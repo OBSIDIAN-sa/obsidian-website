@@ -1,0 +1,438 @@
+{
+  "images": {
+    "hero": {
+      "source": "hero/hero-1.jpg",
+      "crop": {
+        "left": 0,
+        "top": 237,
+        "width": 5892,
+        "height": 3314
+      },
+      "variants": [
+        {
+          "w": 1200,
+          "h": 675,
+          "webp": "hero-1200.webp",
+          "jpg": "hero-1200.jpg"
+        },
+        {
+          "w": 2000,
+          "h": 1125,
+          "webp": "hero-2000.webp",
+          "jpg": "hero-2000.jpg"
+        }
+      ]
+    },
+    "hero-mobile": {
+      "source": "hero-mobile/hero-mobile-3.jpg",
+      "crop": {
+        "left": 570,
+        "top": 0,
+        "width": 3266,
+        "height": 5807
+      },
+      "variants": [
+        {
+          "w": 800,
+          "h": 1422,
+          "webp": "hero-mobile-800.webp",
+          "jpg": "hero-mobile-800.jpg"
+        },
+        {
+          "w": 1200,
+          "h": 2134,
+          "webp": "hero-mobile-1200.webp",
+          "jpg": "hero-mobile-1200.jpg"
+        }
+      ]
+    },
+    "island": {
+      "source": "island/island-1.jpg",
+      "crop": {
+        "left": 0,
+        "top": 732,
+        "width": 4800,
+        "height": 2057
+      },
+      "variants": [
+        {
+          "w": 1200,
+          "h": 514,
+          "webp": "island-1200.webp",
+          "jpg": "island-1200.jpg"
+        },
+        {
+          "w": 2000,
+          "h": 857,
+          "webp": "island-2000.webp",
+          "jpg": "island-2000.jpg"
+        }
+      ]
+    },
+    "plan": {
+      "source": "plan/plan-1.jpg",
+      "crop": {
+        "left": 0,
+        "top": 0,
+        "width": 4097,
+        "height": 3073
+      },
+      "variants": [
+        {
+          "w": 800,
+          "h": 600,
+          "webp": "plan-800.webp",
+          "jpg": "plan-800.jpg"
+        },
+        {
+          "w": 1200,
+          "h": 900,
+          "webp": "plan-1200.webp",
+          "jpg": "plan-1200.jpg"
+        }
+      ]
+    },
+    "mat-walnut": {
+      "source": "mat-walnut/mat-walnut-3.jpg",
+      "crop": {
+        "left": 0,
+        "top": 1250,
+        "width": 5000,
+        "height": 5000
+      },
+      "variants": [
+        {
+          "w": 600,
+          "h": 600,
+          "webp": "mat-walnut-600.webp",
+          "jpg": "mat-walnut-600.jpg"
+        },
+        {
+          "w": 1200,
+          "h": 1200,
+          "webp": "mat-walnut-1200.webp",
+          "jpg": "mat-walnut-1200.jpg"
+        }
+      ]
+    },
+    "mat-marble": {
+      "source": "hero/hero.jpeg",
+      "crop": {
+        "left": 350,
+        "top": 0,
+        "width": 784,
+        "height": 784
+      },
+      "variants": [
+        {
+          "w": 600,
+          "h": 600,
+          "webp": "mat-marble-600.webp",
+          "jpg": "mat-marble-600.jpg"
+        },
+        {
+          "w": 784,
+          "h": 784,
+          "webp": "mat-marble-784.webp",
+          "jpg": "mat-marble-784.jpg"
+        }
+      ]
+    },
+    "mat-oak": {
+      "source": "mat-oak/mat-oak-7.jpg",
+      "crop": {
+        "left": 1000,
+        "top": 0,
+        "width": 4016,
+        "height": 4016
+      },
+      "variants": [
+        {
+          "w": 600,
+          "h": 600,
+          "webp": "mat-oak-600.webp",
+          "jpg": "mat-oak-600.jpg"
+        },
+        {
+          "w": 1200,
+          "h": 1200,
+          "webp": "mat-oak-1200.webp",
+          "jpg": "mat-oak-1200.jpg"
+        }
+      ]
+    },
+    "mat-glass": {
+      "source": "mat-glass/mat-glass-1.jpg",
+      "crop": {
+        "left": 0,
+        "top": 493,
+        "width": 2951,
+        "height": 2951
+      },
+      "variants": [
+        {
+          "w": 600,
+          "h": 600,
+          "webp": "mat-glass-600.webp",
+          "jpg": "mat-glass-600.jpg"
+        },
+        {
+          "w": 1200,
+          "h": 1200,
+          "webp": "mat-glass-1200.webp",
+          "jpg": "mat-glass-1200.jpg"
+        }
+      ]
+    },
+    "svc-kitchen": {
+      "source": "svc-kitchen/hero-3.jpg",
+      "crop": {
+        "left": 57,
+        "top": 0,
+        "width": 5886,
+        "height": 3924
+      },
+      "variants": [
+        {
+          "w": 800,
+          "h": 533,
+          "webp": "svc-kitchen-800.webp",
+          "jpg": "svc-kitchen-800.jpg"
+        },
+        {
+          "w": 1200,
+          "h": 800,
+          "webp": "svc-kitchen-1200.webp",
+          "jpg": "svc-kitchen-1200.jpg"
+        }
+      ]
+    },
+    "svc-wardrobe": {
+      "source": "svc-wardrobe/svc-wardrobe-4.jpg",
+      "crop": {
+        "left": 0,
+        "top": 397,
+        "width": 3628,
+        "height": 2419
+      },
+      "variants": [
+        {
+          "w": 800,
+          "h": 533,
+          "webp": "svc-wardrobe-800.webp",
+          "jpg": "svc-wardrobe-800.jpg"
+        },
+        {
+          "w": 1200,
+          "h": 800,
+          "webp": "svc-wardrobe-1200.webp",
+          "jpg": "svc-wardrobe-1200.jpg"
+        }
+      ]
+    },
+    "svc-interior": {
+      "source": "svc-interior/svc-interior-1.jpg",
+      "crop": {
+        "left": 2520,
+        "top": 683,
+        "width": 3000,
+        "height": 2000
+      },
+      "variants": [
+        {
+          "w": 800,
+          "h": 533,
+          "webp": "svc-interior-800.webp",
+          "jpg": "svc-interior-800.jpg"
+        },
+        {
+          "w": 1200,
+          "h": 800,
+          "webp": "svc-interior-1200.webp",
+          "jpg": "svc-interior-1200.jpg"
+        }
+      ]
+    },
+    "film-1": {
+      "source": "film-1/film-1-4.jpg",
+      "crop": {
+        "left": 0,
+        "top": 313,
+        "width": 6000,
+        "height": 3375
+      },
+      "variants": [
+        {
+          "w": 1200,
+          "h": 675,
+          "webp": "film-1-1200.webp",
+          "jpg": "film-1-1200.jpg"
+        },
+        {
+          "w": 2000,
+          "h": 1125,
+          "webp": "film-1-2000.webp",
+          "jpg": "film-1-2000.jpg"
+        }
+      ]
+    },
+    "film-2": {
+      "source": "film-2/film-2-2.jpg",
+      "crop": {
+        "left": 565,
+        "top": 0,
+        "width": 5435,
+        "height": 3057
+      },
+      "variants": [
+        {
+          "w": 1200,
+          "h": 675,
+          "webp": "film-2-1200.webp",
+          "jpg": "film-2-1200.jpg"
+        },
+        {
+          "w": 2000,
+          "h": 1125,
+          "webp": "film-2-2000.webp",
+          "jpg": "film-2-2000.jpg"
+        }
+      ]
+    },
+    "film-3": {
+      "source": "film-3/film-3-1.jpg",
+      "crop": {
+        "left": 0,
+        "top": 313,
+        "width": 6000,
+        "height": 3375
+      },
+      "variants": [
+        {
+          "w": 1200,
+          "h": 675,
+          "webp": "film-3-1200.webp",
+          "jpg": "film-3-1200.jpg"
+        },
+        {
+          "w": 2000,
+          "h": 1125,
+          "webp": "film-3-2000.webp",
+          "jpg": "film-3-2000.jpg"
+        }
+      ]
+    },
+    "film-4": {
+      "source": "film-4/film-4-1.jpg",
+      "crop": {
+        "left": 0,
+        "top": 227,
+        "width": 4032,
+        "height": 2268
+      },
+      "variants": [
+        {
+          "w": 1200,
+          "h": 675,
+          "webp": "film-4-1200.webp",
+          "jpg": "film-4-1200.jpg"
+        },
+        {
+          "w": 2000,
+          "h": 1125,
+          "webp": "film-4-2000.webp",
+          "jpg": "film-4-2000.jpg"
+        }
+      ]
+    },
+    "film-5": {
+      "source": "film-5/hero-4.jpg",
+      "crop": {
+        "left": 0,
+        "top": 743,
+        "width": 4000,
+        "height": 2250
+      },
+      "variants": [
+        {
+          "w": 1200,
+          "h": 675,
+          "webp": "film-5-1200.webp",
+          "jpg": "film-5-1200.jpg"
+        },
+        {
+          "w": 2000,
+          "h": 1125,
+          "webp": "film-5-2000.webp",
+          "jpg": "film-5-2000.jpg"
+        }
+      ]
+    },
+    "film-6": {
+      "source": "film-6/film-6-3.jpg",
+      "crop": {
+        "left": 0,
+        "top": 313,
+        "width": 6000,
+        "height": 3375
+      },
+      "variants": [
+        {
+          "w": 1200,
+          "h": 675,
+          "webp": "film-6-1200.webp",
+          "jpg": "film-6-1200.jpg"
+        },
+        {
+          "w": 2000,
+          "h": 1125,
+          "webp": "film-6-2000.webp",
+          "jpg": "film-6-2000.jpg"
+        }
+      ]
+    },
+    "texture-stone": {
+      "source": "texture-stone/texture-stone-1.jpg",
+      "crop": {
+        "left": 0,
+        "top": 0,
+        "width": 6000,
+        "height": 4000
+      },
+      "variants": [
+        {
+          "w": 1200,
+          "h": 800,
+          "webp": "texture-stone-1200.webp",
+          "jpg": "texture-stone-1200.jpg"
+        }
+      ]
+    }
+  },
+  "logo": [
+    {
+      "w": 160,
+      "h": 163,
+      "webp": "logo-160.webp",
+      "png": "logo-160.png"
+    },
+    {
+      "w": 320,
+      "h": 326,
+      "webp": "logo-320.webp",
+      "png": "logo-320.png"
+    },
+    {
+      "w": 640,
+      "h": 652,
+      "webp": "logo-640.webp",
+      "png": "logo-640.png"
+    },
+    {
+      "w": 960,
+      "h": 978,
+      "webp": "logo-960.webp",
+      "png": "logo-960.png"
+    }
+  ]
+}

@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>أوبسيديان ديزاين — مطابخ · خزائن · حلول داخلية</title>
+<meta name="description" content="ما عندنا قطعة جاهزة واحدة. كل مطبخ وكل خزانة تبدأ من ورقة بيضاء، وتُصنع بمقاسها ومادتها وتفصيلها." data-i18n-content="meta_desc">
+<meta name="theme-color" content="#050504">
+<meta name="color-scheme" content="dark">
+<link rel="icon" type="image/png" href="assets/img/logo-160.png">
+<script>
+  /* Before first paint: restore the saved language so direction never flips visibly. */
+  (function () {
+    var d = document.documentElement, lang = 'ar';
+    try { lang = localStorage.getItem('obsidian-lang') || 'ar'; } catch (e) {}
+    d.className = 'js' + (lang === 'en' ? ' i18n-pending' : '');
+    if (lang === 'en') { d.lang = 'en'; d.dir = 'ltr'; }
+    setTimeout(function () { d.classList.remove('i18n-pending'); }, 1500); /* failsafe */
+    /* Font preloads only over http(s): on file:// Chrome blocks crossorigin preloads, and @font-face alone loads them fine */
+    if (/^https?:$/.test(location.protocol)) {
+      ['cormorant-garamond-latin-300-normal', 'tajawal-arabic-400-normal', 'tajawal-arabic-700-normal'].forEach(function (f) {
+        var l = document.createElement('link');
+        l.rel = 'preload'; l.as = 'font'; l.type = 'font/woff2'; l.crossOrigin = 'anonymous';
+        l.href = 'assets/fonts/' + f + '.woff2';
+        document.head.appendChild(l);
+      });
+    }
+  })();
+</script>
+<link rel="stylesheet" href="assets/css/main.css">
+</head>
+<body id="top">
+
+<a class="skip-link" href="#main" data-i18n="skip">انتقل إلى المحتوى</a>
+
+<header class="site-header" data-header>
+  <div class="wrap site-header__inner">
+    <a class="brand" href="#top" aria-label="أوبسيديان ديزاين" data-i18n-aria="brand_name">
+      <picture>
+        <source type="image/webp" srcset="assets/img/logo-160.webp 1x, assets/img/logo-320.webp 2x">
+        <img src="assets/img/logo-160.png" width="160" height="163" alt="">
+      </picture>
+    </a>
+    <nav class="nav">
+      <ul class="nav__list">
+        <li class="nav__item nav__item--wide"><a href="#principle" data-i18n="nav_principle">المبدأ</a></li>
+        <li class="nav__item nav__item--wide"><a href="#services" data-i18n="nav_services">خدماتنا</a></li>
+        <li class="nav__item nav__item--wide"><a href="#why" data-i18n="nav_why">ليش أوبسيديان</a></li>
+        <li class="nav__item nav__item--wide"><a href="#faq" data-i18n="nav_faq">الأسئلة</a></li>
+        <li class="nav__item"><a class="nav__cta" href="#register" data-i18n="nav_register">سجّل اهتمامك</a></li>
+      </ul>
+    </nav>
+    <button class="lang-toggle" type="button" data-lang-toggle>
+      <span data-i18n="lang_toggle" lang="en">EN</span>
+    </button>
+  </div>
+</header>
+<p class="sr-only" aria-live="polite" data-lang-live></p>
+
+<main id="main">
+
+  <!-- 01 · Hero -->
+  <section class="hero" aria-labelledby="hero-title">
+    <picture class="hero__media">
+      <source media="(max-width: 700px)" type="image/webp" srcset="assets/img/hero-mobile-800.webp 800w, assets/img/hero-mobile-1200.webp 1200w" sizes="100vw" width="800" height="1422">
+      <source media="(max-width: 700px)" srcset="assets/img/hero-mobile-800.jpg 800w, assets/img/hero-mobile-1200.jpg 1200w" sizes="100vw" width="800" height="1422">
+      <source type="image/webp" srcset="assets/img/hero-1200.webp 1200w, assets/img/hero-2000.webp 2000w" sizes="100vw">
+      <img src="assets/img/hero-1200.jpg" srcset="assets/img/hero-1200.jpg 1200w, assets/img/hero-2000.jpg 2000w" sizes="100vw" width="1200" height="675" alt="" fetchpriority="high">
+    </picture>
+    <div class="wrap hero__content">
+      <div class="hero__mark">
+        <picture>
+          <source type="image/webp" srcset="assets/img/logo-320.webp 1x, assets/img/logo-640.webp 2x">
+          <img class="hero__logo" src="assets/img/logo-320.png" width="320" height="326" alt="">
+        </picture>
+        <h1 class="wordmark" id="hero-title" lang="en" aria-label="OBSIDIAN DESIGN">
+          <span class="wordmark__top" aria-hidden="true">OBSIDIAN</span>
+          <span class="wordmark__bottom" aria-hidden="true"><span>D</span><span>E</span><span>S</span><span>I</span><span>G</span><span>N</span></span>
+        </h1>
+      </div>
+      <p class="hero__rotator" data-rotator aria-live="off">
+        <span class="hero__word" data-rotator-word>مطابخ</span>
+      </p>
+      <p class="hero__intro" data-i18n="hero_intro">ما عندنا قطعة جاهزة واحدة. كل مطبخ وكل خزانة تبدأ من ورقة بيضاء، وتُصنع بمقاسها ومادتها وتفصيلها.</p>
+      <p class="hero__status"><span class="rule" aria-hidden="true"></span><span data-i18n="hero_status">قريبًا — الدمام</span></p>
+      <div class="hero__actions">
+        <a class="btn" href="#register" data-i18n="hero_cta_primary">سجّل اهتمامك</a>
+        <a class="link" href="https://wa.me/966569997565" target="_blank" rel="noopener" data-i18n="hero_cta_secondary">تواصل عبر واتساب</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- 02 · Marquee -->
+  <div class="marquee" data-marquee>
+    <div class="marquee__track" data-marquee-track>
+      <p class="marquee__group" data-marquee-group><span class="marquee__item">مطابخ فاخرة</span><span class="marquee__dot" aria-hidden="true">·</span><span class="marquee__item">خزائن وغرف ملابس</span><span class="marquee__dot" aria-hidden="true">·</span><span class="marquee__item">حلول داخلية</span><span class="marquee__dot" aria-hidden="true">·</span><span class="marquee__item">تفصيل كامل</span><span class="marquee__dot" aria-hidden="true">·</span><span class="marquee__item">الدمام</span><span class="marquee__dot" aria-hidden="true">·</span></p>
+    </div>
+  </div>
+
+  <!-- 03 · Principle (light) -->
+  <section class="principle" id="principle" aria-labelledby="principle-title">
+    <p class="principle__watermark" aria-hidden="true" lang="en" data-i18n="principle_watermark">NO READY MADE</p>
+    <div class="wrap principle__inner">
+      <p class="eyebrow" aria-hidden="true"><span class="eyebrow__rule"></span>03</p>
+      <h2 class="principle__title display" id="principle-title" data-reveal data-i18n="principle_heading">نبدأ من ورقة بيضاء، وننتهي عند تفصيلة لا يلاحظها أحد غيرك.</h2>
+      <p class="principle__body lead" data-reveal data-i18n="principle_body">أوبسيديان ما هو معرض يبيع قطع جاهزة. هو مكان تُرسم فيه المساحة أولاً، ثم تُصنّع كل قطعة على مقاسها. نختار الخشب والمواد والاكسسوارات من أجود الأنواع، وما نتهاون بأي تفصيل مهما كان صغير — لأن الفرق بين الجيد والفاخر يقع دائماً في التفاصيل الصغيرة.</p>
+    </div>
+  </section>
+
+  <!-- 04 · Interstitial -->
+  <section class="interstitial">
+    <p class="interstitial__line display" data-reveal data-i18n="interstitial">بعضها يُقاس بالمليمتر. وبعضها يُقاس بالإحساس.</p>
+  </section>
+
+  <!-- 05 · The Island -->
+  <section class="island" aria-labelledby="island-title">
+    <div class="wrap"><p class="eyebrow" aria-hidden="true"><span class="eyebrow__rule"></span>05</p></div>
+    <figure class="island__figure" data-parallax-frame>
+      <picture data-parallax>
+        <source type="image/webp" srcset="assets/img/island-1200.webp 1200w, assets/img/island-2000.webp 2000w" sizes="100vw">
+        <img src="assets/img/island-1200.jpg" srcset="assets/img/island-1200.jpg 1200w, assets/img/island-2000.jpg 2000w" sizes="100vw" width="1200" height="514" loading="lazy" decoding="async" alt="مطبخ بواجهات خشب داكن وسطح رخامي مع إضاءة مدمجة" data-i18n-alt="island_alt">
+      </picture>
+    </figure>
+    <div class="wrap split">
+      <h2 class="split__title display" id="island-title" data-reveal data-i18n="island_heading">الجزيرة هي قلب المساحة. وكل شي ثاني يدور حولها.</h2>
+      <p class="split__body" data-reveal data-i18n="island_body">سطح حجري مصمت، إضاءة داخلية مدروسة، أدراج مخملية بمقاسات محسوبة، وحواف مشغولة. نصمم الجزيرة أولاً — في المطبخ أو في غرفة الملابس — لأنها القطعة التي تُقاس عليها بقية الغرفة.</p>
+    </div>
+  </section>
+
+  <!-- 06 · Drawing → Piece -->
+  <section class="plan" aria-labelledby="plan-title">
+    <div class="wrap plan__grid">
+      <div class="plan__text">
+        <p class="eyebrow" aria-hidden="true"><span class="eyebrow__rule"></span>06</p>
+        <h2 class="plan__title display" id="plan-title" data-reveal data-i18n="plan_heading">من مخطط بمقاسات… إلى قطعة تُركّب بالمليمتر.</h2>
+        <p class="plan__body" data-reveal data-i18n="plan_body">ما نبدأ من كتالوج. نرفع المقاسات على الطبيعة، نرسم المساحة، ونحدد كل تفصيلة قبل ما يُقص أي لوح. المخطط هو العقد بيننا وبينك — واللي يطلع في النهاية هو نفسه اللي شفته على الورق.</p>
+      </div>
+      <figure class="plan__figure" data-reveal>
+        <picture>
+          <source type="image/webp" srcset="assets/img/plan-800.webp 800w, assets/img/plan-1200.webp 1200w" sizes="(min-width: 900px) 40vw, 100vw">
+          <img src="assets/img/plan-800.jpg" srcset="assets/img/plan-800.jpg 800w, assets/img/plan-1200.jpg 1200w" sizes="(min-width: 900px) 40vw, 100vw" width="800" height="600" loading="lazy" decoding="async" alt="فرجار على مخطط هندسي بمقاسات" data-i18n-alt="plan_alt">
+        </picture>
+      </figure>
+    </div>
+  </section>
+
+  <!-- 07 · Material -->
+  <section class="material" aria-labelledby="material-title">
+    <div class="wrap">
+      <p class="eyebrow" aria-hidden="true"><span class="eyebrow__rule"></span>07</p>
+      <h2 class="material__title display" id="material-title" data-reveal data-i18n="material_heading">المادة قبل الشكل</h2>
+    </div>
+    <div class="material__track" tabindex="0" role="region" aria-labelledby="material-title">
+      <ul class="material__list" data-reveal-group>
+        <li class="material__item" data-reveal>
+          <figure>
+            <picture>
+              <source type="image/webp" srcset="assets/img/mat-walnut-600.webp 600w, assets/img/mat-walnut-1200.webp 1200w" sizes="(min-width: 900px) 30vw, 72vw">
+              <img src="assets/img/mat-walnut-600.jpg" srcset="assets/img/mat-walnut-600.jpg 600w, assets/img/mat-walnut-1200.jpg 1200w" sizes="(min-width: 900px) 30vw, 72vw" width="600" height="600" loading="lazy" decoding="async" alt="">
+            </picture>
+            <figcaption><span class="index">01</span><span data-i18n="mat_1">جوز طبيعي</span></figcaption>
+          </figure>
+        </li>
+        <li class="material__item" data-reveal>
+          <figure>
+            <picture>
+              <source type="image/webp" srcset="assets/img/mat-marble-600.webp 600w, assets/img/mat-marble-784.webp 784w" sizes="(min-width: 900px) 30vw, 72vw">
+              <img src="assets/img/mat-marble-600.jpg" srcset="assets/img/mat-marble-600.jpg 600w, assets/img/mat-marble-784.jpg 784w" sizes="(min-width: 900px) 30vw, 72vw" width="600" height="600" loading="lazy" decoding="async" alt="">
+            </picture>
+            <figcaption><span class="index">02</span><span data-i18n="mat_2">رخام أسود</span></figcaption>
+          </figure>
+        </li>
+        <li class="material__item" data-reveal>
+          <figure>
+            <picture>
+              <source type="image/webp" srcset="assets/img/mat-oak-600.webp 600w, assets/img/mat-oak-1200.webp 1200w" sizes="(min-width: 900px) 30vw, 72vw">
+              <img src="assets/img/mat-oak-600.jpg" srcset="assets/img/mat-oak-600.jpg 600w, assets/img/mat-oak-1200.jpg 1200w" sizes="(min-width: 900px) 30vw, 72vw" width="600" height="600" loading="lazy" decoding="async" alt="">
+            </picture>
+            <figcaption><span class="index">03</span><span data-i18n="mat_3">بلوط فاتح</span></figcaption>
+          </figure>
+        </li>
+        <li class="material__item" data-reveal>
+          <figure>
+            <picture>
+              <source type="image/webp" srcset="assets/img/mat-glass-600.webp 600w, assets/img/mat-glass-1200.webp 1200w" sizes="(min-width: 900px) 30vw, 72vw">
+              <img src="assets/img/mat-glass-600.jpg" srcset="assets/img/mat-glass-600.jpg 600w, assets/img/mat-glass-1200.jpg 1200w" sizes="(min-width: 900px) 30vw, 72vw" width="600" height="600" loading="lazy" decoding="async" alt="">
+            </picture>
+            <figcaption><span class="index">04</span><span data-i18n="mat_4">زجاج بإطار أسود</span></figcaption>
+          </figure>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 08 · Standards -->
+  <section class="standards" aria-labelledby="standards-title">
+    <div class="wrap">
+      <p class="eyebrow" aria-hidden="true"><span class="eyebrow__rule"></span>08</p>
+      <h2 class="standards__title display" id="standards-title" data-reveal data-i18n="standards_heading">ما نتهاون بأي تفصيل</h2>
+      <ol class="standards__list" data-reveal-group>
+        <li class="standards__row" data-reveal>
+          <span class="index" aria-hidden="true">01</span>
+          <h3 class="standards__name" data-i18n="std_1_title">الخشب</h3>
+          <p class="standards__text" data-i18n="std_1_body">أجود الأنواع فقط، مع مطابقة اتجاه العروق بين الأبواب والواجهات المتجاورة.</p>
+        </li>
+        <li class="standards__row" data-reveal>
+          <span class="index" aria-hidden="true">02</span>
+          <h3 class="standards__name" data-i18n="std_2_title">الاكسسوارات</h3>
+          <p class="standards__text" data-i18n="std_2_body">مفصلات ومجاري وأنظمة إغلاق هادئ من فئة عالية — القطعة التي تُفتح كل يوم لازم تبقى مثل أول يوم.</p>
+        </li>
+        <li class="standards__row" data-reveal>
+          <span class="index" aria-hidden="true">03</span>
+          <h3 class="standards__name" data-i18n="std_3_title">التفصيل</h3>
+          <p class="standards__text" data-i18n="std_3_body">لا يوجد مقاس جاهز. تُرفع المقاسات على الطبيعة، ويُصنّع كل جزء لمكانه تحديداً.</p>
+        </li>
+        <li class="standards__row" data-reveal>
+          <span class="index" aria-hidden="true">04</span>
+          <h3 class="standards__name" data-i18n="std_4_title">التسليم</h3>
+          <p class="standards__text" data-i18n="std_4_body">تركيب بإشراف مباشر، ومراجعة نهائية تفصيلة تفصيلة قبل ما نقول خلصنا.</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- 09 · Services -->
+  <section class="services" id="services" aria-labelledby="services-title">
+    <div class="wrap">
+      <p class="eyebrow" aria-hidden="true"><span class="eyebrow__rule"></span>09</p>
+      <h2 class="services__title display" id="services-title" data-reveal data-i18n="services_heading">ثلاثة أشياء نصنعها، ونتقنها</h2>
+      <div class="services__grid" data-reveal-group>
+        <article class="service" data-reveal>
+          <picture>
+            <source type="image/webp" srcset="assets/img/svc-kitchen-800.webp 800w, assets/img/svc-kitchen-1200.webp 1200w" sizes="(min-width: 900px) 30vw, 100vw">
+            <img src="assets/img/svc-kitchen-800.jpg" srcset="assets/img/svc-kitchen-800.jpg 800w, assets/img/svc-kitchen-1200.jpg 1200w" sizes="(min-width: 900px) 30vw, 100vw" width="800" height="533" loading="lazy" decoding="async" alt="مطبخ أسود بلا مقابض مع رخام داكن" data-i18n-alt="svc_1_alt">
+          </picture>
+          <h3 class="service__title" data-i18n="svc_1_title">مطابخ</h3>
+          <p class="service__body" data-i18n="svc_1_body">من رفع المقاس إلى آخر مقبض. تخطيط يراعي حركتك داخل المطبخ قبل الشكل.</p>
+          <ul class="service__points">
+            <li data-i18n="svc_1_p1">أسطح رخام وكوارتز</li>
+            <li data-i18n="svc_1_p2">جزيرة مركزية بإضاءة داخلية</li>
+            <li data-i18n="svc_1_p3">تجهيز أماكن الأجهزة مسبقاً</li>
+          </ul>
+        </article>
+        <article class="service" data-reveal>
+          <picture>
+            <source type="image/webp" srcset="assets/img/svc-wardrobe-800.webp 800w, assets/img/svc-wardrobe-1200.webp 1200w" sizes="(min-width: 900px) 30vw, 100vw">
+            <img src="assets/img/svc-wardrobe-800.jpg" srcset="assets/img/svc-wardrobe-800.jpg 800w, assets/img/svc-wardrobe-1200.jpg 1200w" sizes="(min-width: 900px) 30vw, 100vw" width="800" height="533" loading="lazy" decoding="async" alt="غرفة ملابس بواجهات زجاجية وإضاءة داخل الرفوف" data-i18n-alt="svc_2_alt">
+          </picture>
+          <h3 class="service__title" data-i18n="svc_2_title">خزائن وغرف ملابس</h3>
+          <p class="service__body" data-i18n="svc_2_body">تقسيم داخلي يُبنى على ما تملكه فعلاً، مو على مقاس قياسي جاهز.</p>
+          <ul class="service__points">
+            <li data-i18n="svc_2_p1">واجهات بلا مقابض</li>
+            <li data-i18n="svc_2_p2">إضاءة مدمجة داخل الرفوف</li>
+            <li data-i18n="svc_2_p3">أدراج مبطّنة وأنظمة تعليق</li>
+          </ul>
+        </article>
+        <article class="service" data-reveal>
+          <picture>
+            <source type="image/webp" srcset="assets/img/svc-interior-800.webp 800w, assets/img/svc-interior-1200.webp 1200w" sizes="(min-width: 900px) 30vw, 100vw">
+            <img src="assets/img/svc-interior-800.jpg" srcset="assets/img/svc-interior-800.jpg 800w, assets/img/svc-interior-1200.jpg 1200w" sizes="(min-width: 900px) 30vw, 100vw" width="800" height="533" loading="lazy" decoding="async" alt="جدار بألواح خشب الجوز مع وحدة تلفزيون وباب مخفي" data-i18n-alt="svc_3_alt">
+          </picture>
+          <h3 class="service__title" data-i18n="svc_3_title">حلول داخلية</h3>
+          <p class="service__body" data-i18n="svc_3_body">وحدات تلفزيون، مكتبات، ألواح جدارية، ووحدات مداخل — بنفس لغة المطبخ والخزائن.</p>
+          <ul class="service__points">
+            <li data-i18n="svc_3_p1">تنسيق كامل بين الغرف</li>
+            <li data-i18n="svc_3_p2">مطابقة العروق والألوان</li>
+            <li data-i18n="svc_3_p3">حلول تخزين مخفية</li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 · Why Obsidian -->
+  <section class="why" id="why" aria-labelledby="why-title">
+    <div class="wrap">
+      <p class="eyebrow" aria-hidden="true"><span class="eyebrow__rule"></span>10</p>
+      <h2 class="why__title display" id="why-title" data-reveal data-i18n="why_heading">ليش أوبسيديان</h2>
+      <ol class="why__list" data-reveal-group>
+        <li class="why__item" data-reveal>
+          <span class="why__index" aria-hidden="true">01</span>
+          <h3 class="why__name" data-i18n="why_1_title">ما نبيع جاهز</h3>
+          <p class="why__text" data-i18n="why_1_body">ما عندنا قطعة واحدة مصنوعة مسبقاً. كل شي يبدأ برفع مقاس ورسم، وينتهي بقطعة تخص مساحتك وحدها.</p>
+        </li>
+        <li class="why__item" data-reveal>
+          <span class="why__index" aria-hidden="true">02</span>
+          <h3 class="why__name" data-i18n="why_2_title">المسؤولية علينا</h3>
+          <p class="why__text" data-i18n="why_2_body">نشرف على التصنيع من القص للتجميع، ونراجع كل قطعة قبل ما تطلع. ما نحوّلك لأحد ثاني — الحساب علينا.</p>
+        </li>
+        <li class="why__item" data-reveal>
+          <span class="why__index" aria-hidden="true">03</span>
+          <h3 class="why__name" data-i18n="why_3_title">المواد أولاً</h3>
+          <p class="why__text" data-i18n="why_3_body">نختار الخشب والاكسسوارات قبل ما نتكلم عن السعر. القطعة اللي تُفتح كل يوم لازم تبقى مثل أول يوم.</p>
+        </li>
+        <li class="why__item" data-reveal>
+          <span class="why__index" aria-hidden="true">04</span>
+          <h3 class="why__name" data-i18n="why_4_title">نسلّم على تفصيلة</h3>
+          <p class="why__text" data-i18n="why_4_body">التركيب بإشراف مباشر، وجولة مراجعة أخيرة معك تفصيلة تفصيلة قبل ما نقول خلصنا.</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- 11 · Film (Phase 1: sticky stage, frames cross-fade as each line arrives) -->
+  <section class="film" data-film>
+    <div class="film__stage" aria-hidden="true">
+      <picture class="film__frame is-active" data-film-frame>
+        <source type="image/webp" srcset="assets/img/film-1-1200.webp 1200w, assets/img/film-1-2000.webp 2000w" sizes="100vw">
+        <img src="assets/img/film-1-1200.jpg" srcset="assets/img/film-1-1200.jpg 1200w, assets/img/film-1-2000.jpg 2000w" sizes="100vw" width="1200" height="675" loading="lazy" decoding="async" alt="">
+      </picture>
+      <picture class="film__frame" data-film-frame>
+        <source type="image/webp" srcset="assets/img/film-2-1200.webp 1200w, assets/img/film-2-2000.webp 2000w" sizes="100vw">
+        <img src="assets/img/film-2-1200.jpg" srcset="assets/img/film-2-1200.jpg 1200w, assets/img/film-2-2000.jpg 2000w" sizes="100vw" width="1200" height="675" loading="lazy" decoding="async" alt="">
+      </picture>
+      <picture class="film__frame" data-film-frame>
+        <source type="image/webp" srcset="assets/img/film-3-1200.webp 1200w, assets/img/film-3-2000.webp 2000w" sizes="100vw">
+        <img src="assets/img/film-3-1200.jpg" srcset="assets/img/film-3-1200.jpg 1200w, assets/img/film-3-2000.jpg 2000w" sizes="100vw" width="1200" height="675" loading="lazy" decoding="async" alt="">
+      </picture>
+      <picture class="film__frame" data-film-frame>
+        <source type="image/webp" srcset="assets/img/film-4-1200.webp 1200w, assets/img/film-4-2000.webp 2000w" sizes="100vw">
+        <img src="assets/img/film-4-1200.jpg" srcset="assets/img/film-4-1200.jpg 1200w, assets/img/film-4-2000.jpg 2000w" sizes="100vw" width="1200" height="675" loading="lazy" decoding="async" alt="">
+      </picture>
+      <picture class="film__frame" data-film-frame>
+        <source type="image/webp" srcset="assets/img/film-5-1200.webp 1200w, assets/img/film-5-2000.webp 2000w" sizes="100vw">
+        <img src="assets/img/film-5-1200.jpg" srcset="assets/img/film-5-1200.jpg 1200w, assets/img/film-5-2000.jpg 2000w" sizes="100vw" width="1200" height="675" loading="lazy" decoding="async" alt="">
+      </picture>
+      <picture class="film__frame" data-film-frame>
+        <source type="image/webp" srcset="assets/img/film-6-1200.webp 1200w, assets/img/film-6-2000.webp 2000w" sizes="100vw">
+        <img src="assets/img/film-6-1200.jpg" srcset="assets/img/film-6-1200.jpg 1200w, assets/img/film-6-2000.jpg 2000w" sizes="100vw" width="1200" height="675" loading="lazy" decoding="async" alt="">
+      </picture>
+    </div>
+    <ol class="film__lines">
+      <li class="film__line" data-film-line><span class="index" aria-hidden="true">01 / 06</span><p class="display" data-i18n="film_1">الأسود ما هو غياب اللون. هو أعلى درجات الانضباط.</p></li>
+      <li class="film__line" data-film-line><span class="index" aria-hidden="true">02 / 06</span><p class="display" data-i18n="film_2">الجزيرة تتوسط الغرفة، والباقي يدور حولها.</p></li>
+      <li class="film__line" data-film-line><span class="index" aria-hidden="true">03 / 06</span><p class="display" data-i18n="film_3">اللمعة تكشف كل عيب. فما نسمح بعيب.</p></li>
+      <li class="film__line" data-film-line><span class="index" aria-hidden="true">04 / 06</span><p class="display" data-i18n="film_4">الخزانة تختفي في الجدار حتى تحتاجها.</p></li>
+      <li class="film__line" data-film-line><span class="index" aria-hidden="true">05 / 06</span><p class="display" data-i18n="film_5">واجهات بلا مقابض. لمسة واحدة تكفي.</p></li>
+      <li class="film__line" data-film-line><span class="index" aria-hidden="true">06 / 06</span><p class="display" data-i18n="film_6">وفي النهاية، التفصيلة الأخيرة هي اللي تفرّق.</p></li>
+    </ol>
+  </section>
+
+  <!-- 12 · FAQ -->
+  <section class="faq" id="faq" aria-labelledby="faq-title">
+    <div class="wrap faq__grid">
+      <div>
+        <p class="eyebrow" aria-hidden="true"><span class="eyebrow__rule"></span>12</p>
+        <h2 class="faq__title display" id="faq-title" data-reveal data-i18n="faq_heading">الأسئلة</h2>
+      </div>
+      <div class="faq__list" data-accordion>
+        <div class="faq__item">
+          <h3 class="faq__h"><button class="faq__q" type="button" id="faq-1-q" aria-controls="faq-1-a"><span data-i18n="faq_1_q">كيف تبدأ العملية؟</span><span class="faq__icon" aria-hidden="true"></span></button></h3>
+          <div class="faq__a" id="faq-1-a" role="region" aria-labelledby="faq-1-q"><p data-i18n="faq_1_a">تتواصل معنا، نحدد موعد زيارة للموقع، نرفع المقاسات ونشوف الكهرباء والسباكة والفتحات. بعدها نرسم تصميماً كاملاً ونراجعه معك حتى تعتمده — وما يُقص أي لوح قبل الاعتماد.</p></div>
+        </div>
+        <div class="faq__item">
+          <h3 class="faq__h"><button class="faq__q" type="button" id="faq-2-q" aria-controls="faq-2-a"><span data-i18n="faq_2_q">عندي مساحة غير قياسية أو زوايا صعبة</span><span class="faq__icon" aria-hidden="true"></span></button></h3>
+          <div class="faq__a" id="faq-2-a" role="region" aria-labelledby="faq-2-q"><p data-i18n="faq_2_a">هذي حالتنا الطبيعية. ما نشتغل بمقاسات جاهزة أصلاً، فالمساحة الصعبة تُرسم وتُصنّع على وضعها بالضبط بدل ما نجبرها على قطعة جاهزة.</p></div>
+        </div>
+        <div class="faq__item">
+          <h3 class="faq__h"><button class="faq__q" type="button" id="faq-3-q" aria-controls="faq-3-a"><span data-i18n="faq_3_q">وش الفرق بينكم وبين نجّار عادي؟</span><span class="faq__icon" aria-hidden="true"></span></button></h3>
+          <div class="faq__a" id="faq-3-a" role="region" aria-labelledby="faq-3-q"><p data-i18n="faq_3_a">الفرق في المرحلة اللي قبل التنفيذ وبعده: تصميم معتمد بالمقاسات، اختيار مواد واضح بالاسم، إشراف على التركيب، ومراجعة نهائية. التنفيذ وحده مو كافي.</p></div>
+        </div>
+        <div class="faq__item">
+          <h3 class="faq__h"><button class="faq__q" type="button" id="faq-4-q" aria-controls="faq-4-a"><span data-i18n="faq_4_q">وين موقعكم ومتى الافتتاح؟</span><span class="faq__icon" aria-hidden="true"></span></button></h3>
+          <div class="faq__a" id="faq-4-a" role="region" aria-labelledby="faq-4-q"><p data-i18n="faq_4_a">المعرض في الدمام، المنطقة الشرقية، وهو تحت التجهيز حالياً. سجّل اهتمامك وبنتواصل معك أول ما نفتح، مع أولوية في مواعيد الاستشارة.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 13 · Register interest -->
+  <section class="register" id="register" aria-labelledby="register-title">
+    <div class="wrap register__grid">
+      <div class="register__intro">
+        <p class="eyebrow" aria-hidden="true"><span class="eyebrow__rule"></span>13</p>
+        <h2 class="register__title display" id="register-title" data-reveal data-i18n="register_heading">سجّل اهتمامك قبل الافتتاح</h2>
+        <p class="register__body" data-reveal data-i18n="register_body">اترك تفاصيلك وبنرجع لك أول ما يفتح المعرض، مع أولوية في مواعيد الاستشارة والتصميم.</p>
+      </div>
+      <form class="form" novalidate data-form>
+        <div class="field">
+          <label class="field__label" for="f-name" data-i18n="f_name">الاسم</label>
+          <input class="field__input" id="f-name" name="name" type="text" autocomplete="name" required aria-describedby="f-name-err">
+          <p class="field__err" id="f-name-err"></p>
+        </div>
+        <div class="field">
+          <label class="field__label" for="f-phone" data-i18n="f_phone">رقم الجوال</label>
+          <input class="field__input field__input--tel" id="f-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" dir="ltr" required aria-describedby="f-phone-err">
+          <p class="field__err" id="f-phone-err"></p>
+        </div>
+        <div class="field">
+          <label class="field__label" for="f-type" data-i18n="f_type">نوع المشروع</label>
+          <div class="field__select">
+            <select class="field__input" id="f-type" name="type" data-type-select>
+              <option value="">—</option>
+              <option value="0">مطبخ</option>
+              <option value="1">خزائن وغرف ملابس</option>
+              <option value="2">حلول داخلية</option>
+              <option value="3">أكثر من واحد</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label class="field__label" for="f-note" data-i18n="f_note">ملاحظات (اختياري)</label>
+          <textarea class="field__input" id="f-note" name="note" rows="3"></textarea>
+        </div>
+        <button class="btn form__submit" type="submit" data-i18n="f_submit">أرسل</button>
+        <p class="form__success" role="status" data-form-success></p>
+      </form>
+    </div>
+  </section>
+
+</main>
+
+<!-- 14 · Footer -->
+<footer class="site-footer">
+  <div class="wrap footer__cols">
+    <div class="footer__col">
+      <h2 class="footer__h" data-i18n="footer_services">خدماتنا</h2>
+      <ul data-i18n-list="footer_services_items">
+        <li>مطابخ</li><li>خزائن وغرف ملابس</li><li>حلول داخلية</li>
+      </ul>
+    </div>
+    <div class="footer__col">
+      <h2 class="footer__h" data-i18n="footer_contact">تواصل</h2>
+      <ul>
+        <li><a class="link" href="https://wa.me/966569997565" target="_blank" rel="noopener" data-i18n="footer_whatsapp">واتساب</a> <span class="footer__meta" dir="ltr">0569997565</span></li>
+        <li><a class="link" href="mailto:Ali3obsidian@gmail.com" data-i18n="footer_email">البريد</a> <span class="footer__meta" dir="ltr">Ali3obsidian@gmail.com</span></li>
+        <li>
+          <span data-i18n="footer_social">الحسابات</span>
+          <span class="footer__social" dir="ltr">
+            <a class="link" href="https://www.instagram.com/obsidian.design.2026" target="_blank" rel="noopener">Instagram</a>
+            <a class="link" href="https://www.snapchat.com/add/obsidian_design" target="_blank" rel="noopener">Snapchat</a>
+            <a class="link" href="https://www.tiktok.com/@obsidian.design.2026" target="_blank" rel="noopener">TikTok</a>
+            <a class="link" href="https://x.com/obsidiandesign2" target="_blank" rel="noopener">X</a>
+          </span>
+        </li>
+      </ul>
+    </div>
+    <div class="footer__col">
+      <h2 class="footer__h" data-i18n="footer_showroom">المعرض</h2>
+      <ul>
+        <li data-i18n="footer_city">الدمام — المنطقة الشرقية</li>
+        <li data-i18n="footer_soon">قريبًا</li>
+      </ul>
+    </div>
+  </div>
+  <p class="footer__wordmark" aria-hidden="true" lang="en">OBSIDIAN</p>
+  <div class="wrap footer__base">
+    <p data-i18n="footer_copy">© 2026 أوبسيديان ديزاين. جميع الحقوق محفوظة.</p>
+  </div>
+</footer>
+
+<script src="assets/js/i18n.js"></script>
+<script src="assets/js/main.js"></script>
+</body>
+</html>

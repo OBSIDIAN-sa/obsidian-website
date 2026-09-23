@@ -1,0 +1,4 @@
+_review/
+.playwright-mcp/
+tools/node_modules/
+raw-images/
