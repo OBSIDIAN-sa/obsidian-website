@@ -312,6 +312,32 @@ async function scrollThrough(page) {
     hits.length ? hits.join(' | ') : `none found in the page or string table; the only year is ${years.join(', ')} (copyright line); "قريبًا / Opening soon" carries no date; location is city-level only`);
 }
 
+// 12 — social preview (Open Graph / X card): tags present, absolute, and matching the image file
+{
+  const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  const head = html.slice(0, html.indexOf('</head>'));
+  const meta = {};
+  for (const m of head.matchAll(/<meta\s+(?:property|name)="([^"]+)"\s+content="([^"]*)"/g)) meta[m[1]] = m[2];
+  const problems = [];
+  for (const k of ['og:type', 'og:url', 'og:title', 'og:description', 'og:image', 'og:image:width', 'og:image:height', 'og:image:alt', 'twitter:card', 'twitter:image']) if (!meta[k]) problems.push(`missing ${k}`);
+  if (meta['twitter:card'] !== 'summary_large_image') problems.push(`twitter:card is "${meta['twitter:card']}"`);
+  for (const k of ['og:url', 'og:image', 'twitter:image']) if (meta[k] && !/^https:\/\//.test(meta[k])) problems.push(`${k} is not an absolute https URL`);
+  // The absolute image URL must map onto the file we ship
+  const local = meta['og:image'] && path.join(ROOT, meta['og:image'].replace(meta['og:url'], ''));
+  if (!local || !fs.existsSync(local)) problems.push(`og:image does not map to a file in the repo (${local})`);
+  else {
+    const sharp = (await import('sharp')).default;
+    const m = await sharp(local).metadata(), kb = Math.round(fs.statSync(local).size / 1024);
+    if (m.width !== +meta['og:image:width'] || m.height !== +meta['og:image:height']) problems.push(`image is ${m.width}×${m.height}, tags say ${meta['og:image:width']}×${meta['og:image:height']}`);
+    if (m.width / m.height < 1.85 || m.width / m.height > 1.95) problems.push('aspect is not ~1.91:1');
+    if (kb > 300) problems.push(`image is ${kb}KB (WhatsApp drops previews over ~300KB)`);
+    if (m.hasAlpha) problems.push('image has transparency (renders on white in some apps)');
+    meta.__file = `${path.relative(ROOT, local).replace(/\\/g, '/')} ${m.width}×${m.height} ${m.format} ${kb}KB, opaque`;
+  }
+  report('12. Social preview (Open Graph + X card)', problems.length === 0,
+    problems.length ? problems.join(' | ') : `og:image → ${meta.__file}; twitter:card=summary_large_image; all URLs absolute https under ${meta['og:url']}`);
+}
+
 await browser.close();
 const failed = results.filter((r) => !r.pass);
 console.log(`\n${results.length - failed.length}/${results.length} checks passed`);
