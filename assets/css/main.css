@@ -51,6 +51,13 @@
   --space-1: 0.5rem; --space-2: 1rem; --space-3: 1.5rem; --space-4: 2.5rem;
   --space-5: 4rem;   --space-6: clamp(5rem, 3rem + 7vw, 10rem); --space-7: clamp(7rem, 4rem + 12vw, 16rem);
 
+  /* Vertical rhythm: one token. Every section carries half above and half below, so the gap at
+     any boundary is exactly --section (~64px phone, ~125px at 1440). Sections with their own
+     ground (Principle, Register) take the full token inside their colour. */
+  --section: clamp(4rem, 2.4rem + 6vw, 8rem);
+  --section-half: calc(var(--section) / 2);
+  --seam: clamp(6rem, 3rem + 10vh, 12rem); /* length of the ink/bone fade around the light section */
+
   --gutter: clamp(16px, 5vw, 80px);
   --max: 1440px;
 
@@ -67,7 +74,8 @@
   --ff-body:    'Tajawal', 'Inter', 'Segoe UI', 'Geeza Pro', 'Noto Sans Arabic', Tahoma, sans-serif;
   --ff-latin-display: 'Cormorant Garamond', 'Cormorant', Georgia, 'Times New Roman', serif;
   --ff-num: 'Inter', 'Segoe UI', system-ui, sans-serif;
-  --display-weight: 700;
+  --display-weight: 500;        /* large Arabic display: 500 reads as crafted, 700 read as blocky */
+  --name-weight: 700;           /* small Arabic sub-headings keep weight for hierarchy */
   --display-lh: 1.35;
   --display-track: 0;           /* never track Arabic: it breaks joins */
   --body-weight: 400;
@@ -79,9 +87,10 @@
   --ff-display: var(--ff-latin-display);
   --ff-body: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
   --display-weight: 300;
+  --name-weight: 300;
   --display-lh: 1.06;
   --display-track: -0.012em;
-  --body-weight: 300;
+  --body-weight: 400;           /* Inter 300 on black read thin at 16-18px */
   --body-lh: 1.65;
   --label-track: 0.14em;
   --label-case: uppercase;
@@ -135,7 +144,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
   text-wrap: balance;
 }
 .lead { font-size: var(--step-1); line-height: 1.75; }
-:root:lang(en) .lead { line-height: 1.55; }
+:root:lang(en) .lead { line-height: 1.55; font-weight: 300; }
 
 .index {
   font-family: var(--ff-num); font-weight: 400; font-size: var(--step--1);
@@ -143,11 +152,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
   direction: ltr; unicode-bidi: isolate;
 }
 
-.eyebrow {
-  display: flex; align-items: center; gap: 1rem;
-  font-family: var(--ff-num); font-size: var(--step--1); letter-spacing: 0.1em;
-  color: var(--bronze); margin-block-end: var(--space-4); font-variant-numeric: tabular-nums;
-}
+/* Section marker: a short bronze hairline at the reading start. No numbers: nobody navigates
+   by the sequence, and gaps in it read as mistakes. */
+.eyebrow { display: flex; align-items: center; margin-block-end: var(--space-4); }
 .eyebrow__rule { inline-size: 3rem; block-size: 1px; background: var(--bronze); }
 
 /* ---- Buttons & links (bronze is a line, never a fill) ------------------- */
@@ -271,7 +278,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .hero__rotator .hero__word + .hero__word { position: absolute; inset-block-start: 0; inset-inline-start: 0; }
 
 .hero__intro { max-inline-size: 36ch; font-size: var(--step-1); line-height: 1.7; }
-:root:lang(en) .hero__intro { max-inline-size: 42ch; line-height: 1.55; }
+:root:lang(en) .hero__intro { max-inline-size: 42ch; line-height: 1.55; font-weight: 300; }
 .hero__status {
   display: flex; align-items: center; gap: 1rem; margin-block: var(--space-3) var(--space-4);
   font-size: var(--step--1); color: var(--warm-grey); letter-spacing: var(--label-track); text-transform: var(--label-case);
@@ -297,13 +304,25 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 /* ---- 03 Principle (the light section) ------------------------------------ */
 .principle {
-  position: relative; overflow: hidden; background: var(--bone); color: var(--ink);
-  padding-block: var(--space-7);
+  position: relative; overflow: hidden; color: var(--ink);
+  padding-block: calc(var(--seam) + var(--section));
+  /* An eased ink-to-bone ramp in, and back out: the light comes up rather than switching on */
+  background: var(--bone) linear-gradient(to bottom,
+    var(--ink) 0,
+    color-mix(in oklab, var(--bone) 12%, var(--ink)) calc(var(--seam) * 0.3),
+    color-mix(in oklab, var(--bone) 45%, var(--ink)) calc(var(--seam) * 0.6),
+    color-mix(in oklab, var(--bone) 85%, var(--ink)) calc(var(--seam) * 0.85),
+    var(--bone) var(--seam),
+    var(--bone) calc(100% - var(--seam)),
+    color-mix(in oklab, var(--bone) 85%, var(--ink)) calc(100% - var(--seam) * 0.85),
+    color-mix(in oklab, var(--bone) 45%, var(--ink)) calc(100% - var(--seam) * 0.6),
+    color-mix(in oklab, var(--bone) 12%, var(--ink)) calc(100% - var(--seam) * 0.3),
+    var(--ink) 100%);
 }
 .principle .eyebrow { color: var(--ink); }
 .principle .eyebrow__rule { background: var(--ink); }
 .principle__watermark {
-  position: absolute; inset-inline-start: 50%; inset-block-end: -0.12em; translate: -50% 0;
+  position: absolute; inset-inline-start: 50%; inset-block-end: calc(var(--seam) - 0.12em); translate: -50% 0;
   font-family: var(--ff-latin-display); font-weight: 300; font-size: clamp(6rem, 2rem + 17vw, 22rem);
   line-height: 0.8; white-space: nowrap; color: transparent; direction: ltr;
   -webkit-text-stroke: 1px color-mix(in srgb, var(--ink) 16%, transparent);
@@ -316,11 +335,11 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .principle__body { margin-block-start: var(--space-5); max-inline-size: 58ch; margin-inline-start: auto; color: var(--onyx); }
 
 /* ---- 04 Interstitial ------------------------------------------------------ */
-.interstitial { padding-block: clamp(10rem, 28vh, 20rem); padding-inline: var(--gutter); text-align: center; }
+.interstitial { padding-block: clamp(4rem, 2rem + 10vh, 9rem); padding-inline: var(--gutter); text-align: center; } /* the one deliberate pause */
 .interstitial__line { font-size: var(--step-3); max-inline-size: 26ch; margin-inline: auto; }
 
 /* ---- 05 Island ------------------------------------------------------------ */
-.island { padding-block: var(--space-6) var(--space-7); }
+.island { padding-block: var(--section-half); }
 .island__figure { position: relative; overflow: hidden; aspect-ratio: 21 / 9; }
 .island__figure picture { position: absolute; inset: -12% 0; will-change: transform; }
 .island__figure img { inline-size: 100%; block-size: 100%; object-fit: cover; }
@@ -333,7 +352,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 
 /* ---- 06 Drawing → Piece --------------------------------------------------- */
-.plan { padding-block: var(--space-6); }
+.plan { padding-block: var(--section-half); }
 .plan__grid { display: grid; gap: var(--space-5); }
 .plan__title { font-size: var(--step-3); max-inline-size: 20ch; }
 .plan__body { margin-block-start: var(--space-4); max-inline-size: 50ch; color: var(--bone); }
@@ -344,8 +363,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 
 /* ---- 07 Material ---------------------------------------------------------- */
-.material { padding-block: var(--space-6); }
-.material__title { font-size: var(--step-4); margin-block-end: var(--space-5); }
+.material { padding-block: var(--section-half); }
+.material__title { font-size: var(--step-3); margin-block-end: var(--space-5); }
 .material__track {
   overflow-x: auto; overscroll-behavior-inline: contain; scroll-snap-type: x mandatory;
   scroll-padding-inline: var(--gutter);
@@ -364,8 +383,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 :root:lang(en) .material__item figcaption { font-family: var(--ff-display); font-size: var(--step-2); }
 
 /* ---- 08 Standards --------------------------------------------------------- */
-.standards { padding-block: var(--space-6); }
-.standards__title { font-size: var(--step-4); margin-block-end: var(--space-5); max-inline-size: 16ch; }
+.standards { padding-block: var(--section-half); }
+.standards__title { font-size: var(--step-3); margin-block-end: var(--space-5); max-inline-size: 18ch; }
 .standards__row {
   display: grid; gap: 0.75rem 2rem; padding-block: var(--space-4);
   border-block-start: 1px solid var(--hairline);
@@ -373,7 +392,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 .standards__row:last-child { border-block-end: 1px solid var(--hairline); }
 .standards__row .index { padding-block-start: 0.55em; }
-.standards__name { font-family: var(--ff-display); font-weight: var(--display-weight); font-size: var(--step-2); line-height: 1.3; letter-spacing: var(--display-track); }
+.standards__name { font-family: var(--ff-display); font-weight: var(--name-weight); font-size: var(--step-2); line-height: 1.3; letter-spacing: var(--display-track); }
 .standards__text { grid-column: 2; color: var(--warm-grey); max-inline-size: 56ch; }
 @media (min-width: 900px) {
   .standards__row { grid-template-columns: 4rem 4fr 7fr; align-items: baseline; }
@@ -381,19 +400,19 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 
 /* ---- 09 Services (no card borders: hairlines and space) ----------------- */
-.services { padding-block: var(--space-6); }
-.services__title { font-size: var(--step-4); margin-block-end: var(--space-5); max-inline-size: 18ch; }
+.services { padding-block: var(--section-half); }
+.services__title { font-size: var(--step-3); margin-block-end: var(--space-5); max-inline-size: 20ch; }
 .services__grid { display: grid; gap: var(--space-5) clamp(1.5rem, 3vw, 3rem); }
 @media (min-width: 900px) { .services__grid { grid-template-columns: repeat(3, 1fr); } }
 .service img { inline-size: 100%; aspect-ratio: 3 / 2; object-fit: cover; }
-.service__title { margin-block: var(--space-3) var(--space-2); font-family: var(--ff-display); font-weight: var(--display-weight); font-size: var(--step-2); line-height: 1.25; letter-spacing: var(--display-track); }
+.service__title { margin-block: var(--space-3) var(--space-2); font-family: var(--ff-display); font-weight: var(--name-weight); font-size: var(--step-2); line-height: 1.25; letter-spacing: var(--display-track); }
 .service__body { color: var(--warm-grey); }
 .service__points { margin-block-start: var(--space-3); border-block-start: 1px solid var(--hairline); }
 .service__points li { padding-block: 0.8rem; border-block-end: 1px solid var(--hairline); font-size: var(--step--1); }
 
 /* ---- 10 Why Obsidian ------------------------------------------------------ */
-.why { padding-block: var(--space-6); }
-.why__title { font-size: var(--step-4); margin-block-end: var(--space-5); }
+.why { padding-block: var(--section-half); }
+.why__title { font-size: var(--step-3); margin-block-end: var(--space-5); }
 .why__list { display: grid; gap: var(--space-5) var(--space-6); }
 @media (min-width: 900px) { .why__list { grid-template-columns: 1fr 1fr; } }
 .why__item { border-block-start: 1px solid var(--hairline); padding-block-start: var(--space-3); }
@@ -403,11 +422,11 @@ button, input, select, textarea { font: inherit; color: inherit; }
   direction: ltr; text-align: start; margin-block-end: var(--space-3);
 }
 [dir='rtl'] .why__index { text-align: right; }
-.why__name { font-family: var(--ff-display); font-weight: var(--display-weight); font-size: var(--step-2); line-height: 1.3; letter-spacing: var(--display-track); margin-block-end: var(--space-2); }
+.why__name { font-family: var(--ff-display); font-weight: var(--name-weight); font-size: var(--step-2); line-height: 1.3; letter-spacing: var(--display-track); margin-block-end: var(--space-2); }
 .why__text { color: var(--warm-grey); max-inline-size: 48ch; }
 
 /* ---- 11 Film -------------------------------------------------------------- */
-.film { position: relative; display: grid; margin-block: var(--space-6); }
+.film { position: relative; display: grid; margin-block: var(--section-half); }
 .film__stage, .film__lines { grid-area: 1 / 1; }
 .film__stage { position: sticky; inset-block-start: 0; block-size: 100svh; overflow: hidden; }
 .film__frame { position: absolute; inset: 0; opacity: 0; transition: opacity 1200ms var(--ease-inout); }
@@ -420,7 +439,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 .film__lines { position: relative; z-index: 1; }
 .film__line {
-  min-block-size: 100svh; display: flex; flex-direction: column; justify-content: flex-end; gap: 1rem;
+  min-block-size: 72svh; display: flex; flex-direction: column; justify-content: flex-end; gap: 1rem;
   padding-inline: var(--gutter); padding-block-end: clamp(3rem, 10vh, 7rem);
   max-inline-size: var(--max); margin-inline: auto;
 }
@@ -428,17 +447,17 @@ button, input, select, textarea { font: inherit; color: inherit; }
 :root:lang(en) .film__line p { max-inline-size: 24ch; }
 
 /* ---- 12 FAQ --------------------------------------------------------------- */
-.faq { padding-block: var(--space-6); }
+.faq { padding-block: var(--section-half); }
 .faq__grid { display: grid; gap: var(--space-4); }
 @media (min-width: 900px) { .faq__grid { grid-template-columns: 4fr 8fr; gap: var(--space-6); } }
-.faq__title { font-size: var(--step-4); }
+.faq__title { font-size: var(--step-3); }
 .faq__item { border-block-start: 1px solid var(--hairline); }
 .faq__item:last-child { border-block-end: 1px solid var(--hairline); }
 .faq__h { font-size: inherit; font-weight: inherit; }
 .faq__q {
   display: flex; align-items: center; justify-content: space-between; gap: 2rem;
   inline-size: 100%; padding-block: var(--space-3); background: none; border: 0; cursor: pointer;
-  text-align: start; font-family: var(--ff-display); font-weight: var(--display-weight);
+  text-align: start; font-family: var(--ff-display); font-weight: var(--name-weight);
   font-size: var(--step-1); line-height: 1.4; letter-spacing: var(--display-track);
   transition: color var(--dur-short) var(--ease);
 }
@@ -458,10 +477,10 @@ button, input, select, textarea { font: inherit; color: inherit; }
 @keyframes fade-up { from { opacity: 0; transform: translateY(12px); } }
 
 /* ---- 13 Register ---------------------------------------------------------- */
-.register { padding-block: var(--space-6) var(--space-7); background: var(--onyx); }
+.register { padding-block: var(--section); margin-block-start: var(--section-half); background: var(--onyx); }
 .register__grid { display: grid; gap: var(--space-5); }
 @media (min-width: 900px) { .register__grid { grid-template-columns: 5fr 1fr 6fr; } .form { grid-column: 3; } }
-.register__title { font-size: var(--step-4); max-inline-size: 14ch; }
+.register__title { font-size: var(--step-3); max-inline-size: 16ch; }
 .register__body { margin-block-start: var(--space-3); color: var(--warm-grey); max-inline-size: 42ch; }
 .form { display: grid; gap: var(--space-4); align-content: start; }
 .field { display: grid; gap: 0.5rem; }
@@ -494,7 +513,7 @@ textarea.field__input { resize: vertical; min-block-size: 6rem; line-height: 1.6
 .form__success:empty { display: none; }
 
 /* ---- 14 Footer ------------------------------------------------------------ */
-.site-footer { padding-block-start: var(--space-6); border-block-start: 1px solid var(--hairline); overflow: hidden; }
+.site-footer { padding-block-start: var(--section); border-block-start: 1px solid var(--hairline); overflow: hidden; }
 .footer__cols { display: grid; gap: var(--space-4); }
 @media (min-width: 760px) { .footer__cols { grid-template-columns: repeat(3, 1fr); } }
 .footer__h { font-family: var(--ff-num); font-weight: 400; font-size: var(--step--1); color: var(--bronze); letter-spacing: 0.1em; margin-block-end: var(--space-2); }
@@ -510,7 +529,7 @@ textarea.field__input { resize: vertical; min-block-size: 6rem; line-height: 1.6
   font-family: var(--ff-latin-display); font-weight: 300; line-height: 0.82; text-align: center;
   font-size: clamp(4rem, 0.5rem + 17.5vw, 22rem); letter-spacing: 0.01em;
   color: color-mix(in srgb, var(--bronze) 18%, transparent); /* fallback without background-clip */
-  margin-block: var(--space-6) 0; padding-block-end: 0.04em;
+  margin-block: var(--section) 0; padding-block-end: 0.04em;
   white-space: nowrap; user-select: none; direction: ltr;
 }
 @supports ((-webkit-background-clip: text) or (background-clip: text)) {
