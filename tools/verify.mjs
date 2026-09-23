@@ -338,6 +338,36 @@ async function scrollThrough(page) {
     problems.length ? problems.join(' | ') : `og:image → ${meta.__file}; twitter:card=summary_large_image; all URLs absolute https under ${meta['og:url']}`);
 }
 
+// 13 — scroll progress hairline: tracks scroll 0 → 1, grows from the reading-start edge, transform only
+{
+  const problems = [];
+  for (const lang of ['ar', 'en']) for (const [w, h] of [[1440, 900], [390, 844]]) for (const reducedMotion of ['no-preference', 'reduce']) {
+    const { ctx, page } = await open({ lang, width: w, height: h, reducedMotion });
+    const tag = `${lang}@${w}${reducedMotion === 'reduce' ? '/reduced' : ''}`;
+    const at = (f) => page.evaluate(async (f) => {
+      const max = document.documentElement.scrollHeight - innerHeight;
+      scrollTo({ top: max * f, behavior: 'instant' });
+      await new Promise((r) => setTimeout(r, 120)); // scroll event → rAF → write
+      const bar = document.querySelector('[data-progress]'), r = bar.getBoundingClientRect(), hr = bar.parentElement.getBoundingClientRect();
+      return { scale: new DOMMatrix(getComputedStyle(bar).transform).a, left: r.left - hr.left, right: hr.right - r.right, height: r.height, bg: getComputedStyle(bar).backgroundColor };
+    }, f);
+    const top = await at(0), mid = await at(0.5), end = await at(1);
+    if (top.scale > 0.001) problems.push(`${tag}: visible at top (${top.scale})`);
+    if (Math.abs(mid.scale - 0.5) > 0.02) problems.push(`${tag}: ${mid.scale.toFixed(3)} at half-way`);
+    if (end.scale < 0.999) problems.push(`${tag}: ${end.scale.toFixed(3)} at bottom`);
+    const anchor = lang === 'ar' ? mid.right : mid.left; // start edge stays pinned
+    if (Math.abs(anchor) > 1) problems.push(`${tag}: not anchored to the ${lang === 'ar' ? 'right' : 'left'} edge (${anchor.toFixed(1)}px off)`);
+    if (mid.height !== 1 || mid.bg !== 'rgb(201, 160, 99)') problems.push(`${tag}: not a 1px bronze line (${mid.height}px, ${mid.bg})`);
+    // Page grows (FAQ opens) → bottom must still read full
+    await page.evaluate(() => document.querySelectorAll('[data-accordion] .faq__q').forEach((b) => b.click()));
+    const grown = await at(1);
+    if (grown.scale < 0.999) problems.push(`${tag}: ${grown.scale.toFixed(3)} at bottom after FAQ opened`);
+    await ctx.close();
+  }
+  report('13. Scroll progress hairline', problems.length === 0,
+    problems.length ? problems.join(' | ') : '1px bronze line reads 0 at top, 0.5 half-way, 1 at bottom (also after FAQ panels open); grows from the right in AR, left in EN; desktop + phone, with and without reduced motion');
+}
+
 await browser.close();
 const failed = results.filter((r) => !r.pass);
 console.log(`\n${results.length - failed.length}/${results.length} checks passed`);

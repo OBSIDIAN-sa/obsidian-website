@@ -198,6 +198,25 @@
     }, { rootMargin: '-72px 0px 0px 0px' }).observe(hero);
   })();
 
+  /* --------------------------------------------------- scroll progress */
+  // Tracks the reader's own scroll, so it stays on under reduced motion (nothing moves by itself)
+  (function progress() {
+    var bar = $('[data-progress]');
+    if (!bar) return;
+    var ticking = false;
+    function update() {
+      ticking = false;
+      var max = root.scrollHeight - window.innerHeight;
+      var p = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0;
+      bar.style.transform = 'scaleX(' + p.toFixed(4) + ')';
+    }
+    function request() { if (!ticking) { ticking = true; requestAnimationFrame(update); } }
+    window.addEventListener('scroll', request, { passive: true });
+    window.addEventListener('resize', request);
+    if ('ResizeObserver' in window) new ResizeObserver(request).observe(document.body); // FAQ panels, late images
+    request();
+  })();
+
   /* ---------------------------------------------------------- parallax */
   (function parallax() {
     var frames = $$('[data-parallax-frame]');

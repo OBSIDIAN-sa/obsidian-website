@@ -195,6 +195,13 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 .site-header.is-solid { background-color: color-mix(in srgb, var(--ink) 92%, transparent); }
 .site-header.is-solid::after { opacity: 1; }
+/* Scroll progress: bronze hairline over the header rule, grows from the reading start. Driven by JS, no transition. */
+.scroll-progress {
+  position: absolute; inset-inline: 0; inset-block-end: 0; z-index: 1; block-size: 1px;
+  background: var(--hairline-strong); pointer-events: none;
+  transform: scaleX(0); transform-origin: left; will-change: transform;
+}
+:root[dir="rtl"] .scroll-progress { transform-origin: right; }
 .site-header__inner { display: flex; align-items: center; gap: var(--space-3); block-size: 4.5rem; }
 .brand { display: block; flex: none; }
 .brand img { inline-size: 2.5rem; block-size: auto; }
