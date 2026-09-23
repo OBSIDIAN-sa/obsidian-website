@@ -48,7 +48,8 @@
   (function rotator() {
     var el = $('[data-rotator]');
     if (!el) return;
-    var timer = null, idx = 0;
+    var timer = null, swap = null, idx = 0;
+    var OUT = 450; // matches .hero__word.is-out in CSS
 
     function word(text) {
       var s = document.createElement('span');
@@ -57,24 +58,27 @@
       s.textContent = text;
       return s;
     }
+    // Strictly sequential: the old word fully leaves before the new one enters,
+    // so the two are never on screen together. One moving thing at a time.
     function step() {
       if (document.hidden) return;
       var words = t('hero_words');
-      var cur = $('.hero__word:not(.is-out)', el);
+      var cur = $('.hero__word', el);
       idx = (idx + 1) % words.length;
-      var nw = word(words[idx]);
-      nw.classList.add('is-in-start');
-      el.appendChild(nw);
       cur.classList.add('is-out');
-      // Let the outgoing word lead; the new one follows a beat later
-      setTimeout(function () {
+      swap = setTimeout(function () {
+        var nw = word(words[idx]);
+        nw.classList.add('is-in-start');
+        if (cur.parentNode) cur.parentNode.removeChild(cur);
+        el.appendChild(nw);
+        void nw.offsetWidth; // commit the start state so the entry transitions
         nw.classList.remove('is-in-start');
         nw.classList.add('is-in');
-      }, 140);
-      setTimeout(function () { if (cur.parentNode) cur.parentNode.removeChild(cur); }, 1000);
+      }, OUT);
     }
     function render() {
       clearInterval(timer);
+      clearTimeout(swap);
       var words = t('hero_words');
       el.textContent = '';
       var sr = document.createElement('span');
@@ -406,6 +410,20 @@
       if (!m) { typed = ''; return; }
       typed = (typed + m[1]).slice(-WORD.length);
       if (typed === WORD) { typed = ''; show(); }
+    });
+  })();
+
+  /* ------------------------------------------- image placeholder + fade */
+  // Lazy images sit on an onyx ground and fade in once decoded, instead of popping out of black.
+  // Only with JS (the CSS hides them under .js), and instant under reduced motion.
+  (function images() {
+    $$('img[loading="lazy"]').forEach(function (img) {
+      function done() { img.classList.add('is-loaded'); }
+      if (img.complete && img.naturalWidth) done();
+      else {
+        img.addEventListener('load', done, { once: true });
+        img.addEventListener('error', done, { once: true }); // never leave a hole
+      }
     });
   })();
 

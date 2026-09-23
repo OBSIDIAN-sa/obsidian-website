@@ -413,6 +413,80 @@ async function scrollThrough(page) {
     problems.length ? problems.join(' | ') : 'shows on the full word only (AR+EN), aria-hidden and click-through, keeps scroll and focus, self-dismisses, any key dismisses; ignored in form fields and on touch devices');
 }
 
+// 15 — polish: hero word never doubles, 44px hit areas, tablet nav, whole watermark, image fade
+{
+  const problems = [];
+  // Hero word: sample every 40ms across two swaps; never two visible words
+  for (const lang of ['ar', 'en']) {
+    const { ctx, page } = await open({ lang });
+    const worst = await page.evaluate(() => new Promise((res) => {
+      let max = 0; const t0 = performance.now();
+      (function tick() {
+        const vis = [...document.querySelectorAll('.hero__word')].filter((w) => +getComputedStyle(w).opacity > 0.05).length;
+        max = Math.max(max, vis);
+        if (performance.now() - t0 < 5600) setTimeout(tick, 40); else res(max);
+      })();
+    }));
+    if (worst > 1) problems.push(`${lang}: ${worst} hero words visible at once`);
+    await ctx.close();
+  }
+  // Hit areas >= 44px tall on phones: hit-test 21px above/below each control's centre
+  for (const lang of ['ar', 'en']) {
+    const { ctx, page } = await open({ lang, width: 375, height: 812 });
+    const small = await page.evaluate(() => {
+      const bad = [];
+      for (const el of document.querySelectorAll('a[href], button, input, select, textarea')) {
+        if (!el.offsetWidth || el.classList.contains('skip-link')) continue;
+        el.scrollIntoView({ block: 'center', behavior: 'instant' });
+        const r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+        const hits = [cy - 21, cy + 21].map((y) => { const h = document.elementFromPoint(cx, y); return h && (h === el || el.contains(h)); });
+        if (hits.includes(false)) bad.push(`${(el.textContent || el.id || el.tagName).trim().slice(0, 16)} (${Math.round(r.height)}px box)`);
+      }
+      return bad;
+    });
+    if (small.length) problems.push(`${lang}@375: hit area under 44px: ${small.join(', ')}`);
+    await ctx.close();
+  }
+  // Tablet: full nav visible on one row, nothing overflowing the header
+  for (const lang of ['ar', 'en']) {
+    const { ctx, page } = await open({ lang, width: 768, height: 1024 });
+    const r = await page.evaluate(() => {
+      const links = [...document.querySelectorAll('.nav__list a')];
+      const tops = new Set(links.filter((a) => a.offsetWidth).map((a) => Math.round(a.getBoundingClientRect().top)));
+      const inner = document.querySelector('.site-header__inner');
+      return { shown: links.filter((a) => a.offsetWidth).length, rows: tops.size, overflow: inner.scrollWidth > inner.clientWidth + 1 };
+    });
+    if (r.shown !== 5 || r.rows !== 1 || r.overflow) problems.push(`${lang}@768: nav shows ${r.shown}/5 on ${r.rows} row(s)${r.overflow ? ', header overflows' : ''}`);
+    await ctx.close();
+  }
+  // Watermark whole at every width
+  for (const w of [375, 768, 1440]) {
+    const { ctx, page } = await open({ width: w, height: 900 });
+    const cut = await page.evaluate(() => {
+      const wm = document.querySelector('.principle__watermark'), sec = wm.closest('.principle').getBoundingClientRect();
+      const rg = document.createRange(); rg.selectNodeContents(wm); const t = rg.getBoundingClientRect();
+      return t.left < sec.left - 1 || t.right > sec.right + 1;
+    });
+    if (cut) problems.push(`watermark cropped at ${w}px`);
+    await ctx.close();
+  }
+  // Images: fade in with JS, visible without JS
+  {
+    const { ctx, page } = await open({});
+    await scrollThrough(page);
+    const r = await page.evaluate(() => { const l = [...document.querySelectorAll('img[loading="lazy"]')]; return { n: l.length, loaded: l.filter((i) => i.classList.contains('is-loaded')).length, bg: getComputedStyle(l[0].parentElement).backgroundColor }; });
+    if (r.loaded !== r.n) problems.push(`${r.n - r.loaded} lazy image(s) never marked loaded`);
+    if (r.bg !== 'rgb(12, 10, 9)') problems.push(`placeholder ground is ${r.bg}, not --onyx`);
+    await ctx.close();
+    const nj = await open({ js: false });
+    const hidden = await nj.page.evaluate(() => [...document.querySelectorAll('img')].filter((i) => getComputedStyle(i).opacity !== '1').length);
+    if (hidden) problems.push(`${hidden} image(s) invisible without JS`);
+    await nj.ctx.close();
+  }
+  report('15. Polish: hero word, hit areas, tablet nav, watermark, image fade', problems.length === 0,
+    problems.length ? problems.join(' | ') : 'hero words never overlap (sampled every 40ms over two swaps, AR+EN); every control on a 375px phone is hittable 21px above and below its centre; full 5-link nav on one row at 768 in AR+EN; "NO READY MADE" whole at 375/768/1440; lazy images sit on onyx and fade in, and all show without JS');
+}
+
 await browser.close();
 const failed = results.filter((r) => !r.pass);
 console.log(`\n${results.length - failed.length}/${results.length} checks passed`);
