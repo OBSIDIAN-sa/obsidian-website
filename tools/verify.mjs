@@ -368,6 +368,51 @@ async function scrollThrough(page) {
     problems.length ? problems.join(' | ') : '1px bronze line reads 0 at top, 0.5 half-way, 1 at bottom (also after FAQ panels open); grows from the right in AR, left in EN; desktop + phone, with and without reduced motion');
 }
 
+// 14 — typed OBSIDIAN easter egg: desktop only, never in form fields, breaks nothing
+{
+  const problems = [];
+  const state = (page) => page.evaluate(() => {
+    const e = document.querySelector('.egg');
+    return { on: !!e && e.classList.contains('is-on'), opacity: e ? +getComputedStyle(e).opacity : 0, hidden: e && e.getAttribute('aria-hidden'),
+      pe: e && getComputedStyle(e).pointerEvents, y: scrollY, focus: document.activeElement.tagName + (document.activeElement.id ? '#' + document.activeElement.id : '') };
+  });
+  for (const lang of ['ar', 'en']) {
+    const { ctx, page, errors } = await open({ lang });
+    await page.evaluate(() => scrollTo({ top: 1200, behavior: 'instant' }));
+    await page.keyboard.type('OBSIDIA'); // one short: nothing yet
+    if ((await state(page)).on) problems.push(`${lang}: fired before the word was complete`);
+    const before = await state(page);
+    await page.keyboard.type('N'); await page.waitForTimeout(1000);
+    const s = await state(page);
+    if (!s.on || s.opacity < 0.99) problems.push(`${lang}: did not show on OBSIDIAN (opacity ${s.opacity})`);
+    if (s.hidden !== 'true' || s.pe !== 'none') problems.push(`${lang}: overlay is not aria-hidden + click-through`);
+    if (s.y !== before.y || s.focus !== before.focus) problems.push(`${lang}: moved scroll or focus`);
+    await page.waitForTimeout(2200);
+    if ((await state(page)).on) problems.push(`${lang}: did not dismiss itself`);
+    await page.keyboard.type('obsidian'); await page.waitForTimeout(100); // lower case also counts (physical keys)
+    if (!(await state(page)).on) problems.push(`${lang}: did not re-trigger`);
+    await page.keyboard.press('Escape');
+    if ((await state(page)).on) problems.push(`${lang}: a key did not dismiss it`);
+    // Typing it into the form is just typing
+    await page.fill('#register input:not([type=hidden]) >> nth=0', '');
+    await page.focus('#register input:not([type=hidden]) >> nth=0');
+    await page.keyboard.type('OBSIDIAN'); await page.waitForTimeout(100);
+    if ((await state(page)).on) problems.push(`${lang}: fired while typing in a form field`);
+    if (errors.length) problems.push(`${lang}: ${errors.join(', ')}`);
+    await ctx.close();
+  }
+  { // Phone (touch, coarse pointer): never
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+    const page = await ctx.newPage();
+    await page.goto(URL_, { waitUntil: 'load' }); await page.waitForTimeout(300);
+    await page.keyboard.type('OBSIDIAN'); await page.waitForTimeout(100);
+    if (await page.evaluate(() => !!document.querySelector('.egg'))) problems.push('phone: fired on a touch device');
+    await ctx.close();
+  }
+  report('14. Typed OBSIDIAN easter egg', problems.length === 0,
+    problems.length ? problems.join(' | ') : 'shows on the full word only (AR+EN), aria-hidden and click-through, keeps scroll and focus, self-dismisses, any key dismisses; ignored in form fields and on touch devices');
+}
+
 await browser.close();
 const failed = results.filter((r) => !r.pass);
 console.log(`\n${results.length - failed.length}/${results.length} checks passed`);

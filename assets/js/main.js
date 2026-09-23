@@ -363,5 +363,51 @@
     });
   })();
 
+  /* ------------------------------------------------------- easter egg */
+  // Typing OBSIDIAN (desktop pointer only, outside form fields) shows the mark for a moment.
+  // Matches physical keys (KeyO…) so it works on an Arabic layout too. Wordless, click-through, never takes focus.
+  (function egg() {
+    var WORD = 'OBSIDIAN', HOLD = 2400;
+    var fineMQ = window.matchMedia('(hover: hover) and (pointer: fine)');
+    var typed = '', el = null, timer = 0, showing = false;
+
+    function build() {
+      el = document.createElement('div');
+      el.className = 'egg';
+      el.setAttribute('aria-hidden', 'true');
+      el.innerHTML = '<div class="egg__mark"><picture><source type="image/webp" srcset="assets/img/logo-320.webp 1x, assets/img/logo-640.webp 2x">' +
+        '<img src="assets/img/logo-320.png" width="320" height="326" alt=""></picture></div><span class="egg__rule"></span>';
+      document.body.appendChild(el);
+    }
+    function hide() {
+      if (!showing) return;
+      showing = false;
+      clearTimeout(timer);
+      el.classList.remove('is-on');
+      removeEventListener('pointerdown', hide);
+      removeEventListener('wheel', hide);
+    }
+    function show() {
+      if (!el) build();
+      showing = true;
+      void el.offsetWidth; // commit the start state so a freshly built overlay still transitions
+      el.classList.add('is-on');
+      timer = setTimeout(hide, HOLD);
+      addEventListener('pointerdown', hide, { passive: true });
+      addEventListener('wheel', hide, { passive: true });
+    }
+
+    document.addEventListener('keydown', function (e) {
+      if (showing) { hide(); return; }
+      if (!fineMQ.matches || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+      var tgt = e.target;
+      if (tgt.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(tgt.tagName)) { typed = ''; return; }
+      var m = /^Key([A-Z])$/.exec(e.code || '');
+      if (!m) { typed = ''; return; }
+      typed = (typed + m[1]).slice(-WORD.length);
+      if (typed === WORD) { typed = ''; show(); }
+    });
+  })();
+
   applyLang(lang, false);
 })();

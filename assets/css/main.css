@@ -534,10 +534,28 @@ textarea.field__input { resize: vertical; min-block-size: 6rem; line-height: 1.6
 /* Hold the page until translated strings are in, when the saved language is EN */
 .i18n-pending main, .i18n-pending .site-header, .i18n-pending .site-footer { visibility: hidden; }
 
+/* ---- Easter egg (typed OBSIDIAN) ------------------------------------------ */
+/* Click-through and aria-hidden: it sits over the page for a moment and never blocks it. */
+.egg {
+  position: fixed; inset: 0; z-index: 90; pointer-events: none;
+  display: grid; place-content: center; justify-items: center; gap: var(--space-3);
+  background: color-mix(in srgb, var(--ink) 97%, transparent);
+  opacity: 0; transition: opacity var(--dur-short) var(--ease);
+}
+.egg.is-on { opacity: 1; }
+.egg__mark { inline-size: clamp(8rem, 16vw, 12rem); transform: rotate(-90deg) scale(0.9); transition: transform 1600ms var(--ease); }
+.egg__mark img { inline-size: 100%; block-size: auto; }
+.egg__rule {
+  inline-size: clamp(8rem, 16vw, 12rem); block-size: 1px; background: var(--hairline-strong);
+  transform: scaleX(0); transition: transform var(--dur) var(--ease) 500ms;
+}
+.egg.is-on .egg__mark, .egg.is-on .egg__rule { transform: none; }
+
 /* ---- Reduced motion: complete, static, fully readable -------------------- */
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { transition-duration: 0.01ms !important; animation: none !important; }
   .js [data-reveal] { opacity: 1; transform: none; }
   .island__figure picture { inset: 0; transform: none !important; }
+  .egg__mark, .egg__rule { transform: none; }
 }
