@@ -7,7 +7,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const URL_ = pathToFileURL(path.join(ROOT, 'index.html')).href;
-const CHROME = ['C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'].find(fs.existsSync);
+const CHROME = [process.env.CHROME, 'C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', '/opt/pw-browsers/chromium'].filter(Boolean).find(fs.existsSync);
 const results = [];
 const report = (item, pass, detail) => { results.push({ item, pass, detail }); console.log(`${pass ? 'PASS' : 'FAIL'}  ${item}\n      ${detail}`); };
 
@@ -190,7 +190,8 @@ async function scrollThrough(page) {
     const seen = new Set(), noRing = [];
     for (let i = 0; i < expected + 5; i++) {
       await page.keyboard.press('Tab');
-      await page.waitForTimeout(30);
+      // Focus scrolls smoothly (scroll-behavior: smooth): wait for it to land, up to 1.5s
+      await page.waitForFunction(() => { const e = document.activeElement; if (!e || e === document.body) return true; const r = e.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight; }, null, { timeout: 1500 }).catch(() => {});
       const f = await page.evaluate(() => {
         const e = document.activeElement; if (!e || e === document.body) return null;
         const cs = getComputedStyle(e);
