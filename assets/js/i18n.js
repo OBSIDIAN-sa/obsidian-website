@@ -7,7 +7,7 @@ window.I18N = {
     meta_desc: 'ما عندنا قطعة جاهزة واحدة. كل مطبخ وكل خزانة تبدأ من ورقة بيضاء، وتُصنع بمقاسها ومادتها وتفصيلها.',
 
     skip: 'انتقل إلى المحتوى', // [NOT IN CONTENT.md]
-    menu: 'القائمة', // [NOT IN CONTENT.md] accessible name of the phone menu button
+    menu: 'القائمة', // accessible name of the phone menu button
     lang_toggle: 'EN',
     lang_name: 'العربية',
     nav_principle: 'المبدأ',
@@ -109,7 +109,9 @@ window.I18N = {
     f_type: 'نوع المشروع',
     f_type_opts: ['مطبخ', 'خزائن وغرف ملابس', 'حلول داخلية', 'أكثر من واحد'],
     f_note: 'ملاحظات (اختياري)',
+    f_type_placeholder: 'اختر نوع المشروع',
     f_submit: 'أرسل',
+    f_hint: 'يفتح لك واتساب برسالة جاهزة فيها تفاصيلك، وما عليك إلا ترسلها.',
     f_success: 'وصلنا طلبك. بنتواصل معك قريبًا.',
     f_err_required: 'هذا الحقل مطلوب', // [NOT IN CONTENT.md]
     f_err_phone: 'أدخل رقم جوال صحيح', // [NOT IN CONTENT.md]
@@ -131,7 +133,7 @@ window.I18N = {
     meta_desc: 'Nothing here is off the shelf. Every kitchen and every wardrobe begins on a blank sheet — then it’s built to your measurements, your material, your detail.',
 
     skip: 'Skip to content', // [NOT IN CONTENT.md]
-    menu: 'Menu', // [NOT IN CONTENT.md] accessible name of the phone menu button
+    menu: 'Menu', // accessible name of the phone menu button
     lang_toggle: 'عربي',
     lang_name: 'English',
     nav_principle: 'Principle',
@@ -233,7 +235,9 @@ window.I18N = {
     f_type: 'Project type',
     f_type_opts: ['Kitchen', 'Wardrobes & Dressing Rooms', 'Interior Solutions', 'More than one'],
     f_note: 'Notes (optional)',
+    f_type_placeholder: 'Choose a project type',
     f_submit: 'Send',
+    f_hint: 'This opens WhatsApp with your details ready to send.',
     f_success: 'We’ve got it. We’ll be in touch shortly.',
     f_err_required: 'This field is required', // [NOT IN CONTENT.md]
     f_err_phone: 'Enter a valid mobile number', // [NOT IN CONTENT.md]

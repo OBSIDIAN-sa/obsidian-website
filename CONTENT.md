@@ -290,7 +290,9 @@ Bespoke Kitchens · Wardrobes & Dressing Rooms · Interior Solutions · Made to 
   | phone | رقم الجوال | هاتف — مطلوب |
   | type | نوع المشروع | اختيار: `مطبخ` / `خزائن وغرف ملابس` / `حلول داخلية` / `أكثر من واحد` |
   | note | ملاحظات (اختياري) | نص طويل |
+- نص الاختيار الافتراضي في «نوع المشروع»: `اختر نوع المشروع`
 - زر الإرسال: `أرسل`
+- ملاحظة تحت زر الإرسال: `يفتح لك واتساب برسالة جاهزة فيها تفاصيلك، وما عليك إلا ترسلها.`
 - رسالة النجاح: `وصلنا طلبك. بنتواصل معك قريبًا.`
 
 **EN**
@@ -298,7 +300,9 @@ Bespoke Kitchens · Wardrobes & Dressing Rooms · Interior Solutions · Made to 
 - Paragraph:
   > Leave your details and we'll come back to you the moment the showroom opens — with priority on consultation and design slots.
 - Fields: `Name` / `Mobile number` / `Project type` (`Kitchen` / `Wardrobes & Dressing Rooms` / `Interior Solutions` / `More than one`) / `Notes (optional)`
+- Project type placeholder: `Choose a project type`
 - Submit: `Send`
+- Note under Send: `This opens WhatsApp with your details ready to send.`
 - Success: `We've got it. We'll be in touch shortly.`
 
 ---
@@ -346,3 +350,4 @@ Bespoke Kitchens · Wardrobes & Dressing Rooms · Interior Solutions · Made to 
 | رابط التنقل 4 | الأسئلة | FAQ |
 | رابط التنقل 5 | سجّل اهتمامك | Register |
 | نص التحميل (preloader) | جارٍ التحضير | Preparing |
+| زر القائمة في الجوال (لقارئ الشاشة فقط) | القائمة | Menu |

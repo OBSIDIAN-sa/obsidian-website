@@ -414,7 +414,7 @@
           <label class="field__label" for="f-type" data-i18n="f_type">نوع المشروع</label>
           <div class="field__select">
             <select class="field__input" id="f-type" name="type" data-type-select>
-              <option value="">—</option>
+              <option value="" data-i18n="f_type_placeholder">اختر نوع المشروع</option>
               <option value="0">مطبخ</option>
               <option value="1">خزائن وغرف ملابس</option>
               <option value="2">حلول داخلية</option>
@@ -426,7 +426,8 @@
           <label class="field__label" for="f-note" data-i18n="f_note">ملاحظات (اختياري)</label>
           <textarea class="field__input" id="f-note" name="note" rows="3"></textarea>
         </div>
-        <button class="btn form__submit" type="submit" data-i18n="f_submit">أرسل</button>
+        <button class="btn form__submit" type="submit" data-i18n="f_submit" aria-describedby="f-hint">أرسل</button>
+        <p class="form__hint" id="f-hint" data-i18n="f_hint">يفتح لك واتساب برسالة جاهزة فيها تفاصيلك، وما عليك إلا ترسلها.</p>
         <p class="form__success" role="status" data-form-success></p>
       </form>
     </div>
