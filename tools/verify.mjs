@@ -119,7 +119,8 @@ async function scrollThrough(page) {
     const r = await page.evaluate(() => {
       const out = [], vw = document.documentElement.clientWidth;
       if (document.documentElement.scrollWidth > vw) out.push(`page scrollWidth ${document.documentElement.scrollWidth} > ${vw}`);
-      const skip = '.material__track, .marquee, .principle__watermark, .footer__wordmark, .sr-only, .skip-link, .hero__rotator';
+      // .film__frame: the scrubbed push-in scales frames past the stage, which clips them (overflow: hidden)
+      const skip = '.material__track, .marquee, .principle__watermark, .footer__wordmark, .sr-only, .skip-link, .hero__rotator, .film__frame';
       for (const el of document.querySelectorAll('body *')) {
         if (!el.offsetWidth || el.closest(skip)) continue;
         const r = el.getBoundingClientRect();
@@ -899,6 +900,69 @@ async function scrollThrough(page) {
     await ctx.close(); }
   report('25. Magnetic buttons', problems.length === 0,
     problems.length ? problems.join(' | ') : 'hero and form buttons (AR+EN) lean toward a nearby mouse (≤8px across, ≤5px up/down) and settle back when it leaves; a click on a pulled button still lands; ≥44px tall; keyboard focus, touch and reduced motion never move them');
+}
+
+// 26 — scroll-scrubbed film: playhead follows scroll both ways, ≤2 frames live, text still clears AA; swap under reduced motion
+{
+  const problems = [];
+  const lum = (r, g, b) => [r, g, b].map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }).reduce((a, v, i) => a + v * [0.2126, 0.7152, 0.0722][i], 0);
+  const sharp = (await import('sharp')).default;
+  // Put the viewport centre at fraction f of line block i, then read every frame's state
+  const at = (page, i, f) => page.evaluate(async ({ i, f }) => {
+    const line = document.querySelectorAll('[data-film-line]')[i], r = line.getBoundingClientRect();
+    scrollTo({ top: scrollY + r.top + r.height * f - innerHeight / 2, behavior: 'instant' });
+    await new Promise((res) => setTimeout(res, 60)); // IntersectionObserver + rAF
+    await new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(res)));
+    const lo = [...document.querySelectorAll('[data-film-line]')].map((l) => +getComputedStyle(l).opacity);
+    return [...document.querySelectorAll('[data-film-frame]')].map((el, k) => ({ o: +getComputedStyle(el).opacity, vis: getComputedStyle(el).visibility, s: new DOMMatrix(getComputedStyle(el).transform).a, wc: el.style.willChange, line: lo[k] }));
+  }, { i, f });
+  for (const lang of ['ar', 'en']) for (const [w, h] of [[1440, 900], [375, 812]]) {
+    const { ctx, page, errors } = await open({ lang, width: w, height: h });
+    const tag = `${lang}@${w}`;
+    if (!(await page.evaluate(() => document.querySelector('[data-film]').classList.contains('is-scrub')))) problems.push(`${tag}: not scrubbing`);
+    const seq = [];
+    for (let i = 0; i < 6; i++) for (const f of [0.3, 0.8, 0.95]) {
+      const s = await at(page, i, f); seq.push({ i, f, s });
+      const live = s.filter((x) => x.o > 0.001);
+      if (live.length > 2 || s.filter((x) => x.wc).length > 2) problems.push(`${tag}: ${live.length} frames live at line ${i + 1}+${f}`);
+      if (Math.abs(s[i].o - 1) > 0.001) problems.push(`${tag}: frame ${i + 1} at ${s[i].o} while its line is read (${f})`);
+      if (f === 0.3 && i < 5 && s[i + 1].o > 0.001) problems.push(`${tag}: frame ${i + 2} already showing early in line ${i + 1}`);
+      if (f === 0.95 && i < 5 && !(s[i + 1].o > 0.2 && s[i + 1].o < 1)) problems.push(`${tag}: frame ${i + 2} not mid-dissolve at the end of line ${i + 1} (${s[i + 1].o})`);
+      if (s[i].s < 1 || s[i].s > 1.061) problems.push(`${tag}: push-in scale ${s[i].s}`);
+      // the line being read is fully there; once the next frame has mostly arrived, it has faded with its own
+      if (f === 0.3 && s[i].line !== 1) problems.push(`${tag}: line ${i + 1} at ${s[i].line} while being read`);
+      if (f === 0.95 && i < 5 && s[i].line > 0.15) problems.push(`${tag}: line ${i + 1} still at ${s[i].line} over the next frame`);
+    }
+    // push-in only ever closes in while reading forwards
+    for (let i = 0; i < 6; i++) { const a = seq.find((x) => x.i === i && x.f === 0.3).s[i].s, b = seq.find((x) => x.i === i && x.f === 0.95).s[i].s; if (!(b < a)) problems.push(`${tag}: frame ${i + 1} not pushing in (${a} → ${b})`); }
+    // Scrolling back reproduces the same picture (it is a playhead, not a one-way trigger)
+    const back = await at(page, 2, 0.95), fwd = seq.find((x) => x.i === 2 && x.f === 0.95).s;
+    if (back.some((x, k) => Math.abs(x.o - fwd[k].o) > 0.01 || Math.abs(x.s - fwd[k].s) > 0.001)) problems.push(`${tag}: scrolling back does not reproduce the frame`);
+    // Text over the scrubbed frames: lightest 5% behind each line (text hidden), on its own frame and mid-dissolve
+    await page.evaluate(() => document.querySelectorAll('.film__line p').forEach((e, i) => { e.dataset.oc = i; e.dataset.col = getComputedStyle(e).color; }));
+    await page.addStyleTag({ content: '[data-oc] { color: transparent !important; text-shadow: none !important; }' });
+    for (let i = 0; i < 6; i++) for (const f of [0.6, 0.75]) { // while the line is at (near) full strength
+      await at(page, i, f); await page.waitForTimeout(30);
+      const box = await page.evaluate((i) => { const el = document.querySelector(`[data-oc="${i}"]`), r = el.getBoundingClientRect();
+        return { x: Math.max(0, r.left), y: Math.max(0, r.top), width: Math.min(r.width, innerWidth - Math.max(0, r.left)), height: Math.max(1, Math.min(r.height, innerHeight - Math.max(0, r.top))), col: el.dataset.col, size: parseFloat(getComputedStyle(el).fontSize) }; }, i);
+      if (box.y >= h - 1) continue; // below the fold at this playhead
+      const { data } = await sharp(await page.screenshot({ clip: box })).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+      const L = []; for (let k = 0; k < data.length; k += 3) L.push(lum(data[k], data[k + 1], data[k + 2])); L.sort((a, b) => a - b);
+      const [r, g, b] = box.col.match(/[\d.]+/g).map(Number);
+      const cr = (lum(r, g, b) + 0.05) / (L[Math.floor(L.length * 0.95)] + 0.05), need = box.size >= 24 ? 3 : 4.5;
+      if (cr < need) problems.push(`${tag} film line ${i + 1} @${f}: ${cr.toFixed(2)}:1 (need ${need})`);
+    }
+    if (errors.length) problems.push(`${tag}: ${errors.join(', ')}`);
+    await ctx.close();
+  }
+  // Reduced motion: the original swap, no inline styles, no push-in
+  { const { ctx, page } = await open({ reducedMotion: 'reduce' });
+    const s = await at(page, 3, 0.5); await page.waitForTimeout(100);
+    const r = await page.evaluate(() => ({ scrub: document.querySelector('[data-film]').classList.contains('is-scrub'), inline: [...document.querySelectorAll('[data-film-frame]')].some((el) => el.getAttribute('style')), active: [...document.querySelectorAll('[data-film-frame]')].findIndex((el) => el.classList.contains('is-active')) }));
+    if (r.scrub || r.inline || r.active !== 3 || s.some((x) => x.s !== 1)) problems.push(`reduced motion: ${JSON.stringify(r)}`);
+    await ctx.close(); }
+  report('26. Scroll-scrubbed film', problems.length === 0,
+    problems.length ? problems.join(' | ') : 'AR+EN at 1440 and 375: each frame is fully up while its line is read and dissolves into the next over the last 30% before the next line, pushing in 1.06 → 1; never more than two frames live or promoted; scrolling back reproduces the same picture; every line clears AA while it is read (incl. the start of the dissolve) and fades with its frame before the next one dominates; reduced motion keeps the plain swap');
 }
 
 await browser.close();

@@ -67,7 +67,7 @@
     var q = /[?&]lang=(ar|en)(?:&|$)/.exec(location.search);
     try { lang = q ? q[1] : (localStorage.getItem('obsidian-lang') || 'ar'); } catch (e) { if (q) lang = q[1]; }
     if (q && q[1] === 'en') { var c = document.querySelector('link[rel=canonical]'); if (c) c.href = c.getAttribute('data-base') + '?lang=en'; }
-    /* Intro curtain: first visit in this tab only, never under reduced motion. Hard-lifted by 1.5s from
+    /* Intro curtain: first visit in this tab only, never under reduced motion. Hard-lifted by 1.4s from
        navigation even if main.js never runs (and CSS fades it on its own as well). */
     var intro = false;
     try { intro = !sessionStorage.getItem('obsidian-intro') && !matchMedia('(prefers-reduced-motion: reduce)').matches; if (intro) sessionStorage.setItem('obsidian-intro', '1'); } catch (e) {}
@@ -78,7 +78,7 @@
       if (!d.classList.contains('intro')) return;
       d.classList.remove('intro');
       document.dispatchEvent(new Event('obsidian:intro-done'));
-    }, Math.max(0, 1500 - (window.performance && performance.now ? performance.now() : 0)));
+    }, Math.max(0, 1400 - (window.performance && performance.now ? performance.now() : 0)));
     /* Font preloads only over http(s): on file:// Chrome blocks crossorigin preloads, and @font-face alone loads them fine */
     if (/^https?:$/.test(location.protocol)) {
       /* Preload what the first screen of this language actually sets */
