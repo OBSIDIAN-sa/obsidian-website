@@ -12,9 +12,17 @@ const results = [];
 const report = (item, pass, detail) => { results.push({ item, pass, detail }); console.log(`${pass ? 'PASS' : 'FAIL'}  ${item}\n      ${detail}`); };
 
 const browser = await chromium.launch({ executablePath: CHROME });
+// The intro curtain shows once per tab session. Every context counts as a repeat visit (no curtain)
+// unless it asks for { intro: true }, so the other checks see the page, not the curtain.
+const newContext = browser.newContext.bind(browser);
+browser.newContext = async ({ intro = false, ...o } = {}) => {
+  const c = await newContext(o);
+  if (!intro) await c.addInitScript(() => { try { sessionStorage.setItem('obsidian-intro', '1'); } catch (e) {} });
+  return c;
+};
 
-async function open({ lang = 'ar', width = 1440, height = 900, reducedMotion = 'no-preference', js = true } = {}) {
-  const ctx = await browser.newContext({ viewport: { width, height }, reducedMotion, javaScriptEnabled: js });
+async function open({ lang = 'ar', width = 1440, height = 900, reducedMotion = 'no-preference', js = true, intro = false } = {}) {
+  const ctx = await browser.newContext({ viewport: { width, height }, reducedMotion, javaScriptEnabled: js, intro });
   const page = await ctx.newPage();
   const requests = [], errors = [];
   page.on('request', (r) => requests.push(r.url()));
@@ -732,6 +740,60 @@ async function scrollThrough(page) {
     await ctx.close(); }
   report('22. Logo swing', problems.length === 0,
     problems.length ? problems.join(' | ') : 'the untouched logo-320/640 mark swings once from the top of the ring (peak ≤6.5°, AR+EN) and is at rest by 3.4s; a mouse over it gives a ≤2.5° nudge; still under reduced motion and without JS');
+}
+
+// 23 — intro curtain: first visit only, ≤1.5s, skippable, never without JS / under reduced motion / on repeat
+{
+  const problems = [];
+  const watch = () => { window.__cur = []; const tick = () => { const c = document.querySelector('.intro-curtain');
+    if (c) window.__cur.push([performance.now(), getComputedStyle(c).display !== 'none' && getComputedStyle(c).visibility !== 'hidden' && +getComputedStyle(c).opacity > 0.01]);
+    if (performance.now() < 2600) requestAnimationFrame(tick); }; requestAnimationFrame(tick); };
+  const shown = (page) => page.evaluate(() => { const on = window.__cur.filter((x) => x[1]); return { first: on.length ? on[0][0] : null, last: on.length ? on.at(-1)[0] : null }; });
+  for (const lang of ['ar', 'en']) for (const [w, h] of [[1440, 900], [375, 812]]) {
+    const ctx = await browser.newContext({ viewport: { width: w, height: h }, intro: true });
+    await ctx.addInitScript((l) => { try { localStorage.setItem('obsidian-lang', l); } catch (e) {} }, lang);
+    await ctx.addInitScript(watch);
+    const page = await ctx.newPage(); const errors = []; page.on('pageerror', (e) => errors.push(e.message));
+    await page.goto(URL_, { waitUntil: 'load' });
+    const during = await page.evaluate(() => { const c = document.querySelector('.intro-curtain'); return { hidden: c.getAttribute('aria-hidden'), focusables: c.querySelectorAll('a, button, input, [tabindex]').length,
+      label: [...c.querySelectorAll('.intro-curtain__label span')].filter((s) => getComputedStyle(s).display !== 'none').map((s) => s.textContent).join('|'), logo: c.querySelector('img').currentSrc.split('/').pop(), hero: document.querySelector('.hero__media img').complete }; });
+    await page.waitForTimeout(2400);
+    const s = await shown(page);
+    const tag = `${lang}@${w}`;
+    if (s.first === null) problems.push(`${tag}: curtain never showed on a first visit`);
+    else if (s.last > 1550) problems.push(`${tag}: curtain still visible at ${Math.round(s.last)}ms`);
+    if (during.hidden !== 'true' || during.focusables) problems.push(`${tag}: curtain not aria-hidden or holds focusables`);
+    if (during.label !== (lang === 'ar' ? 'جارٍ التحضير' : 'Preparing')) problems.push(`${tag}: label "${during.label}"`);
+    if (!/^logo-(160|320)\.(webp|png)$/.test(during.logo)) problems.push(`${tag}: curtain shows ${during.logo}`);
+    if (await page.evaluate(() => document.documentElement.classList.contains('intro'))) problems.push(`${tag}: .intro never removed`);
+    if (errors.length) problems.push(`${tag}: ${errors.join(', ')}`);
+    // Same tab again: no curtain
+    await page.reload({ waitUntil: 'load' }); await page.waitForTimeout(300);
+    if ((await shown(page)).first !== null) problems.push(`${tag}: curtain showed again on a repeat visit`);
+    await ctx.close();
+  }
+  // Any key skips it at once
+  { const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, intro: true }); await ctx.addInitScript(watch);
+    const page = await ctx.newPage(); await page.goto(URL_, { waitUntil: 'domcontentloaded' }); await page.waitForTimeout(250);
+    const t = await page.evaluate(() => performance.now()); await page.keyboard.press('Tab'); await page.waitForTimeout(2400);
+    const s = await shown(page);
+    if (s.last - t > 520) problems.push(`a key press did not skip it (visible ${Math.round(s.last - t)}ms after)`);
+    if (await page.evaluate(() => document.activeElement.className) !== 'skip-link') problems.push('the skipping key press did not also move focus to the skip link');
+    await ctx.close(); }
+  // Never: reduced motion, no JS. And if main.js dies, the head script still lifts it by 1.5s
+  for (const [label, o, init] of [['reduced motion', { reducedMotion: 'reduce' }], ['no JS', { javaScriptEnabled: false }], ['main.js broken', {}, () => Object.defineProperty(window, 'I18N', { get() {}, set() {} })]]) {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, intro: true, ...o });
+    if (o.javaScriptEnabled !== false) await ctx.addInitScript(watch);
+    if (init) await ctx.addInitScript(init);
+    const page = await ctx.newPage(); await page.goto(URL_, { waitUntil: 'load' }); await page.waitForTimeout(2400);
+    if (o.javaScriptEnabled === false) { if (await page.evaluate(() => getComputedStyle(document.querySelector('.intro-curtain')).display !== 'none')) problems.push('curtain visible without JS'); }
+    else { const s = await shown(page);
+      if (label === 'reduced motion' && s.first !== null) problems.push('curtain showed under reduced motion');
+      if (label === 'main.js broken' && (s.first === null || s.last > 1550)) problems.push(`with main.js broken: ${s.first === null ? 'never showed' : 'visible until ' + Math.round(s.last) + 'ms'}`); }
+    await ctx.close();
+  }
+  report('23. Intro curtain', problems.length === 0,
+    problems.length ? problems.join(' | ') : 'first visit (AR+EN, 1440 + 375): official mark + CONTENT.md label in the page language, aria-hidden, no focusables, gone by 1.5s; not shown again in the same tab; any key skips it; never under reduced motion or without JS; if main.js fails the head script still lifts it by 1.5s');
 }
 
 await browser.close();

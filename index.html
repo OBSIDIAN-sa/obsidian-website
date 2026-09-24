@@ -67,9 +67,18 @@
     var q = /[?&]lang=(ar|en)(?:&|$)/.exec(location.search);
     try { lang = q ? q[1] : (localStorage.getItem('obsidian-lang') || 'ar'); } catch (e) { if (q) lang = q[1]; }
     if (q && q[1] === 'en') { var c = document.querySelector('link[rel=canonical]'); if (c) c.href = c.getAttribute('data-base') + '?lang=en'; }
-    d.className = 'js' + (lang === 'en' ? ' i18n-pending' : '');
+    /* Intro curtain: first visit in this tab only, never under reduced motion. Hard-lifted by 1.5s from
+       navigation even if main.js never runs (and CSS fades it on its own as well). */
+    var intro = false;
+    try { intro = !sessionStorage.getItem('obsidian-intro') && !matchMedia('(prefers-reduced-motion: reduce)').matches; if (intro) sessionStorage.setItem('obsidian-intro', '1'); } catch (e) {}
+    d.className = 'js' + (lang === 'en' ? ' i18n-pending' : '') + (intro ? ' intro' : '');
     if (lang === 'en') { d.lang = 'en'; d.dir = 'ltr'; }
     setTimeout(function () { d.classList.remove('i18n-pending'); }, 1500); /* failsafe */
+    if (intro) setTimeout(function () {
+      if (!d.classList.contains('intro')) return;
+      d.classList.remove('intro');
+      document.dispatchEvent(new Event('obsidian:intro-done'));
+    }, Math.max(0, 1500 - (window.performance && performance.now ? performance.now() : 0)));
     /* Font preloads only over http(s): on file:// Chrome blocks crossorigin preloads, and @font-face alone loads them fine */
     if (/^https?:$/.test(location.protocol)) {
       /* Preload what the first screen of this language actually sets */
@@ -86,6 +95,16 @@
 <link rel="stylesheet" href="assets/css/main.css">
 </head>
 <body id="top">
+
+<!-- 00 · Intro curtain: shown only when the head script adds .intro (first visit, JS on, motion allowed) -->
+<div class="intro-curtain" aria-hidden="true" data-intro>
+  <picture>
+    <source type="image/webp" srcset="assets/img/logo-160.webp 1x, assets/img/logo-320.webp 2x">
+    <img class="intro-curtain__logo" src="assets/img/logo-160.png" width="160" height="163" alt="">
+  </picture>
+  <span class="intro-curtain__rule"><span class="intro-curtain__bar" data-intro-bar></span></span>
+  <p class="intro-curtain__label"><span lang="ar">جارٍ التحضير</span><span lang="en">Preparing</span></p>
+</div>
 
 <a class="skip-link" href="#main" data-i18n="skip">انتقل إلى المحتوى</a>
 

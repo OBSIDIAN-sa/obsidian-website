@@ -687,6 +687,34 @@ picture:has(> img[loading="lazy"]) { background-color: var(--onyx); }
 }
 .egg.is-on .egg__mark, .egg.is-on .egg__rule { transform: none; }
 
+/* ---- 00 Intro curtain ------------------------------------------------------ */
+/* Exists only under .intro (added before first paint on a first visit). It never hides the page from the
+   browser — the hero paints underneath — and it lifts by 1.5s whatever happens: JS lifts it when the hero
+   is ready, the head script lifts it at 1.5s, and this CSS fades it on its own if both fail. */
+.intro-curtain { display: none; }
+.intro .intro-curtain {
+  position: fixed; inset: 0; z-index: 100;
+  display: grid; place-content: center; justify-items: center; gap: var(--space-3);
+  background: var(--ink);
+  animation: intro-failsafe 450ms var(--ease-inout) 1050ms forwards;
+}
+.intro-curtain.is-out { animation: none; opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity 450ms var(--ease-inout), visibility 0s linear 450ms; }
+@keyframes intro-failsafe { to { opacity: 0; visibility: hidden; } }
+.intro-curtain__logo { inline-size: clamp(4.5rem, 3.5rem + 4vw, 6.5rem); block-size: auto; }
+.intro-curtain__rule { display: block; inline-size: clamp(6rem, 4rem + 8vw, 9rem); block-size: 1px; background: var(--hairline); overflow: hidden; }
+.intro-curtain__bar {
+  display: block; block-size: 100%; background: var(--bronze);
+  transform: scaleX(0.08); transform-origin: left; transition: transform 500ms var(--ease);
+}
+[dir='rtl'] .intro-curtain__bar { transform-origin: right; }
+.intro-curtain__label {
+  font-size: var(--step--1); color: var(--warm-grey);
+  letter-spacing: var(--label-track); text-transform: var(--label-case);
+}
+.intro-curtain__label [lang='en'] { font-family: var(--ff-num); }
+:root:lang(ar) .intro-curtain__label [lang='en'], :root:lang(en) .intro-curtain__label [lang='ar'] { display: none; }
+
 /* ---- Reduced motion: complete, static, fully readable -------------------- */
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }

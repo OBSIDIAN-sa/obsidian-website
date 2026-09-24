@@ -106,6 +106,46 @@
     reduceMQ.addEventListener('change', render);
   })();
 
+  /* ------------------------------------------------------- intro curtain */
+  // First visit only (the head script decides and adds .intro). The bronze hairline follows real readiness:
+  // fonts and the hero photo. The curtain shows at least 600ms so it never flashes, and starts to lift no
+  // later than 1050ms after navigation, so it is gone by 1.5s even on a slow phone. Any key, tap or wheel skips it.
+  (function intro() {
+    var el = $('[data-intro]');
+    if (!el || !root.classList.contains('intro')) return;
+    var bar = $('[data-intro-bar]', el);
+    var MIN = 600, FADE = 450, LIFT_BY = 1500 - FADE;
+    var shownAt = performance.now(), done = false, ready = 0;
+    if (shownAt >= LIFT_BY) { // slow connection: the visitor has waited enough, hard-skip with no fade
+      root.classList.remove('intro');
+      document.dispatchEvent(new Event('obsidian:intro-done'));
+      return;
+    }
+
+    function lift() {
+      if (done) return;
+      done = true;
+      bar.style.transform = 'scaleX(1)';
+      el.classList.add('is-out');
+      document.dispatchEvent(new Event('obsidian:intro-done'));
+      setTimeout(function () { root.classList.remove('intro'); }, FADE);
+      ['keydown', 'pointerdown', 'wheel', 'touchstart'].forEach(function (t) { removeEventListener(t, lift, true); });
+    }
+    function step() {
+      ready++;
+      bar.style.transform = 'scaleX(' + (0.08 + 0.92 * ready / 2).toFixed(3) + ')';
+      if (ready === 2) setTimeout(lift, Math.max(0, shownAt + MIN - performance.now()));
+    }
+    var hero = $('.hero__media img');
+    if (!hero || (hero.complete && hero.naturalWidth)) step();
+    else { hero.addEventListener('load', step, { once: true }); hero.addEventListener('error', step, { once: true }); }
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(step); else step();
+    setTimeout(lift, Math.max(0, LIFT_BY - performance.now()));
+    ['keydown', 'pointerdown', 'wheel', 'touchstart'].forEach(function (t) { addEventListener(t, lift, { capture: true, passive: true }); });
+    // The head script's 1.5s failsafe may have lifted it already
+    document.addEventListener('obsidian:intro-done', function () { if (!done) { done = true; el.classList.add('is-out'); } }, { once: true });
+  })();
+
   /* --------------------------------------------------------- logo swing */
   // The official mark, untouched, swings once from the top of the ring and settles (CSS keyframes, transform only).
   // It starts when the intro curtain lifts, or straight away on a repeat visit. A mouse touching it sets it
