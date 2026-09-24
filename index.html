@@ -62,7 +62,7 @@
       </picture>
     </a>
     <nav class="nav">
-      <ul class="nav__list">
+      <ul class="nav__list" id="site-nav" data-menu>
         <li class="nav__item nav__item--wide"><a href="#principle" data-i18n="nav_principle">المبدأ</a></li>
         <li class="nav__item nav__item--wide"><a href="#services" data-i18n="nav_services">خدماتنا</a></li>
         <li class="nav__item nav__item--wide"><a href="#why" data-i18n="nav_why">ليش أوبسيديان</a></li>
@@ -70,8 +70,12 @@
         <li class="nav__item"><a class="nav__cta" href="#register" data-i18n="nav_register">سجّل اهتمامك</a></li>
       </ul>
     </nav>
+    <a class="nav__cta header-cta" href="#register" data-i18n="nav_register">سجّل اهتمامك</a>
     <button class="lang-toggle" type="button" data-lang-toggle>
       <span data-i18n="lang_toggle" lang="en">EN</span>
+    </button>
+    <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="القائمة" data-i18n-aria="menu" data-menu-toggle>
+      <span class="menu-toggle__line" aria-hidden="true"></span><span class="menu-toggle__line" aria-hidden="true"></span>
     </button>
   </div>
 </header>
@@ -82,8 +86,8 @@
   <!-- 01 · Hero -->
   <section class="hero" aria-labelledby="hero-title">
     <picture class="hero__media">
-      <source media="(max-width: 700px)" type="image/webp" srcset="assets/img/hero-mobile-800.webp 800w, assets/img/hero-mobile-1200.webp 1200w" sizes="100vw" width="800" height="1422">
-      <source media="(max-width: 700px)" srcset="assets/img/hero-mobile-800.jpg 800w, assets/img/hero-mobile-1200.jpg 1200w" sizes="100vw" width="800" height="1422">
+      <source media="(max-width: 700px), (max-width: 1023px) and (orientation: portrait)" type="image/webp" srcset="assets/img/hero-mobile-800.webp 800w, assets/img/hero-mobile-1200.webp 1200w, assets/img/hero-mobile-1600.webp 1600w" sizes="100vw" width="800" height="1422">
+      <source media="(max-width: 700px), (max-width: 1023px) and (orientation: portrait)" srcset="assets/img/hero-mobile-800.jpg 800w, assets/img/hero-mobile-1200.jpg 1200w, assets/img/hero-mobile-1600.jpg 1600w" sizes="100vw" width="800" height="1422">
       <source type="image/webp" srcset="assets/img/hero-1200.webp 1200w, assets/img/hero-2000.webp 2000w" sizes="100vw">
       <img src="assets/img/hero-1200.jpg" srcset="assets/img/hero-1200.jpg 1200w, assets/img/hero-2000.jpg 2000w" sizes="100vw" width="1200" height="675" alt="" fetchpriority="high">
     </picture>

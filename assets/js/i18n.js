@@ -7,6 +7,7 @@ window.I18N = {
     meta_desc: 'ما عندنا قطعة جاهزة واحدة. كل مطبخ وكل خزانة تبدأ من ورقة بيضاء، وتُصنع بمقاسها ومادتها وتفصيلها.',
 
     skip: 'انتقل إلى المحتوى', // [NOT IN CONTENT.md]
+    menu: 'القائمة', // [NOT IN CONTENT.md] accessible name of the phone menu button
     lang_toggle: 'EN',
     lang_name: 'العربية',
     nav_principle: 'المبدأ',
@@ -130,6 +131,7 @@ window.I18N = {
     meta_desc: 'Nothing here is off the shelf. Every kitchen and every wardrobe begins on a blank sheet — then it’s built to your measurements, your material, your detail.',
 
     skip: 'Skip to content', // [NOT IN CONTENT.md]
+    menu: 'Menu', // [NOT IN CONTENT.md] accessible name of the phone menu button
     lang_toggle: 'عربي',
     lang_name: 'English',
     nav_principle: 'Principle',

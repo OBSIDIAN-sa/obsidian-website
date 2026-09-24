@@ -184,7 +184,7 @@ async function scrollThrough(page) {
   for (const lang of ['ar', 'en']) for (const [w, h] of [[1440, 900], [390, 844]]) {
     const { ctx, page } = await open({ lang, width: w, height: h });
     const expected = await page.evaluate(() => {
-      const els = [...document.querySelectorAll('a[href], button, input, select, textarea, [tabindex="0"]')].filter((e) => e.offsetWidth || e.offsetHeight || e.classList.contains('skip-link'));
+      const els = [...document.querySelectorAll('a[href], button, input, select, textarea, [tabindex="0"]')].filter((e) => (e.offsetWidth || e.offsetHeight || e.classList.contains('skip-link')) && getComputedStyle(e).visibility !== 'hidden');
       els.forEach((e, i) => (e.dataset.kb = i)); return els.length;
     });
     const seen = new Set(), noRing = [];
@@ -436,7 +436,7 @@ async function scrollThrough(page) {
     const small = await page.evaluate(() => {
       const bad = [];
       for (const el of document.querySelectorAll('a[href], button, input, select, textarea')) {
-        if (!el.offsetWidth || el.classList.contains('skip-link')) continue;
+        if (!el.offsetWidth || el.classList.contains('skip-link') || getComputedStyle(el).visibility === 'hidden') continue;
         el.scrollIntoView({ block: 'center', behavior: 'instant' });
         const r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
         const hits = [cy - 21, cy + 21].map((y) => { const h = document.elementFromPoint(cx, y); return h && (h === el || el.contains(h)); });
@@ -485,6 +485,58 @@ async function scrollThrough(page) {
   }
   report('15. Polish: hero word, hit areas, tablet nav, watermark, image fade', problems.length === 0,
     problems.length ? problems.join(' | ') : 'hero words never overlap (sampled every 40ms over two swaps, AR+EN); every control on a 375px phone is hittable 21px above and below its centre; full 5-link nav on one row at 768 in AR+EN; "NO READY MADE" whole at 375/768/1440; lazy images sit on onyx and fade in, and all show without JS');
+}
+
+// 16 — phone menu (< 760px) + portrait-tablet hero crop
+{
+  const problems = [];
+  const st = (page) => page.evaluate(() => {
+    const b = document.querySelector('[data-menu-toggle]'), l = document.querySelector('[data-menu]');
+    return { exp: b.getAttribute('aria-expanded'), vis: getComputedStyle(l).visibility, inert: document.querySelector('main').inert,
+      focus: document.activeElement === b ? 'toggle' : (l.contains(document.activeElement) ? 'menu' : document.activeElement.tagName) };
+  });
+  for (const lang of ['ar', 'en']) {
+    const { ctx, page, errors } = await open({ lang, width: 375, height: 812 });
+    if ((await st(page)).exp !== 'false') problems.push(`${lang}: toggle not collapsed at load`);
+    await page.click('[data-menu-toggle]'); await page.waitForTimeout(700);
+    let s = await st(page);
+    if (s.exp !== 'true' || s.vis !== 'visible' || !s.inert || s.focus !== 'menu') problems.push(`${lang}: open state wrong ${JSON.stringify(s)}`);
+    const geo = await page.evaluate(() => {
+      const links = [...document.querySelectorAll('[data-menu] a')];
+      const lr = document.createRange(); lr.selectNodeContents(links[0]); const t = lr.getBoundingClientRect(), a = links[0].getBoundingClientRect();
+      return { n: links.length, minH: Math.min(...links.map((x) => x.getBoundingClientRect().height)), startGap: document.dir === 'rtl' ? a.right - t.right : t.left - a.left,
+        tb: Math.min(...[...document.querySelectorAll('[data-menu-toggle], .lang-toggle')].map((x) => x.getBoundingClientRect().height)) };
+    });
+    if (geo.n !== 5 || geo.minH < 44) problems.push(`${lang}: menu has ${geo.n} links, smallest ${Math.round(geo.minH)}px`);
+    if (geo.startGap > 2) problems.push(`${lang}: menu text not at the reading start`);
+    if (geo.tb < 44) problems.push(`${lang}: a header control box is ${Math.round(geo.tb)}px`);
+    await page.keyboard.press('Escape'); await page.waitForTimeout(100);
+    s = await st(page);
+    if (s.exp !== 'false' || s.inert || s.focus !== 'toggle') problems.push(`${lang}: Escape did not close + return focus ${JSON.stringify(s)}`);
+    await page.click('[data-menu-toggle]'); await page.waitForTimeout(700);
+    await page.click('[data-menu] a[href="#faq"]'); await page.waitForTimeout(1200);
+    s = await st(page);
+    const atFaq = await page.evaluate(() => Math.abs(document.querySelector('#faq').getBoundingClientRect().top) < 200);
+    if (s.exp !== 'false' || s.inert || !atFaq) problems.push(`${lang}: link tap did not close + navigate`);
+    await page.click('[data-menu-toggle]'); await page.setViewportSize({ width: 900, height: 812 }); await page.waitForTimeout(200);
+    s = await st(page);
+    if (s.exp !== 'false' || s.inert) problems.push(`${lang}: widening past 760px left the menu open`);
+    if (errors.length) problems.push(`${lang}: ${errors.join(', ')}`);
+    await ctx.close();
+  }
+  // Desktop: no menu button; full nav
+  { const { ctx, page } = await open({ width: 1440 });
+    if (await page.evaluate(() => !!document.querySelector('[data-menu-toggle]').offsetWidth)) problems.push('menu button visible on desktop');
+    await ctx.close(); }
+  // Portrait tablet gets the portrait crop; landscape keeps the wide frame
+  for (const [w, h, want] of [[768, 1024, 'hero-mobile-'], [1024, 768, 'hero-'], [375, 812, 'hero-mobile-']]) {
+    const { ctx, page } = await open({ width: w, height: h });
+    const src = await page.evaluate(() => document.querySelector('.hero__media img').currentSrc.split('/').pop());
+    if (!src.startsWith(want) || (want === 'hero-' && src.startsWith('hero-mobile'))) problems.push(`${w}x${h} hero uses ${src}`);
+    await ctx.close();
+  }
+  report('16. Phone menu + portrait-tablet hero', problems.length === 0,
+    problems.length ? problems.join(' | ') : 'AR+EN at 375: opens with focus in the menu and the page inert; 5 links ≥44px at the reading start; Escape closes and returns focus; a link tap closes and navigates; widening past 760 closes it; hidden on desktop. 768×1024 portrait serves the portrait crop, 1024×768 landscape the wide frame');
 }
 
 await browser.close();

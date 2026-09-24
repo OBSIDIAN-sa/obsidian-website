@@ -25,7 +25,7 @@ const SQUARE = [600, 1200];
 
 const SLOTS = [
   { slot: 'hero',          src: 'hero/hero-1.jpg',                 ratio: 16 / 9,  widths: FULL },
-  { slot: 'hero-mobile',   src: 'hero-mobile/hero-mobile-3.jpg',   ratio: 9 / 16,  widths: CARD, focus: { x: .55, y: .5 } },
+  { slot: 'hero-mobile',   src: 'hero-mobile/hero-mobile-3.jpg',   ratio: 9 / 16,  widths: [800, 1200, 1600], focus: { x: .55, y: .5 } }, // 1600w: portrait tablets at 2x
   { slot: 'island',        src: 'island/island-1.jpg',             ratio: 21 / 9,  widths: FULL, focus: { x: .5, y: .55 } },
   { slot: 'plan',          src: 'plan/plan-1.jpg',                 ratio: 4 / 3,   widths: CARD, focus: { x: .4, y: .5 } },
   { slot: 'mat-walnut',    src: 'mat-walnut/mat-walnut-3.jpg',     ratio: 1,       widths: SQUARE },

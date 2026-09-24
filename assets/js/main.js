@@ -413,6 +413,28 @@
     });
   })();
 
+  /* --------------------------------------------------------- phone menu */
+  (function menu() {
+    var btn = $('[data-menu-toggle]'), list = $('[data-menu]');
+    if (!btn || !list) return;
+    var wideMQ = window.matchMedia('(min-width: 760px)');
+    var behind = [$('main'), $('.site-footer')];
+    function set(open, restoreFocus) {
+      btn.setAttribute('aria-expanded', String(open));
+      if (open) list.setAttribute('data-open', ''); else list.removeAttribute('data-open');
+      root.classList.toggle('menu-open', open);
+      behind.forEach(function (el) { if (el) el.inert = open; }); // nothing behind the panel is reachable
+      if (open) { var first = $('a', list); if (first) first.focus(); }
+      else if (restoreFocus) btn.focus();
+    }
+    btn.addEventListener('click', function () { set(btn.getAttribute('aria-expanded') !== 'true', true); });
+    list.addEventListener('click', function (e) { if (e.target.closest('a') && !wideMQ.matches) set(false, false); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && btn.getAttribute('aria-expanded') === 'true') set(false, true);
+    });
+    wideMQ.addEventListener('change', function () { if (wideMQ.matches) set(false, false); });
+  })();
+
   /* ------------------------------------------- image placeholder + fade */
   // Lazy images sit on an onyx ground and fade in once decoded, instead of popping out of black.
   // Only with JS (the CSS hides them under .js), and instant under reduced motion.

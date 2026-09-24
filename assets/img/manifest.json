@@ -43,6 +43,12 @@
           "h": 2134,
           "webp": "hero-mobile-1200.webp",
           "jpg": "hero-mobile-1200.jpg"
+        },
+        {
+          "w": 1600,
+          "h": 2845,
+          "webp": "hero-mobile-1600.webp",
+          "jpg": "hero-mobile-1600.jpg"
         }
       ]
     },

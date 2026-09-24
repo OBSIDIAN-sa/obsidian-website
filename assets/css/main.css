@@ -230,7 +230,55 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .lang-toggle [lang='en'] { font-family: var(--ff-num); letter-spacing: 0.12em; }
 .lang-toggle [lang='ar'] { font-family: 'Tajawal', sans-serif; }
 .lang-toggle:hover { border-color: var(--bronze); }
-@media (max-width: 759px) { .nav__item--wide { display: none; } }
+.header-cta, .menu-toggle { display: none; }
+
+/* ---- Phone menu (< 760px) ------------------------------------------------ */
+/* The nav list becomes a full-screen ink panel under the header; links in the display face on
+   hairlines. Opened by a two-line toggle that turns into a cross. JS adds inert + scroll lock. */
+@media (max-width: 759px) {
+  .header-cta { display: inline-block; margin-inline-start: auto; position: relative; }
+  .header-cta::before { content: ''; position: absolute; inset: -0.75rem -0.5rem; }
+  .nav { margin: 0; }
+  .menu-toggle {
+    display: grid; place-content: center; gap: 7px; flex: none;
+    inline-size: 44px; block-size: 44px; margin-inline-end: -10px;
+    background: none; border: 0; cursor: pointer;
+  }
+  .menu-toggle__line {
+    display: block; inline-size: 22px; block-size: 1px; background: var(--bone);
+    transition: transform var(--dur-short) var(--ease);
+  }
+  .menu-toggle[aria-expanded='true'] .menu-toggle__line:first-child { transform: translateY(4px) rotate(45deg); }
+  .menu-toggle[aria-expanded='true'] .menu-toggle__line:last-child { transform: translateY(-4px) rotate(-45deg); }
+
+  .nav__list {
+    position: fixed; inset: 4.5rem 0 0; z-index: -1;
+    display: flex; flex-direction: column; align-items: stretch; gap: 0;
+    padding: var(--space-4) var(--gutter) var(--space-5);
+    background: var(--ink); border-block-start: 1px solid var(--hairline);
+    overflow-y: auto; overscroll-behavior: contain;
+    visibility: hidden; opacity: 0;
+    transition: opacity var(--dur-short) var(--ease), visibility 0s linear var(--dur-short);
+  }
+  .nav__list[data-open] { visibility: visible; opacity: 1; transition: opacity var(--dur-short) var(--ease); }
+  .nav__list .nav__item { border-block-end: 1px solid var(--hairline); }
+  .nav__list a, :root:lang(en) .nav__list a {
+    display: flex; align-items: center; min-block-size: 4rem;
+    font-family: var(--ff-display); font-weight: var(--display-weight); font-size: var(--step-2);
+    letter-spacing: var(--display-track); text-transform: none; color: var(--bone);
+  }
+  .nav__list a::before { display: none; }
+  .nav__list .nav__cta { padding: 0; border: 0; color: var(--bronze-lt); }
+  /* Links arrive one after another, small travel, long tail */
+  .nav__list .nav__item { opacity: 0; transform: translateY(12px); transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease); }
+  .nav__list[data-open] .nav__item { opacity: 1; transform: none; }
+  .nav__list[data-open] .nav__item:nth-child(2) { transition-delay: 70ms; }
+  .nav__list[data-open] .nav__item:nth-child(3) { transition-delay: 140ms; }
+  .nav__list[data-open] .nav__item:nth-child(4) { transition-delay: 210ms; }
+  .nav__list[data-open] .nav__item:nth-child(5) { transition-delay: 280ms; }
+  .menu-open, .menu-open body { overflow: hidden; }
+  .menu-open .site-header { background-color: var(--ink); }
+}
 @media (min-width: 760px) and (max-width: 1023px) { .nav__list { gap: 1.1rem; } }
 
 /* ---- 01 Hero -------------------------------------------------------------- */
@@ -249,6 +297,10 @@ button, input, select, textarea { font: inherit; color: inherit; }
   background:
     linear-gradient(to top, var(--ink) 0%, transparent 38%),
     linear-gradient(to left, color-mix(in srgb, var(--ink) 70%, transparent) 0%, transparent 60%);
+}
+/* Portrait tablets use the portrait crop (see <picture>): lift the frame so the type clears it */
+@media (min-width: 701px) and (max-width: 1023px) and (orientation: portrait) {
+  .hero__media img { object-position: 50% 100%; }
 }
 /* Phones: the portrait frame holds the top of the screen; the type sits below it on ink */
 @media (max-width: 700px) {
