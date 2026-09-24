@@ -26,6 +26,25 @@
   src: url(../fonts/inter-latin-400-normal.woff2) format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
 
+/* Tajawal's own Latin subset: spaces, punctuation and digits inside Arabic lines come from Tajawal,
+   so an Arabic line never waits on (or re-wraps for) Inter. */
+@font-face { font-family: 'Tajawal'; font-style: normal; font-weight: 400; font-display: swap; src: url(../fonts/tajawal-latin-400-normal.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Tajawal'; font-style: normal; font-weight: 500; font-display: swap; src: url(../fonts/tajawal-latin-500-normal.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Tajawal'; font-style: normal; font-weight: 700; font-display: swap; src: url(../fonts/tajawal-latin-700-normal.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+/* Inter is 11-14% wider than the system faces: width-matched fallbacks keep English lines stable */
+@font-face { font-family: 'Inter FB'; font-weight: 300; src: local('Segoe UI Light'), local('SegoeUI-Light'); size-adjust: 113.9%; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Inter FB'; font-weight: 400; src: local('Segoe UI'); size-adjust: 111.5%; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Inter FB2'; font-weight: 300; src: local('Arial'); size-adjust: 107.5%; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Inter FB2'; font-weight: 400; src: local('Arial'); size-adjust: 109.8%; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+/* Metric-matched fallbacks for Arabic: before Tajawal arrives, the system face is scaled to Tajawal's
+   width (measured over the site's own copy) so lines wrap the same and nothing shifts on swap.
+   Segoe UI covers Windows, Tahoma Windows + macOS; iOS/Android fall through to their own Arabic faces. */
+@font-face { font-family: 'Tajawal FB'; font-weight: 400; src: local('Segoe UI'); size-adjust: 101.4%; unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC; }
+@font-face { font-family: 'Tajawal FB'; font-weight: 500; src: local('Segoe UI Semibold'), local('SegoeUI-Semibold'); size-adjust: 100.9%; unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC; }
+@font-face { font-family: 'Tajawal FB'; font-weight: 700; src: local('Segoe UI Bold'), local('SegoeUI-Bold'); size-adjust: 100.9%; unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC; }
+@font-face { font-family: 'Tajawal FB2'; font-weight: 400; src: local('Tahoma'); size-adjust: 100.1%; unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC; }
+@font-face { font-family: 'Tajawal FB2'; font-weight: 500 700; src: local('Tahoma Bold'), local('Tahoma-Bold'); size-adjust: 101.8%; unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC; }
+
 /* ---- Tokens --------------------------------------------------------------- */
 :root {
   --ink:       #050504;
@@ -70,10 +89,10 @@
   --stagger: 70ms;
 
   /* Script-specific typography (set per language below) */
-  --ff-display: 'Tajawal', 'Segoe UI', 'Geeza Pro', 'Noto Sans Arabic', Tahoma, sans-serif;
-  --ff-body:    'Tajawal', 'Inter', 'Segoe UI', 'Geeza Pro', 'Noto Sans Arabic', Tahoma, sans-serif;
+  --ff-display: 'Tajawal', 'Tajawal FB', 'Tajawal FB2', 'Geeza Pro', 'Noto Sans Arabic', sans-serif;
+  --ff-body:    'Tajawal', 'Tajawal FB', 'Tajawal FB2', 'Geeza Pro', 'Noto Sans Arabic', sans-serif;
   --ff-latin-display: 'Cormorant Garamond', 'Cormorant', Georgia, 'Times New Roman', serif;
-  --ff-num: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  --ff-num: 'Inter', 'Inter FB', 'Inter FB2', system-ui, sans-serif;
   --display-weight: 500;        /* large Arabic display: 500 reads as crafted, 700 read as blocky */
   --name-weight: 700;           /* small Arabic sub-headings keep weight for hierarchy */
   --display-lh: 1.35;
@@ -85,7 +104,7 @@
 }
 :root:lang(en) {
   --ff-display: var(--ff-latin-display);
-  --ff-body: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --ff-body: 'Inter', 'Inter FB', 'Inter FB2', system-ui, -apple-system, sans-serif;
   --display-weight: 300;
   --name-weight: 300;
   --display-lh: 1.06;
@@ -114,7 +133,7 @@ body {
 /* Stone grain: fixed, low-opacity, sits behind every section without its own ground */
 body::before {
   content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: 0.07;
-  background: var(--ink) image-set(url(../img/texture-stone-1200.webp) type('image/webp'), url(../img/texture-stone-1200.jpg) type('image/jpeg')) center / cover;
+  background: var(--ink) image-set(url(../img/texture-stone-1200.avif) type('image/avif'), url(../img/texture-stone-1200.webp) type('image/webp'), url(../img/texture-stone-1200.jpg) type('image/jpeg')) center / cover;
 }
 img, picture { display: block; max-width: 100%; height: auto; }
 h1, h2, h3, p, ul, ol, figure { margin: 0; }
@@ -124,6 +143,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 ::selection { background: var(--bronze); color: var(--ink); }
 
 :focus-visible { outline: 1px solid var(--bronze); outline-offset: 5px; }
+/* The skip link lands focus on <main> (a container, not a control): no frame around the whole page */
+#main:focus { outline: none; }
 .principle :focus-visible { outline-color: var(--ink); }
 
 .sr-only { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
@@ -492,7 +513,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .film__frame img { inline-size: 100%; block-size: 100%; object-fit: cover; }
 .film__stage::after {
   content: ''; position: absolute; inset: 0;
-  background: linear-gradient(to top, color-mix(in srgb, var(--ink) 85%, transparent) 0%, transparent 55%),
+  /* Lower third is a near-opaque ink scrim so each line clears 3:1 even on the brightest frame */
+  background: linear-gradient(to top, color-mix(in srgb, var(--ink) 96%, transparent) 0%, color-mix(in srgb, var(--ink) 88%, transparent) 36%, color-mix(in srgb, var(--ink) 50%, transparent) 58%, transparent 78%),
               linear-gradient(to bottom, var(--ink) 0%, transparent 18%);
 }
 .film__lines { position: relative; z-index: 1; }
@@ -501,7 +523,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
   padding-inline: var(--gutter); padding-block-end: clamp(3rem, 10vh, 7rem);
   max-inline-size: var(--max); margin-inline: auto;
 }
-.film__line p { font-size: var(--step-3); max-inline-size: 22ch; }
+.film__line p { font-size: var(--step-3); max-inline-size: 22ch; text-shadow: 0 0 1.5rem var(--ink), 0 0 0.4rem var(--ink); }
 :root:lang(en) .film__line p { max-inline-size: 24ch; }
 
 /* ---- 12 FAQ --------------------------------------------------------------- */

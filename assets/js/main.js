@@ -35,7 +35,13 @@
     toggleLabel.setAttribute('lang', next === 'ar' ? 'en' : 'ar');
 
     try { localStorage.setItem('obsidian-lang', next); } catch (e) {}
-    if (announce) $('[data-lang-live]').textContent = d.lang_name;
+    if (announce) {
+      $('[data-lang-live]').textContent = d.lang_name;
+      // Keep the address in step with the language, so a shared link opens in the same one
+      try { history.replaceState(null, '', (next === 'en' ? '?lang=en' : location.pathname) + location.hash); } catch (e) {}
+      var canon = $('link[rel=canonical]');
+      if (canon) canon.href = canon.getAttribute('data-base') + (next === 'en' ? '?lang=en' : '');
+    }
     langHooks.forEach(function (fn) { fn(); });
     root.classList.remove('i18n-pending');
   }

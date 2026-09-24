@@ -12,12 +12,14 @@
         {
           "w": 1200,
           "h": 675,
+          "avif": "hero-1200.avif",
           "webp": "hero-1200.webp",
           "jpg": "hero-1200.jpg"
         },
         {
           "w": 2000,
           "h": 1125,
+          "avif": "hero-2000.avif",
           "webp": "hero-2000.webp",
           "jpg": "hero-2000.jpg"
         }
@@ -35,18 +37,21 @@
         {
           "w": 800,
           "h": 1422,
+          "avif": "hero-mobile-800.avif",
           "webp": "hero-mobile-800.webp",
           "jpg": "hero-mobile-800.jpg"
         },
         {
           "w": 1200,
           "h": 2134,
+          "avif": "hero-mobile-1200.avif",
           "webp": "hero-mobile-1200.webp",
           "jpg": "hero-mobile-1200.jpg"
         },
         {
           "w": 1600,
           "h": 2845,
+          "avif": "hero-mobile-1600.avif",
           "webp": "hero-mobile-1600.webp",
           "jpg": "hero-mobile-1600.jpg"
         }
@@ -64,12 +69,14 @@
         {
           "w": 1200,
           "h": 514,
+          "avif": "island-1200.avif",
           "webp": "island-1200.webp",
           "jpg": "island-1200.jpg"
         },
         {
           "w": 2000,
           "h": 857,
+          "avif": "island-2000.avif",
           "webp": "island-2000.webp",
           "jpg": "island-2000.jpg"
         }
@@ -87,12 +94,14 @@
         {
           "w": 800,
           "h": 600,
+          "avif": "plan-800.avif",
           "webp": "plan-800.webp",
           "jpg": "plan-800.jpg"
         },
         {
           "w": 1200,
           "h": 900,
+          "avif": "plan-1200.avif",
           "webp": "plan-1200.webp",
           "jpg": "plan-1200.jpg"
         }
@@ -110,12 +119,14 @@
         {
           "w": 600,
           "h": 600,
+          "avif": null,
           "webp": "mat-walnut-600.webp",
           "jpg": "mat-walnut-600.jpg"
         },
         {
           "w": 1200,
           "h": 1200,
+          "avif": null,
           "webp": "mat-walnut-1200.webp",
           "jpg": "mat-walnut-1200.jpg"
         }
@@ -133,12 +144,14 @@
         {
           "w": 600,
           "h": 600,
+          "avif": "mat-marble-600.avif",
           "webp": "mat-marble-600.webp",
           "jpg": "mat-marble-600.jpg"
         },
         {
           "w": 784,
           "h": 784,
+          "avif": "mat-marble-784.avif",
           "webp": "mat-marble-784.webp",
           "jpg": "mat-marble-784.jpg"
         }
@@ -156,12 +169,14 @@
         {
           "w": 600,
           "h": 600,
+          "avif": "mat-oak-600.avif",
           "webp": "mat-oak-600.webp",
           "jpg": "mat-oak-600.jpg"
         },
         {
           "w": 1200,
           "h": 1200,
+          "avif": "mat-oak-1200.avif",
           "webp": "mat-oak-1200.webp",
           "jpg": "mat-oak-1200.jpg"
         }
@@ -179,12 +194,14 @@
         {
           "w": 600,
           "h": 600,
+          "avif": "mat-glass-600.avif",
           "webp": "mat-glass-600.webp",
           "jpg": "mat-glass-600.jpg"
         },
         {
           "w": 1200,
           "h": 1200,
+          "avif": "mat-glass-1200.avif",
           "webp": "mat-glass-1200.webp",
           "jpg": "mat-glass-1200.jpg"
         }
@@ -202,12 +219,14 @@
         {
           "w": 800,
           "h": 533,
+          "avif": "svc-kitchen-800.avif",
           "webp": "svc-kitchen-800.webp",
           "jpg": "svc-kitchen-800.jpg"
         },
         {
           "w": 1200,
           "h": 800,
+          "avif": "svc-kitchen-1200.avif",
           "webp": "svc-kitchen-1200.webp",
           "jpg": "svc-kitchen-1200.jpg"
         }
@@ -225,12 +244,14 @@
         {
           "w": 800,
           "h": 533,
+          "avif": "svc-wardrobe-800.avif",
           "webp": "svc-wardrobe-800.webp",
           "jpg": "svc-wardrobe-800.jpg"
         },
         {
           "w": 1200,
           "h": 800,
+          "avif": "svc-wardrobe-1200.avif",
           "webp": "svc-wardrobe-1200.webp",
           "jpg": "svc-wardrobe-1200.jpg"
         }
@@ -248,12 +269,14 @@
         {
           "w": 800,
           "h": 533,
+          "avif": "svc-interior-800.avif",
           "webp": "svc-interior-800.webp",
           "jpg": "svc-interior-800.jpg"
         },
         {
           "w": 1200,
           "h": 800,
+          "avif": "svc-interior-1200.avif",
           "webp": "svc-interior-1200.webp",
           "jpg": "svc-interior-1200.jpg"
         }
@@ -271,12 +294,14 @@
         {
           "w": 1200,
           "h": 675,
+          "avif": "film-1-1200.avif",
           "webp": "film-1-1200.webp",
           "jpg": "film-1-1200.jpg"
         },
         {
           "w": 2000,
           "h": 1125,
+          "avif": "film-1-2000.avif",
           "webp": "film-1-2000.webp",
           "jpg": "film-1-2000.jpg"
         }
@@ -294,12 +319,14 @@
         {
           "w": 1200,
           "h": 675,
+          "avif": "film-2-1200.avif",
           "webp": "film-2-1200.webp",
           "jpg": "film-2-1200.jpg"
         },
         {
           "w": 2000,
           "h": 1125,
+          "avif": "film-2-2000.avif",
           "webp": "film-2-2000.webp",
           "jpg": "film-2-2000.jpg"
         }
@@ -317,12 +344,14 @@
         {
           "w": 1200,
           "h": 675,
+          "avif": "film-3-1200.avif",
           "webp": "film-3-1200.webp",
           "jpg": "film-3-1200.jpg"
         },
         {
           "w": 2000,
           "h": 1125,
+          "avif": "film-3-2000.avif",
           "webp": "film-3-2000.webp",
           "jpg": "film-3-2000.jpg"
         }
@@ -340,12 +369,14 @@
         {
           "w": 1200,
           "h": 675,
+          "avif": "film-4-1200.avif",
           "webp": "film-4-1200.webp",
           "jpg": "film-4-1200.jpg"
         },
         {
           "w": 2000,
           "h": 1125,
+          "avif": "film-4-2000.avif",
           "webp": "film-4-2000.webp",
           "jpg": "film-4-2000.jpg"
         }
@@ -363,12 +394,14 @@
         {
           "w": 1200,
           "h": 675,
+          "avif": "film-5-1200.avif",
           "webp": "film-5-1200.webp",
           "jpg": "film-5-1200.jpg"
         },
         {
           "w": 2000,
           "h": 1125,
+          "avif": "film-5-2000.avif",
           "webp": "film-5-2000.webp",
           "jpg": "film-5-2000.jpg"
         }
@@ -386,12 +419,14 @@
         {
           "w": 1200,
           "h": 675,
+          "avif": "film-6-1200.avif",
           "webp": "film-6-1200.webp",
           "jpg": "film-6-1200.jpg"
         },
         {
           "w": 2000,
           "h": 1125,
+          "avif": "film-6-2000.avif",
           "webp": "film-6-2000.webp",
           "jpg": "film-6-2000.jpg"
         }
@@ -409,6 +444,7 @@
         {
           "w": 1200,
           "h": 800,
+          "avif": "texture-stone-1200.avif",
           "webp": "texture-stone-1200.webp",
           "jpg": "texture-stone-1200.jpg"
         }

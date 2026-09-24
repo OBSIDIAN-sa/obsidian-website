@@ -539,6 +539,127 @@ async function scrollThrough(page) {
     problems.length ? problems.join(' | ') : 'AR+EN at 375: opens with focus in the menu and the page inert; 5 links ≥44px at the reading start; Escape closes and returns focus; a link tap closes and navigates; widening past 760 closes it; hidden on desktop. 768×1024 portrait serves the portrait crop, 1024×768 landscape the wide frame');
 }
 
+// 17 — accessibility: axe-core WCAG 2.1 AA, skip-link focus, pixel contrast of text over photos
+{
+  const problems = [];
+  const AXE = fs.readFileSync(path.join(ROOT, 'tools', 'node_modules', 'axe-core', 'axe.min.js'), 'utf8');
+  for (const lang of ['ar', 'en']) for (const [w, h, menu] of [[375, 812, false], [375, 812, true], [1440, 900, false]]) {
+    const { ctx, page } = await open({ lang, width: w, height: h, reducedMotion: 'reduce' });
+    if (menu) { await page.click('[data-menu-toggle]'); await page.waitForTimeout(300); }
+    await page.addScriptTag({ content: AXE });
+    const v = await page.evaluate(async () => (await axe.run(document, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] } })).violations.map((x) => `${x.id} ×${x.nodes.length}`));
+    if (v.length) problems.push(`${lang}@${w}${menu ? '+menu' : ''} axe: ${v.join(', ')}`);
+    await ctx.close();
+  }
+  // Skip link moves focus to <main>
+  { const { ctx, page } = await open({});
+    await page.keyboard.press('Tab'); await page.keyboard.press('Enter'); await page.waitForTimeout(200);
+    if (await page.evaluate(() => document.activeElement.id) !== 'main') problems.push('skip link does not move focus to <main>');
+    await ctx.close(); }
+  // Text over photos (hero + every film line): bone text vs the lightest 5% of pixels behind it, text hidden
+  const lum = (r, g, b) => [r, g, b].map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }).reduce((a, v, i) => a + v * [0.2126, 0.7152, 0.0722][i], 0);
+  const sharp = (await import('sharp')).default;
+  for (const lang of ['ar', 'en']) for (const [w, h] of [[375, 812], [1440, 900]]) {
+    const { ctx, page } = await open({ lang, width: w, height: h, reducedMotion: 'reduce' });
+    const n = await page.evaluate(() => { const els = [...document.querySelectorAll('.hero__intro, .film__line p')]; els.forEach((e, i) => { e.dataset.oc = i; e.dataset.col = getComputedStyle(e).color; }); return els.length; });
+    await page.addStyleTag({ content: '[data-oc] { color: transparent !important; }' });
+    for (let i = 0; i < n; i++) {
+      const box = await page.evaluate((i) => { const el = document.querySelector(`[data-oc="${i}"]`); el.scrollIntoView({ block: 'center', behavior: 'instant' });
+        const line = el.closest('[data-film-line]'); if (line) { const k = [...document.querySelectorAll('[data-film-line]')].indexOf(line); document.querySelectorAll('[data-film-frame]').forEach((f, j) => f.classList.toggle('is-active', j === k)); }
+        const r = el.getBoundingClientRect(); return { x: Math.max(0, r.left), y: Math.max(0, r.top), width: Math.min(r.width, innerWidth - Math.max(0, r.left)), height: Math.min(r.height, innerHeight - Math.max(0, r.top)), col: el.dataset.col, size: parseFloat(getComputedStyle(el).fontSize) }; }, i);
+      await page.waitForTimeout(40);
+      const { data } = await sharp(await page.screenshot({ clip: box })).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+      const L = []; for (let k = 0; k < data.length; k += 3) L.push(lum(data[k], data[k + 1], data[k + 2])); L.sort((a, b) => a - b);
+      const [r, g, b] = box.col.match(/[\d.]+/g).map(Number);
+      const cr = (lum(r, g, b) + 0.05) / (L[Math.floor(L.length * 0.95)] + 0.05), need = box.size >= 24 ? 3 : 4.5;
+      if (cr < need) problems.push(`${lang}@${w} text over photo #${i}: ${cr.toFixed(2)}:1 (need ${need})`);
+    }
+    await ctx.close();
+  }
+  report('17. Accessibility (WCAG 2.1 AA)', problems.length === 0,
+    problems.length ? problems.join(' | ') : 'axe-core: 0 violations (AR+EN, 375 with menu open/closed, 1440); skip link lands focus on <main>; hero intro and all six film lines clear AA against the lightest 5% of the photo behind them');
+}
+
+// 18 — SEO: canonical + hreflang, ?lang=en, URL follows the toggle, JSON-LD from CONTENT.md only, robots + sitemap
+{
+  const problems = [];
+  const BASE = 'https://obsidian-sa.github.io/obsidian-website/';
+  const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  for (const [l, u] of [['ar', BASE], ['en', BASE + '?lang=en'], ['x-default', BASE]]) if (!html.includes(`hreflang="${l}" href="${u}"`)) problems.push(`hreflang ${l} missing`);
+  const ld = JSON.parse(html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1]);
+  const content = fs.readFileSync(path.join(ROOT, 'CONTENT.md'), 'utf8');
+  if (ld.telephone !== '+966569997565' || !content.includes('966569997565')) problems.push('JSON-LD phone');
+  if (!content.includes(ld.email)) problems.push('JSON-LD email not in CONTENT.md');
+  if (!content.includes(ld.address.addressLocality) || !content.includes(ld.address.addressRegion)) problems.push('JSON-LD address not from CONTENT.md');
+  for (const k of ['openingHours', 'openingHoursSpecification', 'geo', 'priceRange', 'aggregateRating', 'review']) if (k in ld) problems.push(`JSON-LD invents ${k}`);
+  if ('streetAddress' in ld.address || 'postalCode' in ld.address) problems.push('JSON-LD has a street address');
+  for (const handle of ['obsidian.design.2026', 'obsidian_design', 'obsidiandesign2']) if (!ld.sameAs.some((u) => u.includes(handle))) problems.push(`JSON-LD sameAs missing ${handle}`);
+  // ?lang=en opens English with its own canonical and title
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } }); const page = await ctx.newPage();
+  await page.goto(URL_ + '?lang=en'); await page.waitForTimeout(400);
+  const en = await page.evaluate(() => ({ lang: document.documentElement.lang, canon: document.querySelector('link[rel=canonical]').href, title: document.title, desc: document.querySelector('meta[name=description]').content }));
+  if (en.lang !== 'en' || en.canon !== BASE + '?lang=en' || !/^Obsidian Design/.test(en.title) || !/^Nothing here/.test(en.desc)) problems.push(`?lang=en → ${JSON.stringify(en)}`);
+  await page.click('[data-lang-toggle]');
+  const ar = await page.evaluate(() => ({ lang: document.documentElement.lang, search: location.search, canon: document.querySelector('link[rel=canonical]').href }));
+  if (ar.lang !== 'ar' || ar.search !== '' || ar.canon !== BASE) problems.push(`toggle to AR → ${JSON.stringify(ar)}`);
+  await page.click('[data-lang-toggle]');
+  if (await page.evaluate(() => location.search) !== '?lang=en') problems.push('toggle to EN did not set ?lang=en');
+  await ctx.close();
+  const robots = fs.readFileSync(path.join(ROOT, 'robots.txt'), 'utf8'), sitemap = fs.readFileSync(path.join(ROOT, 'sitemap.xml'), 'utf8');
+  if (!robots.includes(`Sitemap: ${BASE}sitemap.xml`)) problems.push('robots.txt sitemap line');
+  if ((sitemap.match(/<loc>/g) || []).length !== 2 || !sitemap.includes('hreflang="en"')) problems.push('sitemap.xml');
+  report('18. SEO basics', problems.length === 0,
+    problems.length ? problems.join(' | ') : 'canonical per language; hreflang ar / en (?lang=en) / x-default; ?lang=en serves English title, description and canonical; the toggle keeps the URL in step; JSON-LD uses only CONTENT.md facts (no hours, geo or street); robots.txt + sitemap.xml with alternates');
+}
+
+// 19 — performance: AVIF → WebP → JPEG on every photo, byte caps, srcset fits the displayed size
+{
+  const problems = [];
+  const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  const pics = [...html.matchAll(/<picture[^>]*>([\s\S]*?)<\/picture>/g)].map((m) => m[1]).filter((p) => !/logo-/.test(p));
+  for (const p of pics) {
+    const name = (p.match(/assets\/img\/([a-z-]+?)-\d+\.jpg/) || [0, '?'])[1];
+    if (!/type="image\/webp"/.test(p) || !/\.jpg/.test(p)) problems.push(`${name}: missing WebP or JPEG`);
+    if (!/type="image\/avif"/.test(p) && name !== 'mat-walnut') problems.push(`${name}: no AVIF`);
+    for (const f of [...p.matchAll(/assets\/img\/[\w.-]+/g)].map((m) => m[0])) {
+      if (!fs.existsSync(path.join(ROOT, f))) problems.push(`missing file ${f}`);
+      else if (fs.statSync(path.join(ROOT, f)).size > 300 * 1024) problems.push(`${f} over 300KB`);
+    }
+  }
+  for (const [w, h, dpr] of [[375, 812, 3], [768, 1024, 2], [1440, 900, 2]]) {
+    const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: dpr }); const page = await ctx.newPage();
+    await page.goto(URL_); await scrollThrough(page);
+    const bad = await page.evaluate(() => [...document.querySelectorAll('picture img')].filter((i) => i.currentSrc && !/logo-/.test(i.currentSrc)).map((i) => {
+      const got = +(i.currentSrc.match(/-(\d+)\.\w+$/) || [0, 0])[1], r = i.getBoundingClientRect();
+      const need = Math.round(Math.max(r.width, r.height * (i.naturalWidth / i.naturalHeight || 1)) * devicePixelRatio);
+      const max = Math.max(...[...i.closest('picture').querySelectorAll('source, img')].flatMap((s) => (s.srcset || '').split(',').map((x) => +(x.match(/(\d+)w/) || [0, 0])[1])));
+      return got < need * 0.75 && got < max ? `${i.currentSrc.split('/').pop()} picked for ~${need}w` : null;
+    }).filter(Boolean));
+    if (bad.length) problems.push(`${w}@${dpr}x soft: ${bad.join(', ')}`);
+    await ctx.close();
+  }
+  report('19. Performance: formats + srcset', problems.length === 0,
+    problems.length ? problems.join(' | ') : `${pics.length} photos serve AVIF → WebP → JPEG (walnut: WebP → JPEG, AVIF not smaller); every file exists and is ≤300KB; at 375@3x, 768@2x and 1440@2x each photo picks a file within range of its displayed size`);
+}
+
+// 20 — copy: every site string is verbatim from CONTENT.md, and punctuation is clean
+{
+  const problems = [];
+  const src = fs.readFileSync(path.join(ROOT, 'assets', 'js', 'i18n.js'), 'utf8');
+  const sandbox = {}; new Function('window', src)(sandbox);
+  const content = fs.readFileSync(path.join(ROOT, 'CONTENT.md'), 'utf8').replace(/[’‘]/g, "'");
+  const composed = new Set(['meta_title', 'lang_name']); // brand + tagline; language names for the switch announcement
+  const notIn = new Set([...src.matchAll(/^\s+(\w+):.*NOT IN CONTENT/gm)].map((m) => m[1]));
+  for (const lang of ['ar', 'en']) for (const [k, v] of Object.entries(sandbox.I18N[lang])) for (const s of [].concat(v)) {
+    if (!notIn.has(k) && !composed.has(k) && !content.includes(s.replace(/[’‘]/g, "'"))) problems.push(`${lang}.${k} not in CONTENT.md`);
+    if (/  |^\s|\s$/.test(s)) problems.push(`${lang}.${k}: stray space`);
+    if (/ [،.,:;!?؟]/.test(s)) problems.push(`${lang}.${k}: space before punctuation`);
+    if (lang === 'ar' && (/[؀-ۿ],/.test(s) || /،(?! |$)/.test(s))) problems.push(`${lang}.${k}: Arabic comma spacing`);
+  }
+  report('20. Copy matches CONTENT.md', problems.length === 0,
+    problems.length ? problems.join(' | ') : 'every string on the site is verbatim from CONTENT.md (titles compose brand + tagline); no stray spaces, no space before punctuation, Arabic commas spaced');
+}
+
 await browser.close();
 const failed = results.filter((r) => !r.pass);
 console.log(`\n${results.length - failed.length}/${results.length} checks passed`);

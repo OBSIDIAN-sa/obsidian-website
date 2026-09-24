@@ -112,8 +112,17 @@ async function processSlot(s) {
     const graded = sharp(data, { raw: info }).toColourspace('srgb');
     const webp = await encode(graded, 'webp', path.join(OUT, `${s.slot}-${w}.webp`));
     const jpg = await encode(graded, 'jpeg', path.join(OUT, `${s.slot}-${w}.jpg`));
-    variants.push({ w, h: info.height, webp: `${s.slot}-${w}.webp`, jpg: `${s.slot}-${w}.jpg`, webpKB: webp.kb, jpgKB: jpg.kb, webpQ: webp.q, jpgQ: jpg.q, over: webp.over || jpg.over });
+    // AVIF only where it clearly wins (>=10% smaller than the WebP) and stays under the cap;
+    // dark photos can band in AVIF at low quality, so it never replaces a better WebP.
+    const avifFile = path.join(OUT, `${s.slot}-${w}.avif`);
+    const avifBuf = await graded.clone().avif({ quality: 55, effort: 6, chromaSubsampling: '4:4:4' }).toBuffer();
+    const avif = avifBuf.length <= MAX_BYTES && avifBuf.length < webp.kb * 1024 * 0.9;
+    if (avif) fs.writeFileSync(avifFile, avifBuf); else if (fs.existsSync(avifFile)) fs.unlinkSync(avifFile);
+    variants.push({ w, h: info.height, avif: avif ? `${s.slot}-${w}.avif` : null, webp: `${s.slot}-${w}.webp`, jpg: `${s.slot}-${w}.jpg`, avifKB: avif ? Math.round(avifBuf.length / 1024) : null, webpKB: webp.kb, jpgKB: jpg.kb, webpQ: webp.q, jpgQ: jpg.q, over: webp.over || jpg.over });
   }
+  // All-or-nothing per photo: if any width kept no AVIF, the page can't use AVIF for this picture
+  // (a partial srcset would under-fetch), so drop the rest rather than ship orphans.
+  if (variants.some((v) => !v.avif)) for (const v of variants) if (v.avif) { fs.unlinkSync(path.join(OUT, v.avif)); v.avif = null; v.avifKB = null; }
   return { slot: s.slot, source: s.src, crop: box, variants };
 }
 
@@ -137,8 +146,8 @@ fs.mkdirSync(OUT, { recursive: true });
 const manifest = { images: {}, logo: null };
 for (const s of SLOTS) {
   const r = await processSlot(s);
-  manifest.images[r.slot] = { source: r.source, crop: r.crop, variants: r.variants.map(({ w, h, webp, jpg }) => ({ w, h, webp, jpg })) };
-  console.log(r.slot.padEnd(14), r.variants.map(v => `${v.w}w ${v.webpKB}KB(q${v.webpQ})/${v.jpgKB}KB(q${v.jpgQ})${v.over ? ' OVER' : ''}`).join('  '));
+  manifest.images[r.slot] = { source: r.source, crop: r.crop, variants: r.variants.map(({ w, h, avif, webp, jpg }) => ({ w, h, avif, webp, jpg })) };
+  console.log(r.slot.padEnd(14), r.variants.map(v => `${v.w}w avif ${v.avifKB ?? '—'} / webp ${v.webpKB} / jpg ${v.jpgKB}KB${v.over ? ' OVER' : ''}`).join('  '));
 }
 manifest.logo = await processLogo();
 for (const l of manifest.logo) console.log('logo'.padEnd(14), `${l.w}w webp ${l.webpKB}KB / png ${l.pngKB}KB`);
