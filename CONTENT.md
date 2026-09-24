@@ -2,6 +2,7 @@
 
 > هذا الملف هو **المصدر الوحيد للنصوص**. لا تخترع نصوصاً جديدة ولا تترجم من نفسك.
 > العربية هي اللغة الأساسية. الإنجليزية مكتوبة أصلاً (لا ترجمة حرفية).
+> **الترقيم:** العناوين والجمل القصيرة البارزة (سطر الغموض وسطور الفيلم) بلا نقطة في آخرها. الفقرات والنصوص الطويلة تحتفظ بنقاطها.
 
 ---
 
@@ -70,14 +71,14 @@ Bespoke Kitchens · Wardrobes & Dressing Rooms · Interior Solutions · Made to 
 
 **AR**
 - العنوان:
-  > نبدأ من ورقة بيضاء، وننتهي عند تفصيلة لا يلاحظها أحد غيرك.
+  > نبدأ من ورقة بيضاء، وننتهي عند تفصيلة لا يلاحظها أحد غيرك
 - الفقرة:
   > أوبسيديان ما هو معرض يبيع قطع جاهزة. هو مكان تُرسم فيه المساحة أولاً، ثم تُصنّع كل قطعة على مقاسها. نختار الخشب والمواد والإكسسوارات من أجود الأنواع، وما نتهاون بأي تفصيل مهما كان صغيراً — لأن الفرق بين الجيد والفاخر يقع دائماً في التفاصيل الصغيرة.
 - كلمة خلفية عملاقة (watermark): `NO READY MADE`
 
 **EN**
 - Heading:
-  > We start on a blank sheet. We finish on a detail only you will ever notice.
+  > We start on a blank sheet. We finish on a detail only you will ever notice
 - Paragraph:
   > Obsidian is not a showroom that sells finished pieces. It's where the space is drawn first, then every piece is made to fit it. We select the timber, the materials and the hardware from the best available, and we don't let a single detail slide — because the gap between good and luxury always sits in the smallest details.
 - Background watermark: `NO READY MADE`
@@ -87,10 +88,10 @@ Bespoke Kitchens · Wardrobes & Dressing Rooms · Interior Solutions · Made to 
 ## 4. سطر الغموض
 
 **AR**
-> بعضها يُقاس بالمليمتر. وبعضها يُقاس بالإحساس.
+> بعضها يُقاس بالمليمتر. وبعضها يُقاس بالإحساس
 
 **EN**
-> Some of it is measured in millimetres. Some of it is measured by feel.
+> Some of it is measured in millimetres. Some of it is measured by feel
 
 ---
 
@@ -98,13 +99,13 @@ Bespoke Kitchens · Wardrobes & Dressing Rooms · Interior Solutions · Made to 
 
 **AR**
 - العنوان:
-  > الجزيرة هي قلب المساحة. وكل شي ثاني يدور حولها.
+  > الجزيرة هي قلب المساحة. وكل شي ثاني يدور حولها
 - الفقرة:
   > سطح حجري مصمت، إضاءة داخلية مدروسة، أدراج مخملية بمقاسات محسوبة، وحواف مشغولة. نصمم الجزيرة أولاً — في المطبخ أو في غرفة الملابس — لأنها القطعة التي تُقاس عليها بقية الغرفة.
 
 **EN**
 - Heading:
-  > The island is the heart of the room. Everything else is arranged around it.
+  > The island is the heart of the room. Everything else is arranged around it
 - Paragraph:
   > A solid stone surface, lighting worked into the body, velvet-lined drawers cut to calculated sizes, and edges finished by hand. We design the island first — in the kitchen or in the dressing room — because it's the piece the rest of the room is measured against.
 
@@ -114,13 +115,13 @@ Bespoke Kitchens · Wardrobes & Dressing Rooms · Interior Solutions · Made to 
 
 **AR**
 - العنوان:
-  > من مخطط بمقاسات… إلى قطعة تُركّب بالمليمتر.
+  > من مخطط بمقاسات… إلى قطعة تُركّب بالمليمتر
 - الفقرة:
   > ما نبدأ من كتالوج. نرفع المقاسات على الطبيعة، نرسم المساحة، ونحدد كل تفصيلة قبل ما يُقص أي لوح. المخطط هو العقد بيننا وبينك — واللي يطلع في النهاية هو نفسه اللي شفته على الورق.
 
 **EN**
 - Heading:
-  > From a drawing with dimensions… to a piece that fits to the millimetre.
+  > From a drawing with dimensions… to a piece that fits to the millimetre
 - Paragraph:
   > We don't start from a catalogue. We measure on site, draw the space, and settle every detail before a single board is cut. The drawing is the contract between us — and what arrives is exactly what you saw on paper.
 
@@ -232,23 +233,23 @@ Bespoke Kitchens · Wardrobes & Dressing Rooms · Interior Solutions · Made to 
 
 | # | السطر |
 |---|---|
-| 1 | الأسود ما هو غياب اللون. هو أعلى درجات الانضباط. |
-| 2 | الجزيرة تتوسط الغرفة، والباقي يدور حولها. |
-| 3 | اللمعة تكشف كل عيب. فما نسمح بعيب. |
-| 4 | الخزانة تختفي في الجدار حتى تحتاجها. |
-| 5 | واجهات بلا مقابض. لمسة واحدة تكفي. |
-| 6 | وفي النهاية، التفصيلة الأخيرة هي اللي تفرّق. |
+| 1 | الأسود ما هو غياب اللون. هو أعلى درجات الانضباط |
+| 2 | الجزيرة تتوسط الغرفة، والباقي يدور حولها |
+| 3 | اللمعة تكشف كل عيب. فما نسمح بعيب |
+| 4 | الخزانة تختفي في الجدار حتى تحتاجها |
+| 5 | واجهات بلا مقابض. لمسة واحدة تكفي |
+| 6 | وفي النهاية، التفصيلة الأخيرة هي اللي تفرّق |
 
 **EN**
 
 | # | Line |
 |---|---|
-| 1 | Black isn't the absence of colour. It's the highest form of discipline. |
-| 2 | The island sits at the centre. Everything else moves around it. |
-| 3 | A polished surface shows every flaw. So we allow none. |
-| 4 | The wardrobe disappears into the wall until you need it. |
-| 5 | Handleless fronts. One touch is enough. |
-| 6 | In the end, it's the last detail that decides. |
+| 1 | Black isn't the absence of colour. It's the highest form of discipline |
+| 2 | The island sits at the centre. Everything else moves around it |
+| 3 | A polished surface shows every flaw. So we allow none |
+| 4 | The wardrobe disappears into the wall until you need it |
+| 5 | Handleless fronts. One touch is enough |
+| 6 | In the end, it's the last detail that decides |
 
 ---
 

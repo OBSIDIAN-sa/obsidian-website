@@ -191,7 +191,11 @@ async function scrollThrough(page) {
     for (let i = 0; i < expected + 5; i++) {
       await page.keyboard.press('Tab');
       // Focus scrolls smoothly (scroll-behavior: smooth): wait for it to land, up to 1.5s
-      await page.waitForFunction(() => { const e = document.activeElement; if (!e || e === document.body) return true; const r = e.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight; }, null, { timeout: 1500 }).catch(() => {});
+      await page.waitForFunction(() => {
+        const e = document.activeElement; if (!e || e === document.body) return true;
+        const y = scrollY, still = window.__kbY === y; window.__kbY = y; // scroll has stopped between two polls
+        const r = e.getBoundingClientRect(); return still && r.bottom > 0 && r.top < innerHeight;
+      }, null, { timeout: 2000, polling: 100 }).catch(() => {});
       const f = await page.evaluate(() => {
         const e = document.activeElement; if (!e || e === document.body) return null;
         const cs = getComputedStyle(e);
@@ -657,8 +661,13 @@ async function scrollThrough(page) {
     if (/ [،.,:;!?؟]/.test(s)) problems.push(`${lang}.${k}: space before punctuation`);
     if (lang === 'ar' && (/[؀-ۿ],/.test(s) || /،(?! |$)/.test(s))) problems.push(`${lang}.${k}: Arabic comma spacing`);
   }
+  // Headings and short display lines carry no closing full stop; long copy keeps its own
+  for (const lang of ['ar', 'en']) for (const k of ['principle_heading', 'interstitial', 'island_heading', 'plan_heading', 'film_1', 'film_2', 'film_3', 'film_4', 'film_5', 'film_6', 'material_heading', 'standards_heading', 'services_heading', 'register_heading'])
+    if (/[.。]$/.test(sandbox.I18N[lang][k])) problems.push(`${lang}.${k}: heading/display line ends with a full stop`);
+  for (const lang of ['ar', 'en']) for (const k of ['principle_body', 'island_body', 'plan_body', 'register_body', 'faq_1_a', 'why_1_body'])
+    if (!/\.$/.test(sandbox.I18N[lang][k])) problems.push(`${lang}.${k}: paragraph lost its full stop`);
   report('20. Copy matches CONTENT.md', problems.length === 0,
-    problems.length ? problems.join(' | ') : 'every string on the site is verbatim from CONTENT.md (titles compose brand + tagline); no stray spaces, no space before punctuation, Arabic commas spaced');
+    problems.length ? problems.join(' | ') : 'every string on the site is verbatim from CONTENT.md (titles compose brand + tagline); no stray spaces, no space before punctuation, Arabic commas spaced; headings and display lines end without a full stop, paragraphs keep theirs');
 }
 
 // 21 — logo PNG fallbacks are truly lossless resizes of the untouched original
