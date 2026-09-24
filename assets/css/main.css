@@ -334,6 +334,28 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .hero__content { position: relative; z-index: 1; padding-block: 8rem var(--space-5); }
 .hero__mark { display: flex; align-items: center; gap: clamp(1rem, 2.5vw, 2.5rem); margin-block-end: var(--space-4); }
 .hero__logo { inline-size: clamp(4.5rem, 3rem + 6vw, 9rem); flex: none; }
+/* Logo swing: the untouched mark, hung from the top of the ring, is set moving once and settles —
+   a damped pendulum, transform only. Classes come from JS, so without JS it is a still frame. */
+.hero__logo { transform-origin: 50% 0; }
+.hero__logo.is-swing { animation: logo-swing 2600ms both; }
+.hero__logo.is-nudge { animation: logo-nudge 1600ms both; }
+@keyframes logo-swing {
+  0%   { transform: rotate(0deg);    animation-timing-function: cubic-bezier(0.33, 0, 0.2, 1); }
+  15%  { transform: rotate(6deg);    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1); }
+  37%  { transform: rotate(-3.6deg); animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1); }
+  58%  { transform: rotate(1.9deg);  animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1); }
+  77%  { transform: rotate(-0.8deg); animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1); }
+  91%  { transform: rotate(0.25deg); animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1); }
+  100% { transform: rotate(0deg); }
+}
+/* A touch of the pointer: the same pendulum at a third of the amplitude */
+@keyframes logo-nudge {
+  0%   { transform: rotate(0deg);    animation-timing-function: cubic-bezier(0.33, 0, 0.2, 1); }
+  20%  { transform: rotate(2deg);    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1); }
+  50%  { transform: rotate(-1.1deg); animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1); }
+  78%  { transform: rotate(0.4deg);  animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1); }
+  100% { transform: rotate(0deg); }
+}
 .wordmark { display: inline-block; font-family: var(--ff-latin-display); font-weight: 300; line-height: 0.86; direction: ltr; }
 .wordmark__top { display: block; font-size: var(--step-6); letter-spacing: 0.01em; margin-inline-start: -0.05em; }
 /* DESIGN is spread to exactly the width of OBSIDIAN, so the two lines read as one block */

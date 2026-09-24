@@ -691,6 +691,49 @@ async function scrollThrough(page) {
     problems.length ? problems.join(' | ') : `${pngs.join(', ')}: full RGBA, no palette, byte-for-byte pixel match with a fresh resize of the untouched logo.png, each ≤300KB; every referenced logo PNG exists`);
 }
 
+// 22 — logo swing: the official mark (same file), one damped swing from the top of the ring, then at rest
+{
+  const problems = [];
+  for (const lang of ['ar', 'en']) {
+    const { ctx, page } = await open({ lang });
+    const r = await page.evaluate(async () => {
+      const img = document.querySelector('.hero__logo');
+      const t0 = performance.now(); let max = 0, samples = 0, anims = 0;
+      while (performance.now() - t0 < 3400) {
+        const m = new DOMMatrix(getComputedStyle(img).transform);
+        max = Math.max(max, Math.abs(Math.atan2(m.b, m.a) * 180 / Math.PI));
+        anims = Math.max(anims, img.getAnimations().length); samples++;
+        await new Promise((r) => requestAnimationFrame(r));
+      }
+      const cs = getComputedStyle(img);
+      return { max, samples, anims, end: cs.transform, origin: cs.transformOrigin, w: img.getBoundingClientRect().width, src: img.currentSrc.split('/').pop(), left: img.getAnimations().length };
+    });
+    if (r.anims !== 1 || r.max < 3 || r.max > 6.5) problems.push(`${lang}: swing peak ${r.max.toFixed(2)}° (${r.anims} animation)`);
+    if (r.end !== 'none' || r.left) problems.push(`${lang}: not at rest after 3.4s (${r.end})`);
+    if (!r.origin.endsWith(' 0px') || Math.abs(parseFloat(r.origin) - r.w / 2) > 1) problems.push(`${lang}: pivot is ${r.origin}, not the top of the ring`);
+    if (!/^logo-(320|640)\.(webp|png)$/.test(r.src)) problems.push(`${lang}: swings ${r.src}, not the official mark`);
+    await ctx.close();
+  }
+  // Mouse over the mark: a small nudge (≤2.5°), then rest
+  { const { ctx, page } = await open({});
+    await page.waitForTimeout(3000);
+    await page.hover('.hero__logo');
+    const max = await page.evaluate(async () => { const img = document.querySelector('.hero__logo'); let m = 0; const t0 = performance.now();
+      while (performance.now() - t0 < 1800) { const x = new DOMMatrix(getComputedStyle(img).transform); m = Math.max(m, Math.abs(Math.atan2(x.b, x.a) * 180 / Math.PI)); await new Promise((r) => requestAnimationFrame(r)); } return m; });
+    if (max < 1 || max > 2.5) problems.push(`hover nudge peak ${max.toFixed(2)}°`);
+    await ctx.close(); }
+  // Reduced motion and touch: never moves
+  { const { ctx, page } = await open({ reducedMotion: 'reduce' });
+    await page.hover('.hero__logo'); await page.waitForTimeout(300);
+    if (await page.evaluate(() => document.querySelector('.hero__logo').getAnimations().length || getComputedStyle(document.querySelector('.hero__logo')).transform !== 'none')) problems.push('moves under reduced motion');
+    await ctx.close(); }
+  { const { ctx, page } = await open({ js: false });
+    if (await page.evaluate(() => getComputedStyle(document.querySelector('.hero__logo')).transform !== 'none')) problems.push('not a still frame without JS');
+    await ctx.close(); }
+  report('22. Logo swing', problems.length === 0,
+    problems.length ? problems.join(' | ') : 'the untouched logo-320/640 mark swings once from the top of the ring (peak ≤6.5°, AR+EN) and is at rest by 3.4s; a mouse over it gives a ≤2.5° nudge; still under reduced motion and without JS');
+}
+
 await browser.close();
 const failed = results.filter((r) => !r.pass);
 console.log(`\n${results.length - failed.length}/${results.length} checks passed`);

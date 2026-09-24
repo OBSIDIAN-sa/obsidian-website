@@ -106,6 +106,29 @@
     reduceMQ.addEventListener('change', render);
   })();
 
+  /* --------------------------------------------------------- logo swing */
+  // The official mark, untouched, swings once from the top of the ring and settles (CSS keyframes, transform only).
+  // It starts when the intro curtain lifts, or straight away on a repeat visit. A mouse touching it sets it
+  // moving again, gently. Nothing under reduced motion.
+  (function logoSwing() {
+    var logo = $('.hero__logo');
+    if (!logo) return;
+    var fineMQ = window.matchMedia('(hover: hover) and (pointer: fine)');
+    var busy = false;
+    function play(cls) {
+      if (busy || reduceMQ.matches) return;
+      busy = true;
+      logo.classList.remove('is-swing', 'is-nudge');
+      void logo.offsetWidth; // restart cleanly
+      logo.classList.add(cls);
+    }
+    logo.addEventListener('animationend', function () { busy = false; logo.classList.remove('is-swing', 'is-nudge'); });
+    logo.addEventListener('pointerenter', function (e) { if (e.pointerType === 'mouse' && fineMQ.matches) play('is-nudge'); });
+    function start() { setTimeout(function () { play('is-swing'); }, 250); }
+    if (root.classList.contains('intro')) document.addEventListener('obsidian:intro-done', start, { once: true });
+    else start();
+  })();
+
   /* ------------------------------------------------------------ marquee */
   (function marquee() {
     var wrap = $('[data-marquee]');
