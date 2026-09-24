@@ -482,6 +482,81 @@
     });
   })();
 
+  /* ------------------------------------------------------ custom cursor */
+  // A bronze dot exactly at the pointer (no lag, so aiming stays exact) and a hairline ring that follows it.
+  // Mouse only: built for a fine hovering pointer, switched on by a real mouse move, and handed back to the
+  // native cursor on any key press, touch or pen, over form fields, in forced colours and under reduced motion.
+  (function cursor() {
+    var fineMQ = window.matchMedia('(hover: hover) and (pointer: fine)');
+    var forcedMQ = window.matchMedia('(forced-colors: active)');
+    if (!fineMQ.matches) return;
+    var LINK = 'a[href], button, label, select, summary, [role="button"]';
+    var NATIVE = 'input, textarea, select';
+    var el, dot, ring, principle = $('.principle');
+    var x = 0, y = 0, rx = 0, ry = 0, on = false, raf = 0, lastT = 0, hit = false, inLight = false, seam = 0;
+
+    function build() {
+      el = document.createElement('div');
+      el.className = 'cursor';
+      el.setAttribute('aria-hidden', 'true');
+      ring = document.createElement('span'); ring.className = 'cursor__ring';
+      dot = document.createElement('span'); dot.className = 'cursor__dot';
+      el.appendChild(ring); el.appendChild(dot);
+      document.body.appendChild(el);
+      measure();
+    }
+    function measure() { // the light section's ink→bone ramp length (--seam), read on build and resize only
+      if (!principle) return;
+      var probe = document.createElement('div');
+      probe.style.cssText = 'position:absolute;visibility:hidden;block-size:var(--seam)';
+      principle.appendChild(probe); seam = probe.offsetHeight; probe.remove();
+    }
+    function allowed() { return fineMQ.matches && !reduceMQ.matches && !forcedMQ.matches; }
+    function off() { if (on) { on = false; root.classList.remove('has-cursor'); cancelAnimationFrame(raf); raf = 0; } }
+    function state(t) {
+      if (!t || !t.closest) return;
+      var native = !!t.closest(NATIVE);
+      el.classList.toggle('is-native', native);
+      el.classList.toggle('is-link', !native && !!t.closest(LINK));
+      inLight = !!(principle && principle.contains(t));
+    }
+    function kick() { if (!raf) { lastT = 0; raf = requestAnimationFrame(frame); } }
+    function frame(now) {
+      raf = 0;
+      var dt = Math.min((now - (lastT || now)) / 1000, 0.05); lastT = now;
+      // Reads first
+      if (hit) { hit = false; state(document.elementFromPoint(x, y)); }
+      var light = false;
+      if (inLight) { var r = principle.getBoundingClientRect(); light = y > r.top + seam * 0.6 && y < r.bottom - seam * 0.6; }
+      // Then writes
+      el.classList.toggle('is-light', light);
+      var k = 1 - Math.pow(0.0004, dt); // ~150ms to close most of the gap: soft, never sluggish
+      rx += (x - rx) * k; ry += (y - ry) * k;
+      dot.style.transform = 'translate3d(' + x + 'px,' + y + 'px,0)';
+      ring.style.transform = 'translate3d(' + rx.toFixed(2) + 'px,' + ry.toFixed(2) + 'px,0)';
+      if (Math.abs(x - rx) > 0.1 || Math.abs(y - ry) > 0.1) raf = requestAnimationFrame(frame);
+    }
+
+    addEventListener('pointermove', function (e) {
+      if (e.pointerType !== 'mouse' || !allowed()) { off(); return; }
+      if (!el) build();
+      x = e.clientX; y = e.clientY;
+      if (!on) { on = true; rx = x; ry = y; root.classList.add('has-cursor'); state(e.target); }
+      el.classList.remove('is-away');
+      kick();
+    }, { passive: true });
+    addEventListener('pointerover', function (e) { if (on && e.pointerType === 'mouse') state(e.target); }, { passive: true });
+    addEventListener('pointerdown', function (e) { if (e.pointerType !== 'mouse') off(); else if (on) el.classList.add('is-down'); }, { passive: true });
+    addEventListener('pointerup', function () { if (el) el.classList.remove('is-down'); }, { passive: true });
+    document.addEventListener('mouseout', function (e) { if (on && !e.relatedTarget) el.classList.add('is-away'); });
+    // Content moves under a still mouse when the page scrolls: re-read what is under it
+    addEventListener('scroll', function () { if (on) { hit = true; kick(); } }, { passive: true });
+    // Keyboard users get the native cursor (and their focus ring) at once
+    addEventListener('keydown', function (e) { if (!/^(Shift|Control|Alt|Meta)$/.test(e.key)) off(); });
+    addEventListener('resize', function () { if (el) measure(); });
+    reduceMQ.addEventListener('change', function () { if (!allowed()) off(); });
+  })();
+
   /* --------------------------------------------------------- phone menu */
   (function menu() {
     var btn = $('[data-menu-toggle]'), list = $('[data-menu]');

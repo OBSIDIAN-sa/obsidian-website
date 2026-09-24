@@ -796,6 +796,64 @@ async function scrollThrough(page) {
     problems.length ? problems.join(' | ') : 'first visit (AR+EN, 1440 + 375): official mark + CONTENT.md label in the page language, aria-hidden, no focusables, gone by 1.5s; not shown again in the same tab; any key skips it; never under reduced motion or without JS; if main.js fails the head script still lifts it by 1.5s');
 }
 
+// 24 — custom cursor: mouse only; exact dot; native cursor for keyboard, touch, form fields, reduced motion
+{
+  const problems = [];
+  const st = (page) => page.evaluate(() => { const c = document.querySelector('.cursor'); const m = (e) => { const t = new DOMMatrix(getComputedStyle(e).transform); return [t.e, t.f]; };
+    return c ? { on: document.documentElement.classList.contains('has-cursor'), cls: c.className, op: +getComputedStyle(c).opacity, dot: m(c.querySelector('.cursor__dot')), ring: m(c.querySelector('.cursor__ring')),
+      dotBg: getComputedStyle(c.querySelector('.cursor__dot')).backgroundColor, body: getComputedStyle(document.body).cursor } : { on: false, body: getComputedStyle(document.body).cursor }; });
+  for (const lang of ['ar', 'en']) {
+    const { ctx, page, errors } = await open({ lang });
+    await page.mouse.move(700, 300); await page.mouse.move(720, 320, { steps: 4 }); await page.waitForTimeout(700);
+    let s = await st(page);
+    if (!s.on || s.op < 0.99 || s.body !== 'none') problems.push(`${lang}: not on after a mouse move (${JSON.stringify(s)})`);
+    if (s.dot && (s.dot[0] !== 720 || s.dot[1] !== 320)) problems.push(`${lang}: dot at ${s.dot}, pointer at 720,320`);
+    if (s.ring && Math.hypot(s.ring[0] - 720, s.ring[1] - 320) > 1) problems.push(`${lang}: ring did not settle on the pointer`);
+    if (await page.evaluate(() => document.elementFromPoint(720, 320).closest('.cursor') !== null)) problems.push(`${lang}: cursor intercepts the pointer`);
+    // Over a link: ring opens
+    const cta = await page.evaluate(() => { const r = document.querySelector('.hero .btn').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
+    await page.mouse.move(cta[0], cta[1], { steps: 3 }); await page.waitForTimeout(300);
+    if (!(await st(page)).cls.includes('is-link')) problems.push(`${lang}: no link state over the primary button`);
+    // Light section: ink on bone
+    await page.evaluate(() => { const p = document.querySelector('.principle__title'); p.scrollIntoView({ block: 'center', behavior: 'instant' }); });
+    await page.waitForTimeout(200);
+    const pt = await page.evaluate(() => { const r = document.querySelector('.principle__title').getBoundingClientRect(); return [r.left + 20, r.top + r.height / 2]; });
+    await page.mouse.move(pt[0], pt[1], { steps: 3 }); await page.waitForTimeout(400);
+    s = await st(page);
+    if (!s.cls.includes('is-light') || s.dotBg !== 'rgb(5, 5, 4)') problems.push(`${lang}: not ink on the bone ground (${s.cls}, ${s.dotBg})`);
+    // Form field: native text caret, custom mark hidden
+    await page.evaluate(() => document.querySelector('#f-name').scrollIntoView({ block: 'center', behavior: 'instant' })); await page.waitForTimeout(150);
+    const inp = await page.evaluate(() => { const r = document.querySelector('#f-name').getBoundingClientRect(); return [r.left + 30, r.top + r.height / 2]; });
+    await page.mouse.move(inp[0], inp[1], { steps: 3 }); await page.waitForTimeout(400);
+    s = await st(page);
+    const caret = await page.evaluate(() => getComputedStyle(document.querySelector('#f-name')).cursor);
+    if (caret !== 'text' || !s.cls.includes('is-native') || s.op > 0.01) problems.push(`${lang}: form field cursor ${caret}, mark opacity ${s.op}`);
+    // Keyboard: native cursor back at once, focus ring visible
+    await page.keyboard.press('Tab'); await page.waitForTimeout(100);
+    s = await st(page);
+    const ring = await page.evaluate(() => { const cs = getComputedStyle(document.activeElement); return cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) >= 1; });
+    if (s.on || s.body === 'none' || !ring) problems.push(`${lang}: keyboard did not restore the native cursor + ring (${JSON.stringify(s)})`);
+    await page.mouse.move(600, 400, { steps: 3 }); await page.waitForTimeout(200);
+    if (!(await st(page)).on) problems.push(`${lang}: mouse did not bring it back after the keyboard`);
+    if (errors.length) problems.push(`${lang}: ${errors.join(', ')}`);
+    await ctx.close();
+  }
+  // Touch: never built, native cursor untouched
+  { const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }); const page = await ctx.newPage();
+    await page.goto(URL_, { waitUntil: 'load' }); await page.waitForTimeout(300);
+    await page.touchscreen.tap(200, 400); await page.mouse.move(200, 420); await page.waitForTimeout(200);
+    const s = await st(page);
+    if (s.on || await page.evaluate(() => !!document.querySelector('.cursor'))) problems.push('touch: custom cursor built');
+    await ctx.close(); }
+  // Reduced motion: native only
+  { const { ctx, page } = await open({ reducedMotion: 'reduce' });
+    await page.mouse.move(600, 300, { steps: 4 }); await page.waitForTimeout(200);
+    if ((await st(page)).on) problems.push('reduced motion: custom cursor on');
+    await ctx.close(); }
+  report('24. Custom cursor', problems.length === 0,
+    problems.length ? problems.join(' | ') : 'mouse only (AR+EN): dot sits exactly on the pointer, ring settles on it, never intercepts clicks; opens over the primary button; ink on the bone ground; form fields keep the native text caret; Tab hands back the native cursor with the focus ring, a mouse move restores it; never built on touch; off under reduced motion');
+}
+
 await browser.close();
 const failed = results.filter((r) => !r.pass);
 console.log(`\n${results.length - failed.length}/${results.length} checks passed`);

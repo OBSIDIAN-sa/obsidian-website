@@ -687,6 +687,35 @@ picture:has(> img[loading="lazy"]) { background-color: var(--onyx); }
 }
 .egg.is-on .egg__mark, .egg.is-on .egg__rule { transform: none; }
 
+/* ---- Custom cursor (mouse only) ------------------------------------------- */
+/* Built by JS only for a fine, hovering pointer with motion allowed, and only switched on (.has-cursor)
+   after a real mouse move. Keyboard, touch and pen get the native cursor back at once. Form fields
+   always keep their native cursor, so the text caret shows where typing goes. */
+.cursor { position: fixed; inset: 0 auto auto 0; z-index: 110; pointer-events: none; opacity: 0; transition: opacity 300ms var(--ease); }
+.has-cursor .cursor { opacity: 1; }
+.has-cursor .cursor.is-away { opacity: 0; }
+.cursor__dot, .cursor__ring { position: absolute; inset: 0 auto auto 0; border-radius: 50%; will-change: transform; }
+.cursor__dot { inline-size: 6px; block-size: 6px; margin: -3px 0 0 -3px; background: var(--bronze); }
+.cursor__ring { inline-size: 34px; block-size: 34px; margin: -17px 0 0 -17px; }
+/* The ring's scale lives on an inner layer so the follow transform and the state change never fight */
+.cursor__ring::before {
+  content: ''; position: absolute; inset: 0; border-radius: 50%; border: 1px solid var(--bronze);
+  transition: transform 500ms var(--ease), border-color 300ms var(--ease), opacity 300ms var(--ease);
+}
+.cursor__dot { transition: background-color 300ms var(--ease), opacity 300ms var(--ease); }
+.cursor.is-link .cursor__ring::before { transform: scale(1.7); border-color: var(--bronze-lt); }
+.cursor.is-link .cursor__dot { opacity: 0; }
+.cursor.is-down .cursor__ring::before { transform: scale(0.8); }
+.cursor.is-link.is-down .cursor__ring::before { transform: scale(1.45); }
+/* On the bone ground of the light section the mark turns ink (bronze on bone is too faint) */
+.cursor.is-light .cursor__dot { background: var(--ink); }
+.cursor.is-light .cursor__ring::before { border-color: var(--ink); }
+.cursor.is-native { opacity: 0 !important; }
+.has-cursor, .has-cursor * { cursor: none !important; }
+.has-cursor :is(input, textarea) { cursor: text !important; }
+.has-cursor select { cursor: pointer !important; }
+@media (forced-colors: active) { .cursor { display: none; } }
+
 /* ---- 00 Intro curtain ------------------------------------------------------ */
 /* Exists only under .intro (added before first paint on a first visit). It never hides the page from the
    browser — the hero paints underneath — and it lifts by 1.5s whatever happens: JS lifts it when the hero
