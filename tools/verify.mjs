@@ -232,7 +232,7 @@ async function scrollThrough(page) {
     const u = await page.evaluate(() => window.__opened[0]);
     if (!u) { problems.push(`${lang}: nothing opened`); await ctx.close(); continue; }
     const parsed = new URL(u), text = parsed.searchParams.get('text');
-    const expected = `مرحبًا أوبسيديان 👋\nالاسم: ${lang === 'ar' ? 'نورة' : 'Noura'}\nالجوال: ${lang === 'ar' ? '055 123 4567' : '+966 55 123 4567'}\nنوع المشروع: مطبخ\nملاحظات: ${lang === 'ar' ? 'مطبخ بجزيرة' : 'Kitchen with island'}\n— مُرسل من الموقع`;
+    const expected = `مرحباً أوبسيديان 👋\nالاسم: ${lang === 'ar' ? 'نورة' : 'Noura'}\nالجوال: ${lang === 'ar' ? '055 123 4567' : '+966 55 123 4567'}\nنوع المشروع: مطبخ\nملاحظات: ${lang === 'ar' ? 'مطبخ بجزيرة' : 'Kitchen with island'}\n— مُرسل من الموقع`;
     if (parsed.origin + parsed.pathname !== 'https://wa.me/966569997565') problems.push(`${lang}: wrong target ${parsed.origin + parsed.pathname}`);
     if (text !== expected) problems.push(`${lang}: message mismatch:\n${text}`);
     samples.push(parsed.origin + parsed.pathname);
@@ -309,7 +309,7 @@ async function scrollThrough(page) {
   }
   const years = [...new Set(files.flatMap(([, s]) => s.match(/(?<![\w-])20\d\d(?![\w.])/g) || []))]; // skip "-2000.webp" filenames
   report('11. No testimonials, lead times, warranty, payment terms, map or opening date', hits.length === 0,
-    hits.length ? hits.join(' | ') : `none found in the page or string table; the only year is ${years.join(', ')} (copyright line); "قريبًا / Opening soon" carries no date; location is city-level only`);
+    hits.length ? hits.join(' | ') : `none found in the page or string table; the only year is ${years.join(', ')} (copyright line); "قريباً / Opening soon" carries no date; location is city-level only`);
 }
 
 // 12 — social preview (Open Graph / X card): tags present, absolute, and matching the image file
