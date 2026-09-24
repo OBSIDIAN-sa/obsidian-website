@@ -854,6 +854,53 @@ async function scrollThrough(page) {
     problems.length ? problems.join(' | ') : 'mouse only (AR+EN): dot sits exactly on the pointer, ring settles on it, never intercepts clicks; opens over the primary button; ink on the bone ground; form fields keep the native text caret; Tab hands back the native cursor with the focus ring, a mouse move restores it; never built on touch; off under reduced motion');
 }
 
+// 25 — magnetic buttons: small pull toward the mouse, settles back, clicks still land; not for touch, keyboard, reduced motion
+{
+  const problems = [];
+  const tr = (page, sel) => page.evaluate((sel) => { const t = new DOMMatrix(getComputedStyle(document.querySelector(sel)).transform); return [+t.e.toFixed(2), +t.f.toFixed(2)]; }, sel);
+  for (const lang of ['ar', 'en']) for (const sel of ['.hero .btn', '.form__submit']) {
+    const { ctx, page } = await open({ lang });
+    await page.evaluate((sel) => document.querySelector(sel).scrollIntoView({ block: 'center', behavior: 'instant' }), sel); await page.waitForTimeout(300);
+    const r = await page.evaluate((sel) => { const b = document.querySelector(sel).getBoundingClientRect(); return { x: b.left, y: b.top, w: b.width, h: b.height }; }, sel);
+    // Just outside the top-right corner, inside the zone
+    await page.mouse.move(r.x + r.w + 12, r.y - 10, { steps: 5 }); await page.waitForTimeout(450);
+    const p = await tr(page, sel);
+    const tag = `${lang} ${sel}`;
+    if (!(p[0] > 1 && p[1] < -1)) problems.push(`${tag}: no pull toward the pointer (${p})`);
+    if (Math.abs(p[0]) > 8.01 || Math.abs(p[1]) > 5.01) problems.push(`${tag}: pulled too far (${p})`);
+    if (r.h < 44) problems.push(`${tag}: ${r.h}px tall`);
+    // Far away: settles back
+    await page.mouse.move(20, 20, { steps: 5 }); await page.waitForTimeout(1000);
+    const back = await tr(page, sel);
+    if (Math.abs(back[0]) > 0.05 || Math.abs(back[1]) > 0.05) problems.push(`${tag}: did not settle back (${back})`);
+    await ctx.close();
+  }
+  // A click on the pulled hero button still navigates
+  { const { ctx, page } = await open({});
+    const r = await page.evaluate(() => { const b = document.querySelector('.hero .btn').getBoundingClientRect(); return [b.left + b.width - 6, b.top + 6]; });
+    await page.mouse.move(r[0], r[1], { steps: 5 }); await page.waitForTimeout(300); await page.mouse.down(); await page.mouse.up(); await page.waitForTimeout(1200);
+    if (!(await page.evaluate(() => location.hash === '#register'))) problems.push('click on the pulled button did not land');
+    await ctx.close(); }
+  // Keyboard focus, touch, reduced motion: never moves
+  { const { ctx, page } = await open({});
+    await page.focus('.hero .btn'); await page.waitForTimeout(200);
+    if ((await tr(page, '.hero .btn')).some((v) => v !== 0)) problems.push('keyboard focus moved the button');
+    await ctx.close(); }
+  { const { ctx, page } = await open({ reducedMotion: 'reduce' });
+    const r = await page.evaluate(() => { const b = document.querySelector('.hero .btn').getBoundingClientRect(); return [b.right + 10, b.top - 8]; });
+    await page.mouse.move(r[0], r[1], { steps: 5 }); await page.waitForTimeout(400);
+    if ((await tr(page, '.hero .btn')).some((v) => v !== 0)) problems.push('moved under reduced motion');
+    await ctx.close(); }
+  { const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }); const page = await ctx.newPage();
+    await page.goto(URL_, { waitUntil: 'load' }); await page.waitForTimeout(300);
+    const r = await page.evaluate(() => { const b = document.querySelector('.hero .btn'); b.scrollIntoView({ block: 'center', behavior: 'instant' }); const x = b.getBoundingClientRect(); return [x.left + 5, x.top + 5]; });
+    await page.touchscreen.tap(r[0], r[1]); await page.waitForTimeout(300);
+    if (await page.evaluate(() => document.querySelector('.hero .btn').style.transform !== '')) problems.push('touch moved the button');
+    await ctx.close(); }
+  report('25. Magnetic buttons', problems.length === 0,
+    problems.length ? problems.join(' | ') : 'hero and form buttons (AR+EN) lean toward a nearby mouse (≤8px across, ≤5px up/down) and settle back when it leaves; a click on a pulled button still lands; ≥44px tall; keyboard focus, touch and reduced motion never move them');
+}
+
 await browser.close();
 const failed = results.filter((r) => !r.pass);
 console.log(`\n${results.length - failed.length}/${results.length} checks passed`);

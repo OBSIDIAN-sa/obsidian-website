@@ -186,8 +186,10 @@ button, input, select, textarea { font: inherit; color: inherit; }
   font-family: var(--ff-body); font-weight: 400; font-size: var(--step--1);
   letter-spacing: var(--label-track); text-transform: var(--label-case);
   cursor: pointer; overflow: hidden; isolation: isolate;
-  transition: color var(--dur-short) var(--ease), border-color var(--dur-short) var(--ease);
+  transition: color var(--dur-short) var(--ease), border-color var(--dur-short) var(--ease), transform 700ms var(--ease);
 }
+/* Magnetic pull (JS, mouse only): follows closely while engaged, settles back on the long tail when released */
+.btn.is-magnet { transition: color var(--dur-short) var(--ease), border-color var(--dur-short) var(--ease), transform 180ms var(--ease); }
 :root:lang(ar) .btn { font-size: var(--step-0); font-weight: 500; }
 /* A bone hairline sweeps along the base from inline-start on hover */
 .btn::after {

@@ -557,6 +557,48 @@
     reduceMQ.addEventListener('change', function () { if (!allowed()) off(); });
   })();
 
+  /* --------------------------------------------------- magnetic buttons */
+  // Primary buttons (.btn) lean toward a nearby mouse — at most 8px across, 5px up/down — and settle back on
+  // the long ease when it leaves. Only buttons on screen are watched; the rect is read in the event,
+  // the transform written in rAF. Mouse only; never under reduced motion; focus never moves them.
+  (function magnetic() {
+    var fineMQ = window.matchMedia('(hover: hover) and (pointer: fine)');
+    var btns = $$('.btn');
+    if (!btns.length || !fineMQ.matches || !('IntersectionObserver' in window)) return;
+    var ZONE = 28, PULL = 0.3, MAX_X = 8, MAX_Y = 5;
+    var seen = new Set(), pending = new Map(), pull = new Map(), raf = 0;
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) { if (e.isIntersecting) seen.add(e.target); else { seen.delete(e.target); release(e.target); } });
+    });
+    btns.forEach(function (b) { io.observe(b); });
+
+    function write() {
+      raf = 0;
+      pending.forEach(function (v, b) {
+        b.classList.toggle('is-magnet', !!v);
+        b.style.transform = v ? 'translate3d(' + v[0].toFixed(2) + 'px,' + v[1].toFixed(2) + 'px,0)' : '';
+      });
+      pending.clear();
+    }
+    function set(b, v) { pull.set(b, v); pending.set(b, v); if (!raf) raf = requestAnimationFrame(write); }
+    function release(b) { if (pull.get(b)) set(b, null); }
+
+    addEventListener('pointermove', function (e) {
+      if (e.pointerType !== 'mouse' || reduceMQ.matches) return;
+      seen.forEach(function (b) {
+        var r = b.getBoundingClientRect(), p = pull.get(b) || [0, 0]; // strip the current pull, so the zone doesn't chase the button
+        var left = r.left - p[0], top = r.top - p[1];
+        var inside = e.clientX > left - ZONE && e.clientX < left + r.width + ZONE && e.clientY > top - ZONE && e.clientY < top + r.height + ZONE;
+        if (!inside) { release(b); return; }
+        var dx = (e.clientX - (left + r.width / 2)) * PULL, dy = (e.clientY - (top + r.height / 2)) * PULL;
+        set(b, [Math.max(-MAX_X, Math.min(MAX_X, dx)), Math.max(-MAX_Y, Math.min(MAX_Y, dy))]);
+      });
+    }, { passive: true });
+    document.addEventListener('mouseout', function (e) { if (!e.relatedTarget) btns.forEach(release); });
+    addEventListener('scroll', function () { btns.forEach(release); }, { passive: true });
+    reduceMQ.addEventListener('change', function () { btns.forEach(release); });
+  })();
+
   /* --------------------------------------------------------- phone menu */
   (function menu() {
     var btn = $('[data-menu-toggle]'), list = $('[data-menu]');
