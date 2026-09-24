@@ -133,11 +133,15 @@ async function processLogo() {
   for (const w of [160, 320, 640, 960]) {
     const img = sharp(src).resize({ width: w });
     const webp = await img.clone().webp({ quality: 90, alphaQuality: 100, effort: 6 }).toBuffer();
-    const png = await img.clone().png({ compressionLevel: 9, effort: 10 }).toBuffer();
+    // Truly lossless: no effort/quality/colours options (any of them switches sharp to a 256-colour palette)
+    const png = await img.clone().png({ compressionLevel: 9, adaptiveFiltering: true, palette: false }).toBuffer();
     fs.writeFileSync(path.join(OUT, `logo-${w}.webp`), webp);
-    fs.writeFileSync(path.join(OUT, `logo-${w}.png`), png);
+    // Lossless PNG only where the page uses it as the <img> fallback (160, 320); larger lossless PNGs
+    // would break the 300KB cap and nothing references them. WebP carries every size.
+    const pngUsed = w <= 320;
+    if (pngUsed) fs.writeFileSync(path.join(OUT, `logo-${w}.png`), png); else if (fs.existsSync(path.join(OUT, `logo-${w}.png`))) fs.unlinkSync(path.join(OUT, `logo-${w}.png`));
     const { height } = await sharp(webp).metadata();
-    out.push({ w, h: height, webp: `logo-${w}.webp`, png: `logo-${w}.png`, webpKB: Math.round(webp.length / 1024), pngKB: Math.round(png.length / 1024) });
+    out.push({ w, h: height, webp: `logo-${w}.webp`, png: pngUsed ? `logo-${w}.png` : null, webpKB: Math.round(webp.length / 1024), pngKB: pngUsed ? Math.round(png.length / 1024) : null });
   }
   return out;
 }
@@ -150,7 +154,7 @@ for (const s of SLOTS) {
   console.log(r.slot.padEnd(14), r.variants.map(v => `${v.w}w avif ${v.avifKB ?? '—'} / webp ${v.webpKB} / jpg ${v.jpgKB}KB${v.over ? ' OVER' : ''}`).join('  '));
 }
 manifest.logo = await processLogo();
-for (const l of manifest.logo) console.log('logo'.padEnd(14), `${l.w}w webp ${l.webpKB}KB / png ${l.pngKB}KB`);
+for (const l of manifest.logo) console.log('logo'.padEnd(14), `${l.w}w webp ${l.webpKB}KB / png ${l.pngKB ? l.pngKB + "KB" : "— (not used)"}`);
 manifest.logo = manifest.logo.map(({ w, h, webp, png }) => ({ w, h, webp, png }));
 fs.writeFileSync(path.join(OUT, 'manifest.json'), JSON.stringify(manifest, null, 2));
 console.log('wrote', path.relative(ROOT, path.join(OUT, 'manifest.json')));

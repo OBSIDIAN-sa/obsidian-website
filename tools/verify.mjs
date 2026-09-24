@@ -660,6 +660,27 @@ async function scrollThrough(page) {
     problems.length ? problems.join(' | ') : 'every string on the site is verbatim from CONTENT.md (titles compose brand + tagline); no stray spaces, no space before punctuation, Arabic commas spaced');
 }
 
+// 21 — logo PNG fallbacks are truly lossless resizes of the untouched original
+{
+  const problems = [];
+  const sharp = (await import('sharp')).default;
+  const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8') + fs.readFileSync(path.join(ROOT, 'assets', 'js', 'main.js'), 'utf8');
+  const pngs = fs.readdirSync(path.join(ROOT, 'assets', 'img')).filter((f) => /^logo-\d+\.png$/.test(f));
+  for (const f of pngs) {
+    const file = path.join(ROOT, 'assets', 'img', f);
+    const meta = await sharp(file).metadata();
+    if (meta.paletteBitDepth || meta.channels !== 4) problems.push(`${f}: palette/${meta.channels}ch (not full RGBA)`);
+    const d = await sharp(file).raw().toBuffer({ resolveWithObject: true });
+    const o = await sharp(path.join(ROOT, 'logo.png')).resize({ width: d.info.width }).raw().toBuffer();
+    let max = 0; for (let i = 0; i < o.length; i++) max = Math.max(max, Math.abs(o[i] - d.data[i]));
+    if (max !== 0) problems.push(`${f}: differs from a fresh resize by up to ${max}/255`);
+    if (fs.statSync(file).size > 300 * 1024) problems.push(`${f}: over 300KB`);
+  }
+  for (const ref of new Set([...html.matchAll(/logo-\d+\.png/g)].map((m) => m[0]))) if (!pngs.includes(ref)) problems.push(`${ref} referenced but missing`);
+  report('21. Logo PNG fallbacks are lossless', problems.length === 0 && pngs.length > 0,
+    problems.length ? problems.join(' | ') : `${pngs.join(', ')}: full RGBA, no palette, byte-for-byte pixel match with a fresh resize of the untouched logo.png, each ≤300KB; every referenced logo PNG exists`);
+}
+
 await browser.close();
 const failed = results.filter((r) => !r.pass);
 console.log(`\n${results.length - failed.length}/${results.length} checks passed`);

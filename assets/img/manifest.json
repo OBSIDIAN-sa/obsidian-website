@@ -468,13 +468,13 @@
       "w": 640,
       "h": 652,
       "webp": "logo-640.webp",
-      "png": "logo-640.png"
+      "png": null
     },
     {
       "w": 960,
       "h": 978,
       "webp": "logo-960.webp",
-      "png": "logo-960.png"
+      "png": null
     }
   ]
 }
