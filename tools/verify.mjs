@@ -528,7 +528,9 @@ async function scrollThrough(page) {
     s = await st(page);
     if (s.exp !== 'false' || s.inert || s.focus !== 'toggle') problems.push(`${lang}: Escape did not close + return focus ${JSON.stringify(s)}`);
     await page.click('[data-menu-toggle]'); await page.waitForTimeout(700);
-    await page.click('[data-menu] a[href="#faq"]'); await page.waitForTimeout(1200);
+    await page.click('[data-menu] a[href="#faq"]');
+    // Smooth scroll to #faq is long: wait until it has stopped (up to 4s), not a fixed time
+    await page.waitForFunction(() => { const y = scrollY, still = window.__mY === y; window.__mY = y; return still && y > 0; }, null, { timeout: 4000, polling: 150 }).catch(() => {});
     s = await st(page);
     const atFaq = await page.evaluate(() => Math.abs(document.querySelector('#faq').getBoundingClientRect().top) < 200);
     if (s.exp !== 'false' || s.inert || !atFaq) problems.push(`${lang}: link tap did not close + navigate`);

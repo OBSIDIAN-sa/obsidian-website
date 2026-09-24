@@ -28,14 +28,14 @@ for (const [name, launch] of engines.filter(([n]) => !only || only.includes(n)))
     page.on('pageerror', (e) => errors.push(e.message));
     page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
     // Phase 2 · intro curtain: recorded from the first frame (after the head script has run)
-    await ctx.addInitScript(() => { window.__intro = { seen: false, at: 0 };
-      (function poll() { const on = document.documentElement && document.documentElement.classList.contains('intro');
-        if (on) window.__intro.seen = true; else if (document.documentElement) { window.__intro.at = performance.now(); return; }
-        requestAnimationFrame(poll); })(); });
+    // Polling starts at DOMContentLoaded: some engines run a first frame before the head script has run
+    await ctx.addInitScript(() => { window.__intro = { seen: false, at: 0, reduced: matchMedia('(prefers-reduced-motion: reduce)').matches };
+      document.addEventListener('DOMContentLoaded', function poll() { const on = document.documentElement.classList.contains('intro');
+        if (on) { window.__intro.seen = true; requestAnimationFrame(poll); } else window.__intro.at = performance.now(); }); });
     await page.goto(BASE + (lang === 'en' ? '?lang=en' : ''), { waitUntil: 'load' });
     await page.waitForFunction(() => window.__intro.at > 0, null, { timeout: 5000 }).catch(() => {});
     const intro = await page.evaluate(() => window.__intro);
-    if (!intro.seen) problems.push(`${key}: intro curtain did not show on a first visit`);
+    if (!intro.seen) problems.push(`${key}: intro curtain did not show on a first visit${intro.reduced ? ' (engine reports reduced motion)' : ''}`);
     if (!intro.at || intro.at > 1650) problems.push(`${key}: intro curtain still up at ${Math.round(intro.at)}ms`);
     await page.waitForTimeout(900);
     const r = await page.evaluate(async () => {
@@ -51,7 +51,7 @@ for (const [name, launch] of engines.filter(([n]) => !only || only.includes(n)))
 
     // Scroll through: reveals and lazy images must land
     const H = await page.evaluate(() => document.documentElement.scrollHeight);
-    for (let y = 0; y < H; y += 450) { await page.evaluate((y) => scrollTo({ top: y, behavior: 'instant' }), y); await page.waitForTimeout(50); }
+    for (let y = 0; y < H; y += 450) { await page.evaluate((y) => scrollTo({ top: y, behavior: 'instant' }), y); await page.waitForTimeout(150); } // a reader's pace: every IntersectionObserver gets a turn
     // The material strip scrolls sideways: swipe it end to end, as a visitor would
     await page.evaluate(async () => { const t = document.querySelector('.material__track'); t.scrollIntoView({ block: 'center' }); const dir = document.dir === 'rtl' ? -1 : 1; for (let i = 0; i < 8; i++) { t.scrollBy({ left: dir * 300, behavior: 'instant' }); await new Promise((r) => setTimeout(r, 120)); } });
     await page.waitForTimeout(1300);
@@ -98,13 +98,14 @@ for (const [name, launch] of engines.filter(([n]) => !only || only.includes(n)))
     // Phase 2 · pointer effects: desktop mouse gets the cursor + magnet; touch contexts never get the cursor
     const touch = w < 1000 && name !== 'firefox';
     await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' })); await page.waitForTimeout(300);
-    const btn = await page.evaluate(() => { const b = document.querySelector('.hero .btn').getBoundingClientRect(); return [b.right + 12, b.top - 10]; });
+    // Just above the button's top-right corner, inside its magnetic zone and inside the viewport
+    const btn = await page.evaluate(() => { const b = document.querySelector('.hero .btn').getBoundingClientRect(); return [Math.min(b.right + 12, innerWidth - 4), b.top - 10]; });
     if (!touch) {
       await page.mouse.move(btn[0] - 200, btn[1] + 120); await page.mouse.move(btn[0], btn[1], { steps: 6 }); await page.waitForTimeout(450);
       const p = await page.evaluate(() => ({ cursor: document.documentElement.classList.contains('has-cursor'), pull: getComputedStyle(document.querySelector('.hero .btn')).transform }));
       if (!p.cursor) problems.push(`${key}: custom cursor did not switch on for the mouse`);
       if (p.pull === 'none') problems.push(`${key}: magnetic button did not move`);
-      if (w === 1440) await page.screenshot({ path: `${OUT}/${name}-${lang}${w}-pointer.jpg`, type: 'jpeg', quality: 70, clip: { x: btn[0] - 360, y: btn[1] - 80, width: 460, height: 200 } });
+      if (w === 1440) await page.screenshot({ path: `${OUT}/${name}-${lang}${w}-pointer.jpg`, type: 'jpeg', quality: 70, clip: { x: Math.max(0, btn[0] - 360), y: Math.max(0, btn[1] - 80), width: 460, height: 200 } });
     } else if (await page.evaluate(() => !!document.querySelector('.cursor') || document.documentElement.classList.contains('has-cursor'))) problems.push(`${key}: custom cursor on a touch device`);
     // Phase 2 · second visit in the same tab: no curtain
     await page.reload({ waitUntil: 'load' });
