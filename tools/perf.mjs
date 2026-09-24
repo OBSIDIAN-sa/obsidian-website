@@ -1,8 +1,9 @@
 // LCP / CLS on a throttled phone and on desktop, over http (like GitHub Pages).
-// Run from tools/ with the site served:  python3 -m http.server 8790 --bind 127.0.0.1 --directory ..
+// Run from tools/ with the site served gzip'd, like GitHub Pages:  node serve.mjs .. 8790
 //   BASE=http://127.0.0.1:8790/ RUNS=5 node perf.mjs
 // Phone: 375×812 @3x, touch, Slow 4G (150ms RTT, 1.6Mbps down), CPU ×4. Desktop: 1440×900 @1x, 40ms RTT, 10Mbps.
 // Each run is a cold first visit (fresh context, empty cache, empty sessionStorage). Reports medians.
+// REPEAT=1: same cold cache, but as a repeat visit in the tab (no intro curtain).
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
 
@@ -27,6 +28,7 @@ for (const [name, p] of Object.entries(profiles)) for (const lang of ['ar', 'en'
     await cdp.send('Network.setCacheDisabled', { cacheDisabled: true });
     await cdp.send('Network.emulateNetworkConditions', { offline: false, latency: p.net.latency, downloadThroughput: p.net.down, uploadThroughput: p.net.up });
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: p.cpu });
+    if (process.env.REPEAT) await page.addInitScript(() => { try { sessionStorage.setItem('obsidian-intro', '1'); } catch (e) {} }); // no curtain
     await page.addInitScript(() => {
       window.__lcp = 0; window.__lcpEl = ''; window.__cls = 0; window.__intro = 0;
       new PerformanceObserver((l) => { for (const e of l.getEntries()) { window.__lcp = e.startTime; window.__lcpEl = e.element ? (e.element.className || e.element.tagName) + (e.url ? ' ' + e.url.split('/').pop() : '') : e.url; } }).observe({ type: 'largest-contentful-paint', buffered: true });

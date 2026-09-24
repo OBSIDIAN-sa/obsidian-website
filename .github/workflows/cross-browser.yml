@@ -1,0 +1,47 @@
+# Dev-only: runs the site's own checks in Chromium, Firefox and WebKit. Nothing here ships with the site,
+# and the site itself makes no third-party requests. Screenshots are uploaded as a build artifact.
+name: Cross-browser checks
+
+on:
+  push:
+    branches-ignore: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  engines:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: tools
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tools/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - name: Serve the site over http (like GitHub Pages)
+        run: |
+          python3 -m http.server 8790 --bind 127.0.0.1 --directory .. > /dev/null 2>&1 &
+          for i in $(seq 1 20); do curl -sf http://127.0.0.1:8790/ > /dev/null && break; sleep 0.5; done
+      - name: Chromium · Firefox · WebKit at 375 / 768 / 1440, Arabic and English
+        run: node cross-browser.mjs
+        env:
+          BASE: http://127.0.0.1:8790/
+          OUT: ${{ github.workspace }}/tools/cross-browser-shots
+      - name: Definition-of-done checks (Chromium)
+        if: always()
+        run: CHROME="$(node -e "console.log(require('playwright').chromium.executablePath())")" node verify.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cross-browser-shots
+          path: tools/cross-browser-shots
+          retention-days: 14
