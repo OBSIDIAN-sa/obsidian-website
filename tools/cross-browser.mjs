@@ -65,13 +65,14 @@ for (const [name, launch] of engines.filter(([n]) => !only || only.includes(n)))
     if (!s.wm) problems.push(`${key}: watermark cropped`);
 
     // Interactions: FAQ, form validation, phone menu
-    await page.evaluate(() => document.querySelector('#faq').scrollIntoView());
+    // Instant: a smooth scroll still running when the click lands would move another question under the pointer
+    await page.evaluate(() => document.querySelector('#faq-2-q').scrollIntoView({ block: 'center', behavior: 'instant' }));
     await page.click('#faq-2-q');
     if ((await page.getAttribute('#faq-2-q', 'aria-expanded')) !== 'true') problems.push(`${key}: FAQ did not open`);
-    await page.evaluate(() => { window.open = () => ({}); document.querySelector('#register').scrollIntoView(); });
+    await page.evaluate(() => { window.open = () => ({}); document.querySelector('.form__submit').scrollIntoView({ block: 'center', behavior: 'instant' }); });
     await page.click('.form__submit');
     if (!(await page.evaluate(() => document.querySelector('#f-name-err').textContent.trim()))) problems.push(`${key}: form validation silent`);
-    await page.evaluate(() => document.querySelector('#register').scrollIntoView({ block: 'start' }));
+    await page.evaluate(() => document.querySelector('#register').scrollIntoView({ block: 'start', behavior: 'instant' }));
     await page.waitForTimeout(400);
     await page.screenshot({ path: `${OUT}/${name}-${lang}${w}-form.jpg`, type: 'jpeg', quality: 60 });
     if (w < 760) {
@@ -98,8 +99,8 @@ for (const [name, launch] of engines.filter(([n]) => !only || only.includes(n)))
     // Phase 2 · pointer effects: desktop mouse gets the cursor + magnet; touch contexts never get the cursor
     const touch = w < 1000 && name !== 'firefox';
     await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' })); await page.waitForTimeout(300);
-    // Just above the button's top-right corner, inside its magnetic zone and inside the viewport
-    const btn = await page.evaluate(() => { const b = document.querySelector('.hero .btn').getBoundingClientRect(); return [Math.min(b.right + 12, innerWidth - 4), b.top - 10]; });
+    // Just above the button's top-right corner, inside its magnetic zone and inside the viewport (clientWidth: not on a scrollbar)
+    const btn = await page.evaluate(() => { const b = document.querySelector('.hero .btn').getBoundingClientRect(); return [Math.min(b.right + 12, document.documentElement.clientWidth - 4), b.top - 10]; });
     if (!touch) {
       await page.mouse.move(btn[0] - 200, btn[1] + 120); await page.mouse.move(btn[0], btn[1], { steps: 6 }); await page.waitForTimeout(450);
       const p = await page.evaluate(() => ({ cursor: document.documentElement.classList.contains('has-cursor'), pull: getComputedStyle(document.querySelector('.hero .btn')).transform }));
