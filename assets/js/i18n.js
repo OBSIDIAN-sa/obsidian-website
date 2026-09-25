@@ -25,17 +25,17 @@ window.I18N = {
 
     marquee: ['مطابخ فاخرة', 'خزائن وغرف ملابس', 'حلول داخلية', 'تفصيل كامل', 'الدمام'],
 
-    principle_heading: 'نبدأ من ورقة بيضاء، وننتهي عند تفصيلة لا يلاحظها أحد غيرك.',
+    principle_heading: 'نبدأ من ورقة بيضاء، وننتهي عند تفصيلة لا يلاحظها أحد غيرك',
     principle_body: 'أوبسيديان ما هو معرض يبيع قطع جاهزة. هو مكان تُرسم فيه المساحة أولاً، ثم تُصنّع كل قطعة على مقاسها. نختار الخشب والمواد والإكسسوارات من أجود الأنواع، وما نتهاون بأي تفصيل مهما كان صغيراً — لأن الفرق بين الجيد والفاخر يقع دائماً في التفاصيل الصغيرة.',
     principle_watermark: 'NO READY MADE',
 
-    interstitial: 'بعضها يُقاس بالمليمتر. وبعضها يُقاس بالإحساس.',
+    interstitial: 'بعضها يُقاس بالمليمتر. وبعضها يُقاس بالإحساس',
 
-    island_heading: 'الجزيرة هي قلب المساحة. وكل شي ثاني يدور حولها.',
+    island_heading: 'الجزيرة هي قلب المساحة. وكل شي ثاني يدور حولها',
     island_body: 'سطح حجري مصمت، إضاءة داخلية مدروسة، أدراج مخملية بمقاسات محسوبة، وحواف مشغولة. نصمم الجزيرة أولاً — في المطبخ أو في غرفة الملابس — لأنها القطعة التي تُقاس عليها بقية الغرفة.',
     island_alt: 'مطبخ بواجهات خشب داكن وسطح رخامي مع إضاءة مدمجة', // [NOT IN CONTENT.md]
 
-    plan_heading: 'من مخطط بمقاسات… إلى قطعة تُركّب بالمليمتر.',
+    plan_heading: 'من مخطط بمقاسات… إلى قطعة تُركّب بالمليمتر',
     plan_body: 'ما نبدأ من كتالوج. نرفع المقاسات على الطبيعة، نرسم المساحة، ونحدد كل تفصيلة قبل ما يُقص أي لوح. المخطط هو العقد بيننا وبينك — واللي يطلع في النهاية هو نفسه اللي شفته على الورق.',
     plan_alt: 'فرجار على مخطط هندسي بمقاسات', // [NOT IN CONTENT.md]
 
@@ -85,12 +85,12 @@ window.I18N = {
     why_4_title: 'نسلّم على تفصيلة',
     why_4_body: 'التركيب بإشراف مباشر، وجولة مراجعة أخيرة معك تفصيلة تفصيلة قبل ما نقول خلصنا.',
 
-    film_1: 'الأسود ما هو غياب اللون. هو أعلى درجات الانضباط.',
-    film_2: 'الجزيرة تتوسط الغرفة، والباقي يدور حولها.',
-    film_3: 'اللمعة تكشف كل عيب. فما نسمح بعيب.',
-    film_4: 'الخزانة تختفي في الجدار حتى تحتاجها.',
-    film_5: 'واجهات بلا مقابض. لمسة واحدة تكفي.',
-    film_6: 'وفي النهاية، التفصيلة الأخيرة هي اللي تفرّق.',
+    film_1: 'الأسود ما هو غياب اللون. هو أعلى درجات الانضباط',
+    film_2: 'الجزيرة تتوسط الغرفة، والباقي يدور حولها',
+    film_3: 'اللمعة تكشف كل عيب. فما نسمح بعيب',
+    film_4: 'الخزانة تختفي في الجدار حتى تحتاجها',
+    film_5: 'واجهات بلا مقابض. لمسة واحدة تكفي',
+    film_6: 'وفي النهاية، التفصيلة الأخيرة هي اللي تفرّق',
 
     faq_heading: 'الأسئلة',
     faq_1_q: 'كيف تبدأ العملية؟',
@@ -151,17 +151,17 @@ window.I18N = {
 
     marquee: ['Bespoke Kitchens', 'Wardrobes & Dressing Rooms', 'Interior Solutions', 'Made to Measure', 'Dammam'],
 
-    principle_heading: 'We start on a blank sheet. We finish on a detail only you will ever notice.',
+    principle_heading: 'We start on a blank sheet. We finish on a detail only you will ever notice',
     principle_body: 'Obsidian is not a showroom that sells finished pieces. It’s where the space is drawn first, then every piece is made to fit it. We select the timber, the materials and the hardware from the best available, and we don’t let a single detail slide — because the gap between good and luxury always sits in the smallest details.',
     principle_watermark: 'NO READY MADE',
 
-    interstitial: 'Some of it is measured in millimetres. Some of it is measured by feel.',
+    interstitial: 'Some of it is measured in millimetres. Some of it is measured by feel',
 
-    island_heading: 'The island is the heart of the room. Everything else is arranged around it.',
+    island_heading: 'The island is the heart of the room. Everything else is arranged around it',
     island_body: 'A solid stone surface, lighting worked into the body, velvet-lined drawers cut to calculated sizes, and edges finished by hand. We design the island first — in the kitchen or in the dressing room — because it’s the piece the rest of the room is measured against.',
     island_alt: 'A kitchen in dark timber with a veined stone worktop and integrated lighting', // [NOT IN CONTENT.md]
 
-    plan_heading: 'From a drawing with dimensions… to a piece that fits to the millimetre.',
+    plan_heading: 'From a drawing with dimensions… to a piece that fits to the millimetre',
     plan_body: 'We don’t start from a catalogue. We measure on site, draw the space, and settle every detail before a single board is cut. The drawing is the contract between us — and what arrives is exactly what you saw on paper.',
     plan_alt: 'A drawing compass resting on a dimensioned plan', // [NOT IN CONTENT.md]
 
@@ -211,12 +211,12 @@ window.I18N = {
     why_4_title: 'We hand over on a detail',
     why_4_body: 'Installation under direct supervision, and a final walkthrough with you, detail by detail, before we call it done.',
 
-    film_1: 'Black isn’t the absence of colour. It’s the highest form of discipline.',
-    film_2: 'The island sits at the centre. Everything else moves around it.',
-    film_3: 'A polished surface shows every flaw. So we allow none.',
-    film_4: 'The wardrobe disappears into the wall until you need it.',
-    film_5: 'Handleless fronts. One touch is enough.',
-    film_6: 'In the end, it’s the last detail that decides.',
+    film_1: 'Black isn’t the absence of colour. It’s the highest form of discipline',
+    film_2: 'The island sits at the centre. Everything else moves around it',
+    film_3: 'A polished surface shows every flaw. So we allow none',
+    film_4: 'The wardrobe disappears into the wall until you need it',
+    film_5: 'Handleless fronts. One touch is enough',
+    film_6: 'In the end, it’s the last detail that decides',
 
     faq_heading: 'FAQ',
     faq_1_q: 'How does the process start?',

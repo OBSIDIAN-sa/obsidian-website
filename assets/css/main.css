@@ -186,8 +186,10 @@ button, input, select, textarea { font: inherit; color: inherit; }
   font-family: var(--ff-body); font-weight: 400; font-size: var(--step--1);
   letter-spacing: var(--label-track); text-transform: var(--label-case);
   cursor: pointer; overflow: hidden; isolation: isolate;
-  transition: color var(--dur-short) var(--ease), border-color var(--dur-short) var(--ease);
+  transition: color var(--dur-short) var(--ease), border-color var(--dur-short) var(--ease), transform 700ms var(--ease);
 }
+/* Magnetic pull (JS, mouse only): follows closely while engaged, settles back on the long tail when released */
+.btn.is-magnet { transition: color var(--dur-short) var(--ease), border-color var(--dur-short) var(--ease), transform 180ms var(--ease); }
 :root:lang(ar) .btn { font-size: var(--step-0); font-weight: 500; }
 /* A bone hairline sweeps along the base from inline-start on hover */
 .btn::after {
@@ -334,6 +336,28 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .hero__content { position: relative; z-index: 1; padding-block: 8rem var(--space-5); }
 .hero__mark { display: flex; align-items: center; gap: clamp(1rem, 2.5vw, 2.5rem); margin-block-end: var(--space-4); }
 .hero__logo { inline-size: clamp(4.5rem, 3rem + 6vw, 9rem); flex: none; }
+/* Logo swing: the untouched mark, hung from the top of the ring, is set moving once and settles —
+   a damped pendulum, transform only. Classes come from JS, so without JS it is a still frame. */
+.hero__logo { transform-origin: 50% 0; }
+.hero__logo.is-swing { animation: logo-swing 2600ms both; }
+.hero__logo.is-nudge { animation: logo-nudge 1600ms both; }
+@keyframes logo-swing {
+  0%   { transform: rotate(0deg);    animation-timing-function: cubic-bezier(0.33, 0, 0.2, 1); }
+  15%  { transform: rotate(6deg);    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1); }
+  37%  { transform: rotate(-3.6deg); animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1); }
+  58%  { transform: rotate(1.9deg);  animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1); }
+  77%  { transform: rotate(-0.8deg); animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1); }
+  91%  { transform: rotate(0.25deg); animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1); }
+  100% { transform: rotate(0deg); }
+}
+/* A touch of the pointer: the same pendulum at a third of the amplitude */
+@keyframes logo-nudge {
+  0%   { transform: rotate(0deg);    animation-timing-function: cubic-bezier(0.33, 0, 0.2, 1); }
+  20%  { transform: rotate(2deg);    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1); }
+  50%  { transform: rotate(-1.1deg); animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1); }
+  78%  { transform: rotate(0.4deg);  animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1); }
+  100% { transform: rotate(0deg); }
+}
 .wordmark { display: inline-block; font-family: var(--ff-latin-display); font-weight: 300; line-height: 0.86; direction: ltr; }
 .wordmark__top { display: block; font-size: var(--step-6); letter-spacing: 0.01em; margin-inline-start: -0.05em; }
 /* DESIGN is spread to exactly the width of OBSIDIAN, so the two lines read as one block */
@@ -510,6 +534,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .film__stage { position: sticky; inset-block-start: 0; block-size: 100svh; overflow: hidden; }
 .film__frame { position: absolute; inset: 0; opacity: 0; transition: opacity 1200ms var(--ease-inout); }
 .film__frame.is-active { opacity: 1; }
+/* Scrubbed (JS): opacity and push-in come straight from the scroll position, so no time-based easing */
+.film.is-scrub .film__frame { transition: none; transform-origin: 50% 60%; }
 .film__frame img { inline-size: 100%; block-size: 100%; object-fit: cover; }
 .film__stage::after {
   content: ''; position: absolute; inset: 0;
@@ -664,6 +690,63 @@ picture:has(> img[loading="lazy"]) { background-color: var(--onyx); }
   transform: scaleX(0); transition: transform var(--dur) var(--ease) 500ms;
 }
 .egg.is-on .egg__mark, .egg.is-on .egg__rule { transform: none; }
+
+/* ---- Custom cursor (mouse only) ------------------------------------------- */
+/* Built by JS only for a fine, hovering pointer with motion allowed, and only switched on (.has-cursor)
+   after a real mouse move. Keyboard, touch and pen get the native cursor back at once. Form fields
+   always keep their native cursor, so the text caret shows where typing goes. */
+.cursor { position: fixed; inset: 0 auto auto 0; z-index: 110; pointer-events: none; opacity: 0; transition: opacity 300ms var(--ease); }
+.has-cursor .cursor { opacity: 1; }
+.has-cursor .cursor.is-away { opacity: 0; }
+.cursor__dot, .cursor__ring { position: absolute; inset: 0 auto auto 0; border-radius: 50%; will-change: transform; }
+.cursor__dot { inline-size: 6px; block-size: 6px; margin: -3px 0 0 -3px; background: var(--bronze); }
+.cursor__ring { inline-size: 34px; block-size: 34px; margin: -17px 0 0 -17px; }
+/* The ring's scale lives on an inner layer so the follow transform and the state change never fight */
+.cursor__ring::before {
+  content: ''; position: absolute; inset: 0; border-radius: 50%; border: 1px solid var(--bronze);
+  transition: transform 500ms var(--ease), border-color 300ms var(--ease), opacity 300ms var(--ease);
+}
+.cursor__dot { transition: background-color 300ms var(--ease), opacity 300ms var(--ease); }
+.cursor.is-link .cursor__ring::before { transform: scale(1.7); border-color: var(--bronze-lt); }
+.cursor.is-link .cursor__dot { opacity: 0; }
+.cursor.is-down .cursor__ring::before { transform: scale(0.8); }
+.cursor.is-link.is-down .cursor__ring::before { transform: scale(1.45); }
+/* On the bone ground of the light section the mark turns ink (bronze on bone is too faint) */
+.cursor.is-light .cursor__dot { background: var(--ink); }
+.cursor.is-light .cursor__ring::before { border-color: var(--ink); }
+.cursor.is-native { opacity: 0 !important; }
+.has-cursor, .has-cursor * { cursor: none !important; }
+.has-cursor :is(input, textarea) { cursor: text !important; }
+.has-cursor select { cursor: pointer !important; }
+@media (forced-colors: active) { .cursor { display: none; } }
+
+/* ---- 00 Intro curtain ------------------------------------------------------ */
+/* Exists only under .intro (added before first paint on a first visit). It never hides the page from the
+   browser — the hero paints underneath — and it lifts by 1.5s whatever happens: JS lifts it when the hero
+   is ready, the head script lifts it at 1.4s, and this CSS fades it on its own if both fail. */
+.intro-curtain { display: none; }
+.intro .intro-curtain {
+  position: fixed; inset: 0; z-index: 100;
+  display: grid; place-content: center; justify-items: center; gap: var(--space-3);
+  background: var(--ink);
+  animation: intro-failsafe 450ms var(--ease-inout) 950ms forwards;
+}
+.intro-curtain.is-out { animation: none; opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity 450ms var(--ease-inout), visibility 0s linear 450ms; }
+@keyframes intro-failsafe { to { opacity: 0; visibility: hidden; } }
+.intro-curtain__logo { inline-size: clamp(4.5rem, 3.5rem + 4vw, 6.5rem); block-size: auto; }
+.intro-curtain__rule { display: block; inline-size: clamp(6rem, 4rem + 8vw, 9rem); block-size: 1px; background: var(--hairline); overflow: hidden; }
+.intro-curtain__bar {
+  display: block; block-size: 100%; background: var(--bronze);
+  transform: scaleX(0.08); transform-origin: left; transition: transform 500ms var(--ease);
+}
+[dir='rtl'] .intro-curtain__bar { transform-origin: right; }
+.intro-curtain__label {
+  font-size: var(--step--1); color: var(--warm-grey);
+  letter-spacing: var(--label-track); text-transform: var(--label-case);
+}
+.intro-curtain__label [lang='en'] { font-family: var(--ff-num); }
+:root:lang(ar) .intro-curtain__label [lang='en'], :root:lang(en) .intro-curtain__label [lang='ar'] { display: none; }
 
 /* ---- Reduced motion: complete, static, fully readable -------------------- */
 @media (prefers-reduced-motion: reduce) {

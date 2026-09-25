@@ -7,14 +7,22 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const URL_ = pathToFileURL(path.join(ROOT, 'index.html')).href;
-const CHROME = ['C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'].find(fs.existsSync);
+const CHROME = [process.env.CHROME, 'C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', '/opt/pw-browsers/chromium'].filter(Boolean).find(fs.existsSync);
 const results = [];
 const report = (item, pass, detail) => { results.push({ item, pass, detail }); console.log(`${pass ? 'PASS' : 'FAIL'}  ${item}\n      ${detail}`); };
 
 const browser = await chromium.launch({ executablePath: CHROME });
+// The intro curtain shows once per tab session. Every context counts as a repeat visit (no curtain)
+// unless it asks for { intro: true }, so the other checks see the page, not the curtain.
+const newContext = browser.newContext.bind(browser);
+browser.newContext = async ({ intro = false, ...o } = {}) => {
+  const c = await newContext(o);
+  if (!intro) await c.addInitScript(() => { try { sessionStorage.setItem('obsidian-intro', '1'); } catch (e) {} });
+  return c;
+};
 
-async function open({ lang = 'ar', width = 1440, height = 900, reducedMotion = 'no-preference', js = true } = {}) {
-  const ctx = await browser.newContext({ viewport: { width, height }, reducedMotion, javaScriptEnabled: js });
+async function open({ lang = 'ar', width = 1440, height = 900, reducedMotion = 'no-preference', js = true, intro = false } = {}) {
+  const ctx = await browser.newContext({ viewport: { width, height }, reducedMotion, javaScriptEnabled: js, intro });
   const page = await ctx.newPage();
   const requests = [], errors = [];
   page.on('request', (r) => requests.push(r.url()));
@@ -111,7 +119,8 @@ async function scrollThrough(page) {
     const r = await page.evaluate(() => {
       const out = [], vw = document.documentElement.clientWidth;
       if (document.documentElement.scrollWidth > vw) out.push(`page scrollWidth ${document.documentElement.scrollWidth} > ${vw}`);
-      const skip = '.material__track, .marquee, .principle__watermark, .footer__wordmark, .sr-only, .skip-link, .hero__rotator';
+      // .film__frame: the scrubbed push-in scales frames past the stage, which clips them (overflow: hidden)
+      const skip = '.material__track, .marquee, .principle__watermark, .footer__wordmark, .sr-only, .skip-link, .hero__rotator, .film__frame';
       for (const el of document.querySelectorAll('body *')) {
         if (!el.offsetWidth || el.closest(skip)) continue;
         const r = el.getBoundingClientRect();
@@ -190,7 +199,12 @@ async function scrollThrough(page) {
     const seen = new Set(), noRing = [];
     for (let i = 0; i < expected + 5; i++) {
       await page.keyboard.press('Tab');
-      await page.waitForTimeout(30);
+      // Focus scrolls smoothly (scroll-behavior: smooth): wait for it to land, up to 1.5s
+      await page.waitForFunction(() => {
+        const e = document.activeElement; if (!e || e === document.body) return true;
+        const y = scrollY, still = window.__kbY === y; window.__kbY = y; // scroll has stopped between two polls
+        const r = e.getBoundingClientRect(); return still && r.bottom > 0 && r.top < innerHeight;
+      }, null, { timeout: 2000, polling: 100 }).catch(() => {});
       const f = await page.evaluate(() => {
         const e = document.activeElement; if (!e || e === document.body) return null;
         const cs = getComputedStyle(e);
@@ -514,7 +528,9 @@ async function scrollThrough(page) {
     s = await st(page);
     if (s.exp !== 'false' || s.inert || s.focus !== 'toggle') problems.push(`${lang}: Escape did not close + return focus ${JSON.stringify(s)}`);
     await page.click('[data-menu-toggle]'); await page.waitForTimeout(700);
-    await page.click('[data-menu] a[href="#faq"]'); await page.waitForTimeout(1200);
+    await page.click('[data-menu] a[href="#faq"]');
+    // Smooth scroll to #faq is long: wait until it has stopped (up to 4s), not a fixed time
+    await page.waitForFunction(() => { const y = scrollY, still = window.__mY === y; window.__mY = y; return still && y > 0; }, null, { timeout: 4000, polling: 150 }).catch(() => {});
     s = await st(page);
     const atFaq = await page.evaluate(() => Math.abs(document.querySelector('#faq').getBoundingClientRect().top) < 200);
     if (s.exp !== 'false' || s.inert || !atFaq) problems.push(`${lang}: link tap did not close + navigate`);
@@ -656,8 +672,13 @@ async function scrollThrough(page) {
     if (/ [،.,:;!?؟]/.test(s)) problems.push(`${lang}.${k}: space before punctuation`);
     if (lang === 'ar' && (/[؀-ۿ],/.test(s) || /،(?! |$)/.test(s))) problems.push(`${lang}.${k}: Arabic comma spacing`);
   }
+  // Headings and short display lines carry no closing full stop; long copy keeps its own
+  for (const lang of ['ar', 'en']) for (const k of ['principle_heading', 'interstitial', 'island_heading', 'plan_heading', 'film_1', 'film_2', 'film_3', 'film_4', 'film_5', 'film_6', 'material_heading', 'standards_heading', 'services_heading', 'register_heading'])
+    if (/[.。]$/.test(sandbox.I18N[lang][k])) problems.push(`${lang}.${k}: heading/display line ends with a full stop`);
+  for (const lang of ['ar', 'en']) for (const k of ['principle_body', 'island_body', 'plan_body', 'register_body', 'faq_1_a', 'why_1_body'])
+    if (!/\.$/.test(sandbox.I18N[lang][k])) problems.push(`${lang}.${k}: paragraph lost its full stop`);
   report('20. Copy matches CONTENT.md', problems.length === 0,
-    problems.length ? problems.join(' | ') : 'every string on the site is verbatim from CONTENT.md (titles compose brand + tagline); no stray spaces, no space before punctuation, Arabic commas spaced');
+    problems.length ? problems.join(' | ') : 'every string on the site is verbatim from CONTENT.md (titles compose brand + tagline); no stray spaces, no space before punctuation, Arabic commas spaced; headings and display lines end without a full stop, paragraphs keep theirs');
 }
 
 // 21 — logo PNG fallbacks are truly lossless resizes of the untouched original
@@ -679,6 +700,271 @@ async function scrollThrough(page) {
   for (const ref of new Set([...html.matchAll(/logo-\d+\.png/g)].map((m) => m[0]))) if (!pngs.includes(ref)) problems.push(`${ref} referenced but missing`);
   report('21. Logo PNG fallbacks are lossless', problems.length === 0 && pngs.length > 0,
     problems.length ? problems.join(' | ') : `${pngs.join(', ')}: full RGBA, no palette, byte-for-byte pixel match with a fresh resize of the untouched logo.png, each ≤300KB; every referenced logo PNG exists`);
+}
+
+// 22 — logo swing: the official mark (same file), one damped swing from the top of the ring, then at rest
+{
+  const problems = [];
+  for (const lang of ['ar', 'en']) {
+    const { ctx, page } = await open({ lang });
+    const r = await page.evaluate(async () => {
+      const img = document.querySelector('.hero__logo');
+      const t0 = performance.now(); let max = 0, samples = 0, anims = 0;
+      while (performance.now() - t0 < 3400) {
+        const m = new DOMMatrix(getComputedStyle(img).transform);
+        max = Math.max(max, Math.abs(Math.atan2(m.b, m.a) * 180 / Math.PI));
+        anims = Math.max(anims, img.getAnimations().length); samples++;
+        await new Promise((r) => requestAnimationFrame(r));
+      }
+      const cs = getComputedStyle(img);
+      return { max, samples, anims, end: cs.transform, origin: cs.transformOrigin, w: img.getBoundingClientRect().width, src: img.currentSrc.split('/').pop(), left: img.getAnimations().length };
+    });
+    if (r.anims !== 1 || r.max < 3 || r.max > 6.5) problems.push(`${lang}: swing peak ${r.max.toFixed(2)}° (${r.anims} animation)`);
+    if (r.end !== 'none' || r.left) problems.push(`${lang}: not at rest after 3.4s (${r.end})`);
+    if (!r.origin.endsWith(' 0px') || Math.abs(parseFloat(r.origin) - r.w / 2) > 1) problems.push(`${lang}: pivot is ${r.origin}, not the top of the ring`);
+    if (!/^logo-(320|640)\.(webp|png)$/.test(r.src)) problems.push(`${lang}: swings ${r.src}, not the official mark`);
+    await ctx.close();
+  }
+  // Mouse over the mark: a small nudge (≤2.5°), then rest
+  { const { ctx, page } = await open({});
+    await page.waitForTimeout(3000);
+    await page.hover('.hero__logo');
+    const max = await page.evaluate(async () => { const img = document.querySelector('.hero__logo'); let m = 0; const t0 = performance.now();
+      while (performance.now() - t0 < 1800) { const x = new DOMMatrix(getComputedStyle(img).transform); m = Math.max(m, Math.abs(Math.atan2(x.b, x.a) * 180 / Math.PI)); await new Promise((r) => requestAnimationFrame(r)); } return m; });
+    if (max < 1 || max > 2.5) problems.push(`hover nudge peak ${max.toFixed(2)}°`);
+    await ctx.close(); }
+  // Reduced motion and touch: never moves
+  { const { ctx, page } = await open({ reducedMotion: 'reduce' });
+    await page.hover('.hero__logo'); await page.waitForTimeout(300);
+    if (await page.evaluate(() => document.querySelector('.hero__logo').getAnimations().length || getComputedStyle(document.querySelector('.hero__logo')).transform !== 'none')) problems.push('moves under reduced motion');
+    await ctx.close(); }
+  { const { ctx, page } = await open({ js: false });
+    if (await page.evaluate(() => getComputedStyle(document.querySelector('.hero__logo')).transform !== 'none')) problems.push('not a still frame without JS');
+    await ctx.close(); }
+  report('22. Logo swing', problems.length === 0,
+    problems.length ? problems.join(' | ') : 'the untouched logo-320/640 mark swings once from the top of the ring (peak ≤6.5°, AR+EN) and is at rest by 3.4s; a mouse over it gives a ≤2.5° nudge; still under reduced motion and without JS');
+}
+
+// 23 — intro curtain: first visit only, ≤1.5s, skippable, never without JS / under reduced motion / on repeat
+{
+  const problems = [];
+  const watch = () => { window.__cur = []; const tick = () => { const c = document.querySelector('.intro-curtain');
+    if (c) window.__cur.push([performance.now(), getComputedStyle(c).display !== 'none' && getComputedStyle(c).visibility !== 'hidden' && +getComputedStyle(c).opacity > 0.01]);
+    if (performance.now() < 2600) requestAnimationFrame(tick); }; requestAnimationFrame(tick); };
+  const shown = (page) => page.evaluate(() => { const on = window.__cur.filter((x) => x[1]); return { first: on.length ? on[0][0] : null, last: on.length ? on.at(-1)[0] : null }; });
+  for (const lang of ['ar', 'en']) for (const [w, h] of [[1440, 900], [375, 812]]) {
+    const ctx = await browser.newContext({ viewport: { width: w, height: h }, intro: true });
+    await ctx.addInitScript((l) => { try { localStorage.setItem('obsidian-lang', l); } catch (e) {} }, lang);
+    await ctx.addInitScript(watch);
+    const page = await ctx.newPage(); const errors = []; page.on('pageerror', (e) => errors.push(e.message));
+    await page.goto(URL_, { waitUntil: 'load' });
+    const during = await page.evaluate(() => { const c = document.querySelector('.intro-curtain'); return { hidden: c.getAttribute('aria-hidden'), focusables: c.querySelectorAll('a, button, input, [tabindex]').length,
+      label: [...c.querySelectorAll('.intro-curtain__label span')].filter((s) => getComputedStyle(s).display !== 'none').map((s) => s.textContent).join('|'), logo: c.querySelector('img').currentSrc.split('/').pop(), hero: document.querySelector('.hero__media img').complete }; });
+    await page.waitForTimeout(2400);
+    const s = await shown(page);
+    const tag = `${lang}@${w}`;
+    if (s.first === null) problems.push(`${tag}: curtain never showed on a first visit`);
+    else if (s.last > 1550) problems.push(`${tag}: curtain still visible at ${Math.round(s.last)}ms`);
+    if (during.hidden !== 'true' || during.focusables) problems.push(`${tag}: curtain not aria-hidden or holds focusables`);
+    if (during.label !== (lang === 'ar' ? 'جارٍ التحضير' : 'Preparing')) problems.push(`${tag}: label "${during.label}"`);
+    if (!/^logo-(160|320)\.(webp|png)$/.test(during.logo)) problems.push(`${tag}: curtain shows ${during.logo}`);
+    if (await page.evaluate(() => document.documentElement.classList.contains('intro'))) problems.push(`${tag}: .intro never removed`);
+    if (errors.length) problems.push(`${tag}: ${errors.join(', ')}`);
+    // Same tab again: no curtain
+    await page.reload({ waitUntil: 'load' }); await page.waitForTimeout(300);
+    if ((await shown(page)).first !== null) problems.push(`${tag}: curtain showed again on a repeat visit`);
+    await ctx.close();
+  }
+  // Any key skips it at once
+  { const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, intro: true }); await ctx.addInitScript(watch);
+    const page = await ctx.newPage(); await page.goto(URL_, { waitUntil: 'domcontentloaded' }); await page.waitForTimeout(250);
+    const t = await page.evaluate(() => performance.now()); await page.keyboard.press('Tab'); await page.waitForTimeout(2400);
+    const s = await shown(page);
+    if (s.last - t > 520) problems.push(`a key press did not skip it (visible ${Math.round(s.last - t)}ms after)`);
+    if (await page.evaluate(() => document.activeElement.className) !== 'skip-link') problems.push('the skipping key press did not also move focus to the skip link');
+    await ctx.close(); }
+  // Never: reduced motion, no JS. And if main.js dies, the head script still lifts it by 1.5s
+  for (const [label, o, init] of [['reduced motion', { reducedMotion: 'reduce' }], ['no JS', { javaScriptEnabled: false }], ['main.js broken', {}, () => Object.defineProperty(window, 'I18N', { get() {}, set() {} })]]) {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, intro: true, ...o });
+    if (o.javaScriptEnabled !== false) await ctx.addInitScript(watch);
+    if (init) await ctx.addInitScript(init);
+    const page = await ctx.newPage(); await page.goto(URL_, { waitUntil: 'load' }); await page.waitForTimeout(2400);
+    if (o.javaScriptEnabled === false) { if (await page.evaluate(() => getComputedStyle(document.querySelector('.intro-curtain')).display !== 'none')) problems.push('curtain visible without JS'); }
+    else { const s = await shown(page);
+      if (label === 'reduced motion' && s.first !== null) problems.push('curtain showed under reduced motion');
+      if (label === 'main.js broken' && (s.first === null || s.last > 1550)) problems.push(`with main.js broken: ${s.first === null ? 'never showed' : 'visible until ' + Math.round(s.last) + 'ms'}`); }
+    await ctx.close();
+  }
+  report('23. Intro curtain', problems.length === 0,
+    problems.length ? problems.join(' | ') : 'first visit (AR+EN, 1440 + 375): official mark + CONTENT.md label in the page language, aria-hidden, no focusables, gone by 1.5s; not shown again in the same tab; any key skips it; never under reduced motion or without JS; if main.js fails the head script still lifts it by 1.5s');
+}
+
+// 24 — custom cursor: mouse only; exact dot; native cursor for keyboard, touch, form fields, reduced motion
+{
+  const problems = [];
+  const st = (page) => page.evaluate(() => { const c = document.querySelector('.cursor'); const m = (e) => { const t = new DOMMatrix(getComputedStyle(e).transform); return [t.e, t.f]; };
+    return c ? { on: document.documentElement.classList.contains('has-cursor'), cls: c.className, op: +getComputedStyle(c).opacity, dot: m(c.querySelector('.cursor__dot')), ring: m(c.querySelector('.cursor__ring')),
+      dotBg: getComputedStyle(c.querySelector('.cursor__dot')).backgroundColor, body: getComputedStyle(document.body).cursor } : { on: false, body: getComputedStyle(document.body).cursor }; });
+  for (const lang of ['ar', 'en']) {
+    const { ctx, page, errors } = await open({ lang });
+    await page.mouse.move(700, 300); await page.mouse.move(720, 320, { steps: 4 }); await page.waitForTimeout(700);
+    let s = await st(page);
+    if (!s.on || s.op < 0.99 || s.body !== 'none') problems.push(`${lang}: not on after a mouse move (${JSON.stringify(s)})`);
+    if (s.dot && (s.dot[0] !== 720 || s.dot[1] !== 320)) problems.push(`${lang}: dot at ${s.dot}, pointer at 720,320`);
+    if (s.ring && Math.hypot(s.ring[0] - 720, s.ring[1] - 320) > 1) problems.push(`${lang}: ring did not settle on the pointer`);
+    if (await page.evaluate(() => document.elementFromPoint(720, 320).closest('.cursor') !== null)) problems.push(`${lang}: cursor intercepts the pointer`);
+    // Over a link: ring opens
+    const cta = await page.evaluate(() => { const r = document.querySelector('.hero .btn').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
+    await page.mouse.move(cta[0], cta[1], { steps: 3 }); await page.waitForTimeout(300);
+    if (!(await st(page)).cls.includes('is-link')) problems.push(`${lang}: no link state over the primary button`);
+    // Light section: ink on bone
+    await page.evaluate(() => { const p = document.querySelector('.principle__title'); p.scrollIntoView({ block: 'center', behavior: 'instant' }); });
+    await page.waitForTimeout(200);
+    const pt = await page.evaluate(() => { const r = document.querySelector('.principle__title').getBoundingClientRect(); return [r.left + 20, r.top + r.height / 2]; });
+    await page.mouse.move(pt[0], pt[1], { steps: 3 }); await page.waitForTimeout(400);
+    s = await st(page);
+    if (!s.cls.includes('is-light') || s.dotBg !== 'rgb(5, 5, 4)') problems.push(`${lang}: not ink on the bone ground (${s.cls}, ${s.dotBg})`);
+    // Form field: native text caret, custom mark hidden
+    await page.evaluate(() => document.querySelector('#f-name').scrollIntoView({ block: 'center', behavior: 'instant' })); await page.waitForTimeout(150);
+    const inp = await page.evaluate(() => { const r = document.querySelector('#f-name').getBoundingClientRect(); return [r.left + 30, r.top + r.height / 2]; });
+    await page.mouse.move(inp[0], inp[1], { steps: 3 }); await page.waitForTimeout(400);
+    s = await st(page);
+    const caret = await page.evaluate(() => getComputedStyle(document.querySelector('#f-name')).cursor);
+    if (caret !== 'text' || !s.cls.includes('is-native') || s.op > 0.01) problems.push(`${lang}: form field cursor ${caret}, mark opacity ${s.op}`);
+    // Keyboard: native cursor back at once, focus ring visible
+    await page.keyboard.press('Tab'); await page.waitForTimeout(100);
+    s = await st(page);
+    const ring = await page.evaluate(() => { const cs = getComputedStyle(document.activeElement); return cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) >= 1; });
+    if (s.on || s.body === 'none' || !ring) problems.push(`${lang}: keyboard did not restore the native cursor + ring (${JSON.stringify(s)})`);
+    await page.mouse.move(600, 400, { steps: 3 }); await page.waitForTimeout(200);
+    if (!(await st(page)).on) problems.push(`${lang}: mouse did not bring it back after the keyboard`);
+    if (errors.length) problems.push(`${lang}: ${errors.join(', ')}`);
+    await ctx.close();
+  }
+  // Touch: never built, native cursor untouched
+  { const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }); const page = await ctx.newPage();
+    await page.goto(URL_, { waitUntil: 'load' }); await page.waitForTimeout(300);
+    await page.touchscreen.tap(200, 400); await page.mouse.move(200, 420); await page.waitForTimeout(200);
+    const s = await st(page);
+    if (s.on || await page.evaluate(() => !!document.querySelector('.cursor'))) problems.push('touch: custom cursor built');
+    await ctx.close(); }
+  // Reduced motion: native only
+  { const { ctx, page } = await open({ reducedMotion: 'reduce' });
+    await page.mouse.move(600, 300, { steps: 4 }); await page.waitForTimeout(200);
+    if ((await st(page)).on) problems.push('reduced motion: custom cursor on');
+    await ctx.close(); }
+  report('24. Custom cursor', problems.length === 0,
+    problems.length ? problems.join(' | ') : 'mouse only (AR+EN): dot sits exactly on the pointer, ring settles on it, never intercepts clicks; opens over the primary button; ink on the bone ground; form fields keep the native text caret; Tab hands back the native cursor with the focus ring, a mouse move restores it; never built on touch; off under reduced motion');
+}
+
+// 25 — magnetic buttons: small pull toward the mouse, settles back, clicks still land; not for touch, keyboard, reduced motion
+{
+  const problems = [];
+  const tr = (page, sel) => page.evaluate((sel) => { const t = new DOMMatrix(getComputedStyle(document.querySelector(sel)).transform); return [+t.e.toFixed(2), +t.f.toFixed(2)]; }, sel);
+  for (const lang of ['ar', 'en']) for (const sel of ['.hero .btn', '.form__submit']) {
+    const { ctx, page } = await open({ lang });
+    await page.evaluate((sel) => document.querySelector(sel).scrollIntoView({ block: 'center', behavior: 'instant' }), sel); await page.waitForTimeout(300);
+    const r = await page.evaluate((sel) => { const b = document.querySelector(sel).getBoundingClientRect(); return { x: b.left, y: b.top, w: b.width, h: b.height }; }, sel);
+    // Just outside the top-right corner, inside the zone
+    await page.mouse.move(r.x + r.w + 12, r.y - 10, { steps: 5 }); await page.waitForTimeout(450);
+    const p = await tr(page, sel);
+    const tag = `${lang} ${sel}`;
+    if (!(p[0] > 1 && p[1] < -1)) problems.push(`${tag}: no pull toward the pointer (${p})`);
+    if (Math.abs(p[0]) > 8.01 || Math.abs(p[1]) > 5.01) problems.push(`${tag}: pulled too far (${p})`);
+    if (r.h < 44) problems.push(`${tag}: ${r.h}px tall`);
+    // Far away: settles back
+    await page.mouse.move(20, 20, { steps: 5 }); await page.waitForTimeout(1000);
+    const back = await tr(page, sel);
+    if (Math.abs(back[0]) > 0.05 || Math.abs(back[1]) > 0.05) problems.push(`${tag}: did not settle back (${back})`);
+    await ctx.close();
+  }
+  // A click on the pulled hero button still navigates
+  { const { ctx, page } = await open({});
+    const r = await page.evaluate(() => { const b = document.querySelector('.hero .btn').getBoundingClientRect(); return [b.left + b.width - 6, b.top + 6]; });
+    await page.mouse.move(r[0], r[1], { steps: 5 }); await page.waitForTimeout(300); await page.mouse.down(); await page.mouse.up(); await page.waitForTimeout(1200);
+    if (!(await page.evaluate(() => location.hash === '#register'))) problems.push('click on the pulled button did not land');
+    await ctx.close(); }
+  // Keyboard focus, touch, reduced motion: never moves
+  { const { ctx, page } = await open({});
+    await page.focus('.hero .btn'); await page.waitForTimeout(200);
+    if ((await tr(page, '.hero .btn')).some((v) => v !== 0)) problems.push('keyboard focus moved the button');
+    await ctx.close(); }
+  { const { ctx, page } = await open({ reducedMotion: 'reduce' });
+    const r = await page.evaluate(() => { const b = document.querySelector('.hero .btn').getBoundingClientRect(); return [b.right + 10, b.top - 8]; });
+    await page.mouse.move(r[0], r[1], { steps: 5 }); await page.waitForTimeout(400);
+    if ((await tr(page, '.hero .btn')).some((v) => v !== 0)) problems.push('moved under reduced motion');
+    await ctx.close(); }
+  { const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }); const page = await ctx.newPage();
+    await page.goto(URL_, { waitUntil: 'load' }); await page.waitForTimeout(300);
+    const r = await page.evaluate(() => { const b = document.querySelector('.hero .btn'); b.scrollIntoView({ block: 'center', behavior: 'instant' }); const x = b.getBoundingClientRect(); return [x.left + 5, x.top + 5]; });
+    await page.touchscreen.tap(r[0], r[1]); await page.waitForTimeout(300);
+    if (await page.evaluate(() => document.querySelector('.hero .btn').style.transform !== '')) problems.push('touch moved the button');
+    await ctx.close(); }
+  report('25. Magnetic buttons', problems.length === 0,
+    problems.length ? problems.join(' | ') : 'hero and form buttons (AR+EN) lean toward a nearby mouse (≤8px across, ≤5px up/down) and settle back when it leaves; a click on a pulled button still lands; ≥44px tall; keyboard focus, touch and reduced motion never move them');
+}
+
+// 26 — scroll-scrubbed film: playhead follows scroll both ways, ≤2 frames live, text still clears AA; swap under reduced motion
+{
+  const problems = [];
+  const lum = (r, g, b) => [r, g, b].map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }).reduce((a, v, i) => a + v * [0.2126, 0.7152, 0.0722][i], 0);
+  const sharp = (await import('sharp')).default;
+  // Put the viewport centre at fraction f of line block i, then read every frame's state
+  const at = (page, i, f) => page.evaluate(async ({ i, f }) => {
+    const line = document.querySelectorAll('[data-film-line]')[i], r = line.getBoundingClientRect();
+    scrollTo({ top: scrollY + r.top + r.height * f - innerHeight / 2, behavior: 'instant' });
+    await new Promise((res) => setTimeout(res, 60)); // IntersectionObserver + rAF
+    await new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(res)));
+    const lo = [...document.querySelectorAll('[data-film-line]')].map((l) => +getComputedStyle(l).opacity);
+    return [...document.querySelectorAll('[data-film-frame]')].map((el, k) => ({ o: +getComputedStyle(el).opacity, vis: getComputedStyle(el).visibility, s: new DOMMatrix(getComputedStyle(el).transform).a, wc: el.style.willChange, line: lo[k] }));
+  }, { i, f });
+  for (const lang of ['ar', 'en']) for (const [w, h] of [[1440, 900], [375, 812]]) {
+    const { ctx, page, errors } = await open({ lang, width: w, height: h });
+    const tag = `${lang}@${w}`;
+    if (!(await page.evaluate(() => document.querySelector('[data-film]').classList.contains('is-scrub')))) problems.push(`${tag}: not scrubbing`);
+    const seq = [];
+    for (let i = 0; i < 6; i++) for (const f of [0.3, 0.8, 0.95]) {
+      const s = await at(page, i, f); seq.push({ i, f, s });
+      const live = s.filter((x) => x.o > 0.001);
+      if (live.length > 2 || s.filter((x) => x.wc).length > 2) problems.push(`${tag}: ${live.length} frames live at line ${i + 1}+${f}`);
+      if (Math.abs(s[i].o - 1) > 0.001) problems.push(`${tag}: frame ${i + 1} at ${s[i].o} while its line is read (${f})`);
+      if (f === 0.3 && i < 5 && s[i + 1].o > 0.001) problems.push(`${tag}: frame ${i + 2} already showing early in line ${i + 1}`);
+      if (f === 0.95 && i < 5 && !(s[i + 1].o > 0.2 && s[i + 1].o < 1)) problems.push(`${tag}: frame ${i + 2} not mid-dissolve at the end of line ${i + 1} (${s[i + 1].o})`);
+      if (s[i].s < 1 || s[i].s > 1.061) problems.push(`${tag}: push-in scale ${s[i].s}`);
+      // the line being read is fully there; once the next frame has mostly arrived, it has faded with its own
+      if (f === 0.3 && s[i].line !== 1) problems.push(`${tag}: line ${i + 1} at ${s[i].line} while being read`);
+      if (f === 0.95 && i < 5 && s[i].line > 0.15) problems.push(`${tag}: line ${i + 1} still at ${s[i].line} over the next frame`);
+    }
+    // push-in only ever closes in while reading forwards
+    for (let i = 0; i < 6; i++) { const a = seq.find((x) => x.i === i && x.f === 0.3).s[i].s, b = seq.find((x) => x.i === i && x.f === 0.95).s[i].s; if (!(b < a)) problems.push(`${tag}: frame ${i + 1} not pushing in (${a} → ${b})`); }
+    // Scrolling back reproduces the same picture (it is a playhead, not a one-way trigger)
+    const back = await at(page, 2, 0.95), fwd = seq.find((x) => x.i === 2 && x.f === 0.95).s;
+    if (back.some((x, k) => Math.abs(x.o - fwd[k].o) > 0.01 || Math.abs(x.s - fwd[k].s) > 0.001)) problems.push(`${tag}: scrolling back does not reproduce the frame`);
+    // Text over the scrubbed frames: lightest 5% behind each line (text hidden), on its own frame and mid-dissolve
+    await page.evaluate(() => document.querySelectorAll('.film__line p').forEach((e, i) => { e.dataset.oc = i; e.dataset.col = getComputedStyle(e).color; }));
+    await page.addStyleTag({ content: '[data-oc] { color: transparent !important; text-shadow: none !important; }' });
+    for (let i = 0; i < 6; i++) for (const f of [0.6, 0.75]) { // while the line is at (near) full strength
+      await at(page, i, f); await page.waitForTimeout(30);
+      const box = await page.evaluate((i) => { const el = document.querySelector(`[data-oc="${i}"]`), r = el.getBoundingClientRect();
+        return { x: Math.max(0, r.left), y: Math.max(0, r.top), width: Math.min(r.width, innerWidth - Math.max(0, r.left)), height: Math.max(1, Math.min(r.height, innerHeight - Math.max(0, r.top))), col: el.dataset.col, size: parseFloat(getComputedStyle(el).fontSize) }; }, i);
+      if (box.y >= h - 1) continue; // below the fold at this playhead
+      const { data } = await sharp(await page.screenshot({ clip: box })).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+      const L = []; for (let k = 0; k < data.length; k += 3) L.push(lum(data[k], data[k + 1], data[k + 2])); L.sort((a, b) => a - b);
+      const [r, g, b] = box.col.match(/[\d.]+/g).map(Number);
+      const cr = (lum(r, g, b) + 0.05) / (L[Math.floor(L.length * 0.95)] + 0.05), need = box.size >= 24 ? 3 : 4.5;
+      if (cr < need) problems.push(`${tag} film line ${i + 1} @${f}: ${cr.toFixed(2)}:1 (need ${need})`);
+    }
+    if (errors.length) problems.push(`${tag}: ${errors.join(', ')}`);
+    await ctx.close();
+  }
+  // Reduced motion: the original swap, no inline styles, no push-in
+  { const { ctx, page } = await open({ reducedMotion: 'reduce' });
+    const s = await at(page, 3, 0.5); await page.waitForTimeout(100);
+    const r = await page.evaluate(() => ({ scrub: document.querySelector('[data-film]').classList.contains('is-scrub'), inline: [...document.querySelectorAll('[data-film-frame]')].some((el) => el.getAttribute('style')), active: [...document.querySelectorAll('[data-film-frame]')].findIndex((el) => el.classList.contains('is-active')) }));
+    if (r.scrub || r.inline || r.active !== 3 || s.some((x) => x.s !== 1)) problems.push(`reduced motion: ${JSON.stringify(r)}`);
+    await ctx.close(); }
+  report('26. Scroll-scrubbed film', problems.length === 0,
+    problems.length ? problems.join(' | ') : 'AR+EN at 1440 and 375: each frame is fully up while its line is read and dissolves into the next over the last 30% before the next line, pushing in 1.06 → 1; never more than two frames live or promoted; scrolling back reproduces the same picture; every line clears AA while it is read (incl. the start of the dissolve) and fades with its frame before the next one dominates; reduced motion keeps the plain swap');
 }
 
 await browser.close();
