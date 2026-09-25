@@ -19,8 +19,8 @@ jobs:
       run:
         working-directory: tools
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
@@ -39,7 +39,7 @@ jobs:
       - name: Definition-of-done checks (Chromium)
         if: always()
         run: CHROME="$(node -e "console.log(require('playwright').chromium.executablePath())")" node verify.mjs
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: cross-browser-shots

@@ -55,6 +55,11 @@ for (const [name, launch] of engines.filter(([n]) => !only || only.includes(n)))
     // The material strip scrolls sideways: swipe it end to end, as a visitor would
     await page.evaluate(async () => { const t = document.querySelector('.material__track'); t.scrollIntoView({ block: 'center' }); const dir = document.dir === 'rtl' ? -1 : 1; for (let i = 0; i < 8; i++) { t.scrollBy({ left: dir * 300, behavior: 'instant' }); await new Promise((r) => setTimeout(r, 120)); } });
     await page.waitForTimeout(1300);
+    // A reveal only has to show once it is on screen. A fast scripted scroll can carry an element past before a
+    // slow engine's IntersectionObserver runs (a reader would see it reveal on the way back), so bring any
+    // unrevealed element into view and give it a moment: what is still hidden then is a real failure.
+    await page.evaluate(async () => { for (const e of document.querySelectorAll('[data-reveal]:not(.is-in)')) { e.scrollIntoView({ block: 'center', behavior: 'instant' }); await new Promise((r) => setTimeout(r, 400)); } });
+    await page.waitForTimeout(1000);
     const s = await page.evaluate(() => ({
       hidden: [...document.querySelectorAll('[data-reveal]')].filter((e) => getComputedStyle(e).opacity !== '1').map((e) => `${e.className.split(' ')[0]}${e.classList.contains('is-in') ? '(is-in, opacity ' + getComputedStyle(e).opacity + ')' : ''} @${Math.round(e.getBoundingClientRect().top + scrollY)}`),
       imgs: [...document.querySelectorAll('img[loading="lazy"]')].filter((i) => !(i.complete && i.naturalWidth)).length,
@@ -98,7 +103,8 @@ for (const [name, launch] of engines.filter(([n]) => !only || only.includes(n)))
     await page.screenshot({ path: `${OUT}/${name}-${lang}${w}-film.jpg`, type: 'jpeg', quality: 60 });
     // Phase 2 · pointer effects: desktop mouse gets the cursor + magnet; touch contexts never get the cursor
     const touch = w < 1000 && name !== 'firefox';
-    await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' })); await page.waitForTimeout(300);
+    // Bring the hero button on screen: only on-screen buttons are magnetic (at 375 it can sit just below the fold)
+    await page.evaluate(() => document.querySelector('.hero .btn').scrollIntoView({ block: 'center', behavior: 'instant' })); await page.waitForTimeout(300);
     // Just above the button's top-right corner, inside its magnetic zone and inside the viewport (clientWidth: not on a scrollbar)
     const btn = await page.evaluate(() => { const b = document.querySelector('.hero .btn').getBoundingClientRect(); return [Math.min(b.right + 12, document.documentElement.clientWidth - 4), b.top - 10]; });
     if (!touch) {
