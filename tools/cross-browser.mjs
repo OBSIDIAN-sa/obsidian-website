@@ -56,11 +56,11 @@ for (const [name, launch] of engines.filter(([n]) => !only || only.includes(n)))
     await page.evaluate(async () => { const t = document.querySelector('.material__track'); t.scrollIntoView({ block: 'center' }); const dir = document.dir === 'rtl' ? -1 : 1; for (let i = 0; i < 8; i++) { t.scrollBy({ left: dir * 300, behavior: 'instant' }); await new Promise((r) => setTimeout(r, 120)); } });
     await page.waitForTimeout(1300);
     const s = await page.evaluate(() => ({
-      hidden: [...document.querySelectorAll('[data-reveal]')].filter((e) => getComputedStyle(e).opacity !== '1').length,
+      hidden: [...document.querySelectorAll('[data-reveal]')].filter((e) => getComputedStyle(e).opacity !== '1').map((e) => `${e.className.split(' ')[0]}${e.classList.contains('is-in') ? '(is-in, opacity ' + getComputedStyle(e).opacity + ')' : ''} @${Math.round(e.getBoundingClientRect().top + scrollY)}`),
       imgs: [...document.querySelectorAll('img[loading="lazy"]')].filter((i) => !(i.complete && i.naturalWidth)).length,
       wm: (() => { const wm = document.querySelector('.principle__watermark'), sec = wm.closest('.principle').getBoundingClientRect(); const rg = document.createRange(); rg.selectNodeContents(wm); const t = rg.getBoundingClientRect(); return t.left >= sec.left - 1 && t.right <= sec.right + 1; })(),
     }));
-    if (s.hidden) problems.push(`${key}: ${s.hidden} reveal(s) never shown`);
+    if (s.hidden.length) problems.push(`${key}: ${s.hidden.length} reveal(s) never shown: ${s.hidden.join(', ')} (page ${H}px)`);
     if (s.imgs) problems.push(`${key}: ${s.imgs} lazy image(s) not loaded`);
     if (!s.wm) problems.push(`${key}: watermark cropped`);
 
@@ -103,9 +103,11 @@ for (const [name, launch] of engines.filter(([n]) => !only || only.includes(n)))
     const btn = await page.evaluate(() => { const b = document.querySelector('.hero .btn').getBoundingClientRect(); return [Math.min(b.right + 12, document.documentElement.clientWidth - 4), b.top - 10]; });
     if (!touch) {
       await page.mouse.move(btn[0] - 200, btn[1] + 120); await page.mouse.move(btn[0], btn[1], { steps: 6 }); await page.waitForTimeout(450);
-      const p = await page.evaluate(() => ({ cursor: document.documentElement.classList.contains('has-cursor'), pull: getComputedStyle(document.querySelector('.hero .btn')).transform }));
+      const p = await page.evaluate(() => { const b = document.querySelector('.hero .btn'), r = b.getBoundingClientRect();
+        return { cursor: document.documentElement.classList.contains('has-cursor'), pull: getComputedStyle(b).transform, cls: b.className, inline: b.style.transform,
+          rect: [r.left, r.top, r.right, r.bottom].map(Math.round), cw: document.documentElement.clientWidth, iw: innerWidth, y: scrollY, fine: matchMedia('(hover: hover) and (pointer: fine)').matches, motion: !!document.querySelector('.cursor') }; });
       if (!p.cursor) problems.push(`${key}: custom cursor did not switch on for the mouse`);
-      if (p.pull === 'none') problems.push(`${key}: magnetic button did not move`);
+      if (p.pull === 'none') problems.push(`${key}: magnetic button did not move (pointer at ${btn.map(Math.round)}; ${JSON.stringify(p)})`);
       if (w === 1440) await page.screenshot({ path: `${OUT}/${name}-${lang}${w}-pointer.jpg`, type: 'jpeg', quality: 70, clip: { x: Math.max(0, btn[0] - 360), y: Math.max(0, btn[1] - 80), width: 460, height: 200 } });
     } else if (await page.evaluate(() => !!document.querySelector('.cursor') || document.documentElement.classList.contains('has-cursor'))) problems.push(`${key}: custom cursor on a touch device`);
     // Phase 2 · second visit in the same tab: no curtain
