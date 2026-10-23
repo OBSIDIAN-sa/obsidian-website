@@ -168,6 +168,7 @@ Get Phase 1 clean and reviewed before touching Phase 2. A polished simple versio
 | Magnetic buttons | Desktop only |
 | Scroll progress hairline | Always acceptable |
 | Typed easter egg (`OBSIDIAN`) | Desktop only; breaks nothing |
+| Service clips (board → piece) | Muted, no audio track, ~1MB each (`assets/video/`, MP4 + WebM); built only near the viewport, plays only while half in view, never under reduced motion; the still photo is the fallback |
 
 **Out of scope:** ambient audio, background video in hero, WebGL, infinite 3D grid, any procedural reconstruction of the logo.
 

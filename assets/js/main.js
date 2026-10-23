@@ -522,6 +522,44 @@
     });
   })();
 
+  /* ------------------------------------------ service clips (board → piece) */
+  // The still stays the content; the clip is built only when its card nears the viewport, plays muted
+  // while at least half of it is in view, and fades over the still once frames are actually running.
+  // Nothing loads or plays under reduced motion, and a failed clip just leaves the still.
+  (function serviceClips() {
+    var boxes = $$('[data-video]');
+    var probe = document.createElement('video');
+    // H.264 where the browser has it (smaller), VP9 WebM otherwise (e.g. open-source Chromium builds)
+    var ext = probe.canPlayType && probe.canPlayType('video/mp4; codecs="avc1.640028"') ? '.mp4'
+      : probe.canPlayType && probe.canPlayType('video/webm; codecs="vp9"') ? '.webm' : '';
+    if (!boxes.length || !ext || !('IntersectionObserver' in window)) return;
+    function build(box) {
+      if (box._v) return box._v;
+      var v = document.createElement('video');
+      v.className = 'service__video';
+      v.muted = true; v.loop = true; v.playsInline = true; v.preload = 'none';
+      v.setAttribute('muted', ''); v.setAttribute('playsinline', ''); v.setAttribute('aria-hidden', 'true');
+      v.addEventListener('playing', function () { v.classList.add('is-playing'); });
+      v.addEventListener('error', function () { v.remove(); box._v = null; box.removeAttribute('data-video'); });
+      v.src = box.getAttribute('data-video') + ext;
+      box.appendChild(v);
+      return (box._v = v);
+    }
+    function play(box) {
+      if (reduceMQ.matches || !box.hasAttribute('data-video')) return;
+      var p = build(box).play();
+      if (p && p.catch) p.catch(function () {}); // autoplay refused (e.g. data saver): the still remains
+    }
+    function pause(box) { if (box._v) box._v.pause(); }
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) { e.intersectionRatio >= 0.5 ? play(e.target) : pause(e.target); });
+    }, { threshold: [0, 0.5] });
+    boxes.forEach(function (b) { io.observe(b); });
+    reduceMQ.addEventListener('change', function () {
+      boxes.forEach(function (b) { if (reduceMQ.matches && b._v) { b._v.pause(); b._v.classList.remove('is-playing'); } });
+    });
+  })();
+
   applyLang(lang, false);
 
   // Motion that isn't needed for the first screen (cursor, magnetic buttons, scrubbed film) arrives after

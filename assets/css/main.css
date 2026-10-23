@@ -508,6 +508,10 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .services__grid { display: grid; gap: var(--space-5) clamp(1.5rem, 3vw, 3rem); }
 @media (min-width: 900px) { .services__grid { grid-template-columns: repeat(3, 1fr); } }
 .service img { inline-size: 100%; aspect-ratio: 3 / 2; object-fit: cover; }
+/* "Board to piece" clip over the still: JS-only, muted, plays while in view, never under reduced motion */
+.service__media { position: relative; overflow: hidden; }
+.service__video { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; object-fit: cover; background-color: var(--onyx); opacity: 0; transition: opacity var(--dur) var(--ease); pointer-events: none; }
+.service__video.is-playing { opacity: 1; }
 .service__title { margin-block: var(--space-3) var(--space-2); font-family: var(--ff-display); font-weight: var(--name-weight); font-size: var(--step-2); line-height: 1.25; letter-spacing: var(--display-track); }
 .service__body { color: var(--warm-grey); }
 .service__points { margin-block-start: var(--space-3); border-block-start: 1px solid var(--hairline); }
