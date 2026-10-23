@@ -27,7 +27,6 @@ window.I18N = {
 
     principle_heading: 'نبدأ من ورقة بيضاء، وننتهي عند تفصيلة لا يلاحظها أحد غيرك',
     principle_body: 'أوبسيديان ما هو معرض يبيع قطع جاهزة. هو مكان تُرسم فيه المساحة أولاً، ثم تُصنّع كل قطعة على مقاسها. نختار الخشب والمواد والإكسسوارات من أجود الأنواع، وما نتهاون بأي تفصيل مهما كان صغيراً — لأن الفرق بين الجيد والفاخر يقع دائماً في التفاصيل الصغيرة.',
-    principle_watermark: 'NO READY MADE',
 
     interstitial: 'بعضها يُقاس بالمليمتر. وبعضها يُقاس بالإحساس',
 
@@ -73,7 +72,7 @@ window.I18N = {
     svc_3_p1: 'تنسيق كامل بين الغرف',
     svc_3_p2: 'مطابقة العروق والألوان',
     svc_3_p3: 'حلول تخزين مخفية',
-    svc_3_alt: 'جدار بألواح خشب الجوز مع وحدة تلفزيون وباب مخفي', // [NOT IN CONTENT.md]
+    svc_3_alt: 'مكتب بمكتبة خشب مدمجة وإضاءة داخل الرفوف', // [NOT IN CONTENT.md]
 
     why_heading: 'ليش أوبسيديان',
     why_1_title: 'ما نبيع جاهز',
@@ -153,7 +152,6 @@ window.I18N = {
 
     principle_heading: 'We start on a blank sheet. We finish on a detail only you will ever notice',
     principle_body: 'Obsidian is not a showroom that sells finished pieces. It’s where the space is drawn first, then every piece is made to fit it. We select the timber, the materials and the hardware from the best available, and we don’t let a single detail slide — because the gap between good and luxury always sits in the smallest details.',
-    principle_watermark: 'NO READY MADE',
 
     interstitial: 'Some of it is measured in millimetres. Some of it is measured by feel',
 
@@ -199,7 +197,7 @@ window.I18N = {
     svc_3_p1: 'Full coordination room to room',
     svc_3_p2: 'Grain and colour matched throughout',
     svc_3_p3: 'Concealed storage solutions',
-    svc_3_alt: 'Walnut wall panelling with a media unit and a flush concealed door', // [NOT IN CONTENT.md]
+    svc_3_alt: 'A study with a built-in timber bookcase and lighting inside the shelves', // [NOT IN CONTENT.md]
 
     why_heading: 'Why Obsidian',
     why_1_title: 'Nothing pre-made',

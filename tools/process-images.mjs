@@ -26,7 +26,7 @@ const SQUARE = [600, 1200];
 const SLOTS = [
   { slot: 'hero',          src: 'hero/hero-1.jpg',                 ratio: 16 / 9,  widths: FULL },
   { slot: 'hero-mobile',   src: 'hero-mobile/hero-mobile-3.jpg',   ratio: 9 / 16,  widths: [800, 1200, 1600], focus: { x: .55, y: .5 } }, // 1600w: portrait tablets at 2x
-  { slot: 'island',        src: 'island/island-1.jpg',             ratio: 21 / 9,  widths: FULL, focus: { x: .5, y: .55 } },
+  { slot: 'island',        src: 'island/island-1.jpg',             ratio: 21 / 9,  widths: FULL, focus: { x: .5, y: .55 } }, // 2026-10-23: served files re-cut by hand without the coffee machine (island-1200/1570); re-running this restores it
   { slot: 'plan',          src: 'plan/plan-1.jpg',                 ratio: 4 / 3,   widths: CARD, focus: { x: .4, y: .5 } },
   { slot: 'mat-walnut',    src: 'mat-walnut/mat-walnut-3.jpg',     ratio: 1,       widths: SQUARE },
   { slot: 'mat-marble',    src: 'hero/hero.jpeg',                  ratio: 1,       widths: SQUARE, box: { l: .3, t: 0, w: .671, h: 1 } },
@@ -34,7 +34,7 @@ const SLOTS = [
   { slot: 'mat-glass',     src: 'mat-glass/mat-glass-1.jpg',       ratio: 1,       widths: SQUARE },
   { slot: 'svc-kitchen',   src: 'svc-kitchen/hero-3.jpg',          ratio: 3 / 2,   widths: CARD },
   { slot: 'svc-wardrobe',  src: 'svc-wardrobe/svc-wardrobe-4.jpg', ratio: 3 / 2,   widths: CARD },
-  { slot: 'svc-interior',  src: 'svc-interior/svc-interior-1.jpg', ratio: 3 / 2,   widths: CARD, box: { l: .42, t: .17, w: .5, h: .5 } },
+  { slot: 'svc-interior',  src: 'svc-interior/svc-interior-1.jpg', ratio: 3 / 2,   widths: CARD, box: { l: .42, t: .17, w: .5, h: .5 } }, // 2026-10-23: served files replaced by a still of the office clip; re-running this restores the old photo
   { slot: 'film-1',        src: 'film-1/film-1-4.jpg',             ratio: 16 / 9,  widths: FULL },
   { slot: 'film-2',        src: 'film-2/film-2-2.jpg',             ratio: 16 / 9,  widths: FULL, focus: { x: .55, y: .5 } },
   { slot: 'film-3',        src: 'film-3/film-3-1.jpg',             ratio: 16 / 9,  widths: FULL },

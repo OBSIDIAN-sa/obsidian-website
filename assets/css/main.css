@@ -423,15 +423,6 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 .principle .eyebrow { color: var(--ink); }
 .principle .eyebrow__rule { background: var(--ink); }
-.principle__watermark {
-  /* Physical centring on purpose: the element is direction:ltr, so logical insets would resolve
-     against its own direction and push it off-screen in Arabic. Centred needs no mirroring. */
-  position: absolute; left: 50%; inset-block-end: calc(var(--seam) - 0.12em); translate: -50% 0;
-  font-family: var(--ff-latin-display); font-weight: 300; font-size: min(22rem, calc((100vw - 2 * var(--gutter)) / 8));
-  line-height: 0.8; white-space: nowrap; color: transparent; direction: ltr;
-  -webkit-text-stroke: 1px color-mix(in srgb, var(--ink) 16%, transparent);
-  pointer-events: none; user-select: none;
-}
 .principle__inner { position: relative; }
 .principle__title { font-size: var(--step-4); max-inline-size: 18ch; }
 :root:lang(en) .principle__title { max-inline-size: 20ch; }
