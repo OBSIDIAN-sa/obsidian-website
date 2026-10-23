@@ -247,7 +247,7 @@ async function scrollThrough(page) {
     if (!u) { problems.push(`${lang}: nothing opened`); await ctx.close(); continue; }
     const parsed = new URL(u), text = parsed.searchParams.get('text');
     const expected = `مرحباً أوبسيديان 👋\nالاسم: ${lang === 'ar' ? 'نورة' : 'Noura'}\nالجوال: ${lang === 'ar' ? '055 123 4567' : '+966 55 123 4567'}\nنوع المشروع: مطبخ\nملاحظات: ${lang === 'ar' ? 'مطبخ بجزيرة' : 'Kitchen with island'}\n— مُرسل من الموقع`;
-    if (parsed.origin + parsed.pathname !== 'https://wa.me/966569997565') problems.push(`${lang}: wrong target ${parsed.origin + parsed.pathname}`);
+    if (parsed.origin + parsed.pathname !== 'https://wa.me/966579385265') problems.push(`${lang}: wrong target ${parsed.origin + parsed.pathname}`);
     if (text !== expected) problems.push(`${lang}: message mismatch:\n${text}`);
     samples.push(parsed.origin + parsed.pathname);
     await ctx.close();
@@ -255,9 +255,9 @@ async function scrollThrough(page) {
   // hero + footer links point at the same number
   const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   const waLinks = [...html.matchAll(/https:\/\/wa\.me\/(\d+)/g)].map((m) => m[1]);
-  if (waLinks.some((n) => n !== '966569997565')) problems.push('a static WhatsApp link uses another number');
+  if (waLinks.some((n) => n !== '966579385265')) problems.push('a static WhatsApp link uses another number');
   report('7. WhatsApp deep link: correct number, populated message', problems.length === 0,
-    problems.length ? problems.join(' | ') : `form opens ${samples[0]} with the CONTENT.md §15 message filled in (name, phone with Arabic digits normalised, type, note) from both languages; blocked when required fields are empty; ${waLinks.length} static wa.me links all use 966569997565`);
+    problems.length ? problems.join(' | ') : `form opens ${samples[0]} with the CONTENT.md §15 message filled in (name, phone with Arabic digits normalised, type, note) from both languages; blocked when required fields are empty; ${waLinks.length} static wa.me links all use 966579385265`);
 }
 
 // 8 — no image over 300KB (+ nothing heavier shipped in assets/)
@@ -604,7 +604,7 @@ async function scrollThrough(page) {
   for (const [l, u] of [['ar', BASE], ['en', BASE + '?lang=en'], ['x-default', BASE]]) if (!html.includes(`hreflang="${l}" href="${u}"`)) problems.push(`hreflang ${l} missing`);
   const ld = JSON.parse(html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1]);
   const content = fs.readFileSync(path.join(ROOT, 'CONTENT.md'), 'utf8');
-  if (ld.telephone !== '+966569997565' || !content.includes('966569997565')) problems.push('JSON-LD phone');
+  if (ld.telephone !== '+966579385265' || !content.includes('966579385265')) problems.push('JSON-LD phone');
   if (!content.includes(ld.email)) problems.push('JSON-LD email not in CONTENT.md');
   if (!content.includes(ld.address.addressLocality) || !content.includes(ld.address.addressRegion)) problems.push('JSON-LD address not from CONTENT.md');
   for (const k of ['openingHours', 'openingHoursSpecification', 'geo', 'priceRange', 'aggregateRating', 'review']) if (k in ld) problems.push(`JSON-LD invents ${k}`);

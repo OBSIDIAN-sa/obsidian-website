@@ -257,6 +257,6 @@ window.I18N = {
 
 /* WhatsApp message (CONTENT.md §15). Always sent in Arabic so every lead reads the same. */
 window.WA = {
-  number: '966569997565',
+  number: '966579385265',
   template: 'مرحباً أوبسيديان 👋\nالاسم: {name}\nالجوال: {phone}\nنوع المشروع: {type}\nملاحظات: {note}\n— مُرسل من الموقع',
 };

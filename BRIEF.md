@@ -122,7 +122,7 @@ The light Principle section (03) and the full-bleed Island (05) are the page's t
 **Non-negotiable**
 
 - Zero runtime network requests to third parties. Fonts, images, scripts — all local. Verify in the Network panel.
-- No backend. The interest form composes a WhatsApp deep link to `966569997565` with fields pre-filled (`CONTENT.md §15`). Validate client-side before opening.
+- No backend. The interest form composes a WhatsApp deep link to `966579385265` with fields pre-filled (`CONTENT.md §15`). Validate client-side before opening.
 - `logo.png` is used as-is. Not redrawn, re-traced, converted to SVG, or procedurally reconstructed. Brand requirement, not a preference.
 - No maps, no coordinates, no street address. City only.
 - No testimonials, lead times, warranty terms, payment terms, or opening date.
