@@ -9,7 +9,7 @@
 
 ## 1. The problem this site solves
 
-Obsidian is a bespoke kitchen, wardrobe and interior joinery brand in Dammam. The showroom hasn't opened. There is no portfolio, no client list, no reviews, no opening date.
+Obsidian is a bespoke kitchen, wardrobe and interior joinery brand in Saihat. The showroom hasn't opened. There is no portfolio, no client list, no reviews, no opening date.
 
 So the site can't do what a normal studio site does — prove itself with work. It has to establish credibility through **craft signals instead of evidence**: the precision of the typography, the restraint of the palette, the quality of the motion. The medium is the proof.
 
@@ -122,7 +122,7 @@ The light Principle section (03) and the full-bleed Island (05) are the page's t
 **Non-negotiable**
 
 - Zero runtime network requests to third parties. Fonts, images, scripts — all local. Verify in the Network panel.
-- No backend. The interest form composes a WhatsApp deep link to `966569997565` with fields pre-filled (`CONTENT.md §15`). Validate client-side before opening.
+- No backend. The interest form composes a WhatsApp deep link to `966579385265` with fields pre-filled (`CONTENT.md §15`). Validate client-side before opening.
 - `logo.png` is used as-is. Not redrawn, re-traced, converted to SVG, or procedurally reconstructed. Brand requirement, not a preference.
 - No maps, no coordinates, no street address. City only.
 - No testimonials, lead times, warranty terms, payment terms, or opening date.
@@ -168,6 +168,7 @@ Get Phase 1 clean and reviewed before touching Phase 2. A polished simple versio
 | Magnetic buttons | Desktop only |
 | Scroll progress hairline | Always acceptable |
 | Typed easter egg (`OBSIDIAN`) | Desktop only; breaks nothing |
+| Service clips (board → piece) | Muted, no audio track, ~1MB each (`assets/video/`, MP4 + WebM); built only near the viewport, plays only while half in view, never under reduced motion; the still photo is the fallback |
 
 **Out of scope:** ambient audio, background video in hero, WebGL, infinite 3D grid, any procedural reconstruction of the logo.
 
