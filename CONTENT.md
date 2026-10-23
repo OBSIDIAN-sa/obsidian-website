@@ -172,7 +172,7 @@ Bespoke Kitchens · Wardrobes & Dressing Rooms · Interior Solutions · Made to 
 ## 9. خدماتنا
 
 **AR**
-- العنوان: `ثلاثة أشياء نصنعها، ونتقنها`
+- العنوان: `كل ما نصنعه، نتقنه`
 
 **البطاقة 1 — مطابخ**
 - الوصف: من رفع المقاس إلى آخر مقبض. تخطيط يراعي حركتك داخل المطبخ قبل الشكل.
@@ -187,7 +187,7 @@ Bespoke Kitchens · Wardrobes & Dressing Rooms · Interior Solutions · Made to 
 - النقاط: `تنسيق كامل بين الغرف` · `مطابقة العروق والألوان` · `حلول تخزين مخفية`
 
 **EN**
-- Heading: `Three things we make, and make well`
+- Heading: `Everything we make, we make well`
 
 **Card 1 — Kitchens**
 - From the first measurement to the last handle. Layout planned around how you move in the kitchen, before how it looks.

@@ -54,7 +54,7 @@ window.I18N = {
     std_4_title: 'التسليم',
     std_4_body: 'تركيب بإشراف مباشر، ومراجعة نهائية تفصيلة تفصيلة قبل ما نقول خلصنا.',
 
-    services_heading: 'ثلاثة أشياء نصنعها، ونتقنها',
+    services_heading: 'كل ما نصنعه، نتقنه',
     svc_1_title: 'مطابخ',
     svc_1_body: 'من رفع المقاس إلى آخر مقبض. تخطيط يراعي حركتك داخل المطبخ قبل الشكل.',
     svc_1_p1: 'أسطح رخام وكوارتز',
@@ -179,7 +179,7 @@ window.I18N = {
     std_4_title: 'The handover',
     std_4_body: 'Installation under direct supervision, and a final walkthrough with you, detail by detail, before we call it done.',
 
-    services_heading: 'Three things we make, and make well',
+    services_heading: 'Everything we make, we make well',
     svc_1_title: 'Kitchens',
     svc_1_body: 'From the first measurement to the last handle. Layout planned around how you move in the kitchen, before how it looks.',
     svc_1_p1: 'Marble & quartz surfaces',
