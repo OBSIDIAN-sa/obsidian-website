@@ -19,9 +19,9 @@
 | واتساب (دولي) | 966579385265 |
 | البريد | obsidian.design.2026@gmail.com |
 | المدينة | سيهات، المنطقة الشرقية / Saihat, Eastern Province |
-| إنستقرام | obsidian.design.2026 |
+| إنستقرام | obsidian.design.ksa |
 | سناب شات | obsidian_design |
-| تيك توك | obsidian.design.2026 |
+| تيك توك | obsidian.design.ksa |
 | إكس | obsidiandesign2 |
 
 **ملاحظات إلزامية:**

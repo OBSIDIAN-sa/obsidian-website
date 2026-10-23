@@ -609,7 +609,7 @@ async function scrollThrough(page) {
   if (!content.includes(ld.address.addressLocality) || !content.includes(ld.address.addressRegion)) problems.push('JSON-LD address not from CONTENT.md');
   for (const k of ['openingHours', 'openingHoursSpecification', 'geo', 'priceRange', 'aggregateRating', 'review']) if (k in ld) problems.push(`JSON-LD invents ${k}`);
   if ('streetAddress' in ld.address || 'postalCode' in ld.address) problems.push('JSON-LD has a street address');
-  for (const handle of ['obsidian.design.2026', 'obsidian_design', 'obsidiandesign2']) if (!ld.sameAs.some((u) => u.includes(handle))) problems.push(`JSON-LD sameAs missing ${handle}`);
+  for (const handle of ['obsidian.design.ksa', 'obsidian_design', 'obsidiandesign2']) if (!ld.sameAs.some((u) => u.includes(handle))) problems.push(`JSON-LD sameAs missing ${handle}`);
   // ?lang=en opens English with its own canonical and title
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } }); const page = await ctx.newPage();
   await page.goto(URL_ + '?lang=en'); await page.waitForTimeout(400);
