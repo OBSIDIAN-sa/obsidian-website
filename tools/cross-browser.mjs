@@ -63,11 +63,9 @@ for (const [name, launch] of engines.filter(([n]) => !only || only.includes(n)))
     const s = await page.evaluate(() => ({
       hidden: [...document.querySelectorAll('[data-reveal]')].filter((e) => getComputedStyle(e).opacity !== '1').map((e) => `${e.className.split(' ')[0]}${e.classList.contains('is-in') ? '(is-in, opacity ' + getComputedStyle(e).opacity + ')' : ''} @${Math.round(e.getBoundingClientRect().top + scrollY)}`),
       imgs: [...document.querySelectorAll('img[loading="lazy"]')].filter((i) => !(i.complete && i.naturalWidth)).length,
-      wm: (() => { const wm = document.querySelector('.principle__watermark'), sec = wm.closest('.principle').getBoundingClientRect(); const rg = document.createRange(); rg.selectNodeContents(wm); const t = rg.getBoundingClientRect(); return t.left >= sec.left - 1 && t.right <= sec.right + 1; })(),
     }));
     if (s.hidden.length) problems.push(`${key}: ${s.hidden.length} reveal(s) never shown: ${s.hidden.join(', ')} (page ${H}px)`);
     if (s.imgs) problems.push(`${key}: ${s.imgs} lazy image(s) not loaded`);
-    if (!s.wm) problems.push(`${key}: watermark cropped`);
 
     // Interactions: FAQ, form validation, phone menu
     // Instant: a smooth scroll still running when the click lands would move another question under the pointer

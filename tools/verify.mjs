@@ -120,7 +120,7 @@ async function scrollThrough(page) {
       const out = [], vw = document.documentElement.clientWidth;
       if (document.documentElement.scrollWidth > vw) out.push(`page scrollWidth ${document.documentElement.scrollWidth} > ${vw}`);
       // .film__frame: the scrubbed push-in scales frames past the stage, which clips them (overflow: hidden)
-      const skip = '.material__track, .marquee, .principle__watermark, .footer__wordmark, .sr-only, .skip-link, .hero__rotator, .film__frame';
+      const skip = '.material__track, .marquee, .footer__wordmark, .sr-only, .skip-link, .hero__rotator, .film__frame';
       for (const el of document.querySelectorAll('body *')) {
         if (!el.offsetWidth || el.closest(skip)) continue;
         const r = el.getBoundingClientRect();
@@ -427,7 +427,7 @@ async function scrollThrough(page) {
     problems.length ? problems.join(' | ') : 'shows on the full word only (AR+EN), aria-hidden and click-through, keeps scroll and focus, self-dismisses, any key dismisses; ignored in form fields and on touch devices');
 }
 
-// 15 — polish: hero word never doubles, 44px hit areas, tablet nav, whole watermark, image fade
+// 15 — polish: hero word never doubles, 44px hit areas, tablet nav, image fade
 {
   const problems = [];
   // Hero word: sample every 40ms across two swaps; never two visible words
@@ -473,17 +473,6 @@ async function scrollThrough(page) {
     if (r.shown !== 5 || r.rows !== 1 || r.overflow) problems.push(`${lang}@768: nav shows ${r.shown}/5 on ${r.rows} row(s)${r.overflow ? ', header overflows' : ''}`);
     await ctx.close();
   }
-  // Watermark whole at every width
-  for (const w of [375, 768, 1440]) {
-    const { ctx, page } = await open({ width: w, height: 900 });
-    const cut = await page.evaluate(() => {
-      const wm = document.querySelector('.principle__watermark'), sec = wm.closest('.principle').getBoundingClientRect();
-      const rg = document.createRange(); rg.selectNodeContents(wm); const t = rg.getBoundingClientRect();
-      return t.left < sec.left - 1 || t.right > sec.right + 1;
-    });
-    if (cut) problems.push(`watermark cropped at ${w}px`);
-    await ctx.close();
-  }
   // Images: fade in with JS, visible without JS
   {
     const { ctx, page } = await open({});
@@ -497,8 +486,8 @@ async function scrollThrough(page) {
     if (hidden) problems.push(`${hidden} image(s) invisible without JS`);
     await nj.ctx.close();
   }
-  report('15. Polish: hero word, hit areas, tablet nav, watermark, image fade', problems.length === 0,
-    problems.length ? problems.join(' | ') : 'hero words never overlap (sampled every 40ms over two swaps, AR+EN); every control on a 375px phone is hittable 21px above and below its centre; full 5-link nav on one row at 768 in AR+EN; "NO READY MADE" whole at 375/768/1440; lazy images sit on onyx and fade in, and all show without JS');
+  report('15. Polish: hero word, hit areas, tablet nav, image fade', problems.length === 0,
+    problems.length ? problems.join(' | ') : 'hero words never overlap (sampled every 40ms over two swaps, AR+EN); every control on a 375px phone is hittable 21px above and below its centre; full 5-link nav on one row at 768 in AR+EN; lazy images sit on onyx and fade in, and all show without JS');
 }
 
 // 16 — phone menu (< 760px) + portrait-tablet hero crop

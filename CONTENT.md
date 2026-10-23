@@ -74,14 +74,12 @@ Bespoke Kitchens · Wardrobes & Dressing Rooms · Interior Solutions · Made to 
   > نبدأ من ورقة بيضاء، وننتهي عند تفصيلة لا يلاحظها أحد غيرك
 - الفقرة:
   > أوبسيديان ما هو معرض يبيع قطع جاهزة. هو مكان تُرسم فيه المساحة أولاً، ثم تُصنّع كل قطعة على مقاسها. نختار الخشب والمواد والإكسسوارات من أجود الأنواع، وما نتهاون بأي تفصيل مهما كان صغيراً — لأن الفرق بين الجيد والفاخر يقع دائماً في التفاصيل الصغيرة.
-- كلمة خلفية عملاقة (watermark): `NO READY MADE`
 
 **EN**
 - Heading:
   > We start on a blank sheet. We finish on a detail only you will ever notice
 - Paragraph:
   > Obsidian is not a showroom that sells finished pieces. It's where the space is drawn first, then every piece is made to fit it. We select the timber, the materials and the hardware from the best available, and we don't let a single detail slide — because the gap between good and luxury always sits in the smallest details.
-- Background watermark: `NO READY MADE`
 
 ---
 
