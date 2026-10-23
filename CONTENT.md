@@ -27,8 +27,19 @@
 **ملاحظات إلزامية:**
 - لا تضع خريطة ولا إحداثيات ولا عنواناً تفصيلياً. المدينة فقط: "سيهات — المنطقة الشرقية".
 - لا تكتب أي آراء عملاء أو تقييمات — المعرض لم يفتتح بعد.
-- لا تكتب أرقام مدة تنفيذ أو ضمان أو شروط دفع.
+- لا تكتب أرقام مدة تنفيذ أو شروط دفع.
+- الضمان: فقط الأرقام المعتمدة في ملف الشركة التعريفي (أكتوبر 2026) كما في §10أ، بلا شروط إضافية.
+- لا معرض أعمال ولا شعارات علامات تجارية (أسماء العلامات نصاً فقط).
 - لا تذكر "قادمون قريباً" بتاريخ محدد.
+
+---
+
+## 0أ. عنوان الصفحة ووصفها (لمحركات البحث)
+
+| | AR | EN |
+|---|---|---|
+| العنوان | أوبسيديان ديزاين — تفصيل مطابخ وخزائن وغرف ملابس فاخرة في سيهات | Obsidian Design — Bespoke Kitchens, Wardrobes & Dressing Rooms in Saihat |
+| الوصف | تفصيل مطابخ وخزائن وغرف ملابس فاخرة في سيهات والمنطقة الشرقية. ما عندنا قطعة جاهزة: نرفع المقاسات، نصمم، ونصنّع كل قطعة على مقاسها. | Nothing here is off the shelf. Bespoke kitchens, wardrobes and dressing rooms in Saihat, Eastern Province — measured on site, designed and built to fit. |
 
 ---
 
@@ -122,6 +133,30 @@ Bespoke Kitchens · Wardrobes & Dressing Rooms · Interior Solutions · Made to 
   > From a drawing with dimensions… to a piece that fits to the millimetre
 - Paragraph:
   > We don't start from a catalogue. We measure on site, draw the space, and settle every detail before a single board is cut. The drawing is the contract between us — and what arrives is exactly what you saw on paper.
+
+---
+
+## 6أ. كيف نشتغل (من ملف الشركة التعريفي)
+
+**AR**
+- العنوان: `من المخطط إلى التركيب`
+
+| # | الخطوة | النص |
+|---|---|---|
+| 01 | نقيس | نزور موقعك ونأخذ المقاسات بدقة. |
+| 02 | نصمم | نرسم التصميم ونختار معك الخامات والألوان. |
+| 03 | نصنع | كل قطعة تُصنع بحرفية حسب المخطط المعتمد. |
+| 04 | نركّب | نركّب ونسلّمك المساحة جاهزة. |
+
+**EN**
+- Heading: `From the drawing to the fitting`
+
+| # | Step | Text |
+|---|---|---|
+| 01 | We measure | We visit your space and take exact measurements. |
+| 02 | We design | We draw the design and choose the materials and colours with you. |
+| 03 | We make | Every piece is crafted to the approved drawing. |
+| 04 | We install | We fit everything and hand the space over ready. |
 
 ---
 
@@ -222,6 +257,42 @@ Bespoke Kitchens · Wardrobes & Dressing Rooms · Interior Solutions · Made to 
 | 02 | The responsibility is ours | We supervise the build from the first cut to assembly, and check every piece before it leaves. We won't hand you to someone else — the account sits with us. |
 | 03 | Material first | We choose the timber and the hardware before we talk about price. A piece opened every day has to stay like day one. |
 | 04 | We hand over on a detail | Installation under direct supervision, and a final walkthrough with you, detail by detail, before we call it done. |
+
+---
+
+## 10أ. الضمان والعلامات (من ملف الشركة التعريفي)
+
+**AR**
+- العنوان: `ضمان يطمّنك`
+
+| الرقم | الوحدة | النص |
+|---|---|---|
+| 10 | سنوات | على الخشب |
+| 22 | سنة | على مفصلات بلوم |
+| 5 | سنوات | على الإكسسوارات |
+
+- عنوان العلامات: `من العلامات التي نعمل معها`
+
+| الفئة | العلامات |
+|---|---|
+| الألواح والأخشاب | EGGER · CLEAF · SAVIOLA · SMART WOOD |
+| المفصلات والإكسسوارات | BLUM · HÄFELE · TALLSEN · NUOMI |
+| الأجهزة | TEKA |
+
+- سطر ختامي: `وعلامات أخرى كثيرة نعرضها لك عند زيارتك للمعرض.`
+
+**EN**
+- Heading: `A warranty you can rely on`
+
+| Number | Unit | Text |
+|---|---|---|
+| 10 | years | on the timber |
+| 22 | years | on Blum hinges |
+| 5 | years | on the accessories |
+
+- Brands heading: `Brands we work with`
+- Categories: `Panels & timber` · `Hinges & accessories` · `Appliances`
+- Closing line: `And many more we'll show you when you visit the showroom.`
 
 ---
 
@@ -350,3 +421,4 @@ Bespoke Kitchens · Wardrobes & Dressing Rooms · Interior Solutions · Made to 
 | رابط التنقل 5 | سجّل اهتمامك | Register |
 | نص التحميل (preloader) | جارٍ التحضير | Preparing |
 | زر القائمة في الجوال (لقارئ الشاشة فقط) | القائمة | Menu |
+| زر واتساب العائم في الجوال (لقارئ الشاشة فقط) | تواصل عبر واتساب | Message us on WhatsApp |
