@@ -9,7 +9,7 @@
 
 ## 1. The problem this site solves
 
-Obsidian is a bespoke kitchen, wardrobe and interior joinery brand in Dammam. The showroom hasn't opened. There is no portfolio, no client list, no reviews, no opening date.
+Obsidian is a bespoke kitchen, wardrobe and interior joinery brand in Saihat. The showroom hasn't opened. There is no portfolio, no client list, no reviews, no opening date.
 
 So the site can't do what a normal studio site does — prove itself with work. It has to establish credibility through **craft signals instead of evidence**: the precision of the typography, the restraint of the palette, the quality of the motion. The medium is the proof.
 

@@ -19,11 +19,11 @@ window.I18N = {
 
     hero_words: ['مطابخ', 'خزائن', 'تصاميم داخلية'],
     hero_intro: 'ما عندنا قطعة جاهزة واحدة. كل مطبخ وكل خزانة تبدأ من ورقة بيضاء، وتُصنّع بمقاسها ومادتها وتفصيلها.',
-    hero_status: 'قريباً — الدمام',
+    hero_status: 'قريباً — سيهات',
     hero_cta_primary: 'سجّل اهتمامك',
     hero_cta_secondary: 'تواصل عبر واتساب',
 
-    marquee: ['مطابخ فاخرة', 'خزائن وغرف ملابس', 'حلول داخلية', 'تفصيل كامل', 'الدمام'],
+    marquee: ['مطابخ فاخرة', 'خزائن وغرف ملابس', 'حلول داخلية', 'تفصيل كامل', 'سيهات'],
 
     principle_heading: 'نبدأ من ورقة بيضاء، وننتهي عند تفصيلة لا يلاحظها أحد غيرك',
     principle_body: 'أوبسيديان ما هو معرض يبيع قطع جاهزة. هو مكان تُرسم فيه المساحة أولاً، ثم تُصنّع كل قطعة على مقاسها. نختار الخشب والمواد والإكسسوارات من أجود الأنواع، وما نتهاون بأي تفصيل مهما كان صغيراً — لأن الفرق بين الجيد والفاخر يقع دائماً في التفاصيل الصغيرة.',
@@ -100,7 +100,7 @@ window.I18N = {
     faq_3_q: 'وش الفرق بينكم وبين نجّار عادي؟',
     faq_3_a: 'الفرق في المرحلة اللي قبل التنفيذ وبعده: تصميم معتمد بالمقاسات، اختيار مواد واضح بالاسم، إشراف على التركيب، ومراجعة نهائية. التنفيذ وحده مو كافي.',
     faq_4_q: 'وين موقعكم ومتى الافتتاح؟',
-    faq_4_a: 'المعرض في الدمام، المنطقة الشرقية، وهو تحت التجهيز حالياً. سجّل اهتمامك وبنتواصل معك أول ما نفتح، مع أولوية في مواعيد الاستشارة.',
+    faq_4_a: 'المعرض في سيهات، المنطقة الشرقية، وهو تحت التجهيز حالياً. سجّل اهتمامك وبنتواصل معك أول ما نفتح، مع أولوية في مواعيد الاستشارة.',
 
     register_heading: 'سجّل اهتمامك قبل الافتتاح',
     register_body: 'اترك تفاصيلك وبنرجع لك أول ما يفتح المعرض، مع أولوية في مواعيد الاستشارة والتصميم.',
@@ -123,7 +123,7 @@ window.I18N = {
     footer_email: 'البريد',
     footer_social: 'الحسابات',
     footer_showroom: 'المعرض',
-    footer_city: 'الدمام — المنطقة الشرقية',
+    footer_city: 'سيهات — المنطقة الشرقية',
     footer_soon: 'قريباً',
     footer_copy: '© 2026 أوبسيديان ديزاين. جميع الحقوق محفوظة.',
   },
@@ -145,11 +145,11 @@ window.I18N = {
 
     hero_words: ['Kitchens', 'Wardrobes', 'Interiors'],
     hero_intro: 'Nothing here is off the shelf. Every kitchen and every wardrobe begins on a blank sheet — then it’s built to your measurements, your material, your detail.',
-    hero_status: 'Opening soon — Dammam',
+    hero_status: 'Opening soon — Saihat',
     hero_cta_primary: 'Register your interest',
     hero_cta_secondary: 'Message us on WhatsApp',
 
-    marquee: ['Bespoke Kitchens', 'Wardrobes & Dressing Rooms', 'Interior Solutions', 'Made to Measure', 'Dammam'],
+    marquee: ['Bespoke Kitchens', 'Wardrobes & Dressing Rooms', 'Interior Solutions', 'Made to Measure', 'Saihat'],
 
     principle_heading: 'We start on a blank sheet. We finish on a detail only you will ever notice',
     principle_body: 'Obsidian is not a showroom that sells finished pieces. It’s where the space is drawn first, then every piece is made to fit it. We select the timber, the materials and the hardware from the best available, and we don’t let a single detail slide — because the gap between good and luxury always sits in the smallest details.',
@@ -226,7 +226,7 @@ window.I18N = {
     faq_3_q: 'What’s the difference between you and a regular carpenter?',
     faq_3_a: 'The difference sits before and after the build: an approved design with dimensions, materials named and chosen, supervised installation, and a final review. Building alone isn’t enough.',
     faq_4_q: 'Where are you, and when do you open?',
-    faq_4_a: 'The showroom is in Dammam, Eastern Province, and it’s being fitted out now. Register your interest and we’ll contact you the moment we open, with priority on consultation slots.',
+    faq_4_a: 'The showroom is in Saihat, Eastern Province, and it’s being fitted out now. Register your interest and we’ll contact you the moment we open, with priority on consultation slots.',
 
     register_heading: 'Register your interest before we open',
     register_body: 'Leave your details and we’ll come back to you the moment the showroom opens — with priority on consultation and design slots.',
@@ -249,7 +249,7 @@ window.I18N = {
     footer_email: 'Email',
     footer_social: 'Social',
     footer_showroom: 'Showroom',
-    footer_city: 'Dammam — Eastern Province',
+    footer_city: 'Saihat — Eastern Province',
     footer_soon: 'Opening soon',
     footer_copy: '© 2026 Obsidian Design. All rights reserved.',
   },
