@@ -3,8 +3,8 @@
    they need sign-off before launch. */
 window.I18N = {
   ar: {
-    meta_title: 'أوبسيديان ديزاين — مطابخ · خزائن · حلول داخلية',
-    meta_desc: 'ما عندنا قطعة جاهزة واحدة. كل مطبخ وكل خزانة تبدأ من ورقة بيضاء، وتُصنّع بمقاسها ومادتها وتفصيلها.',
+    meta_title: 'أوبسيديان ديزاين — تفصيل مطابخ وخزائن وغرف ملابس فاخرة في سيهات',
+    meta_desc: 'تفصيل مطابخ وخزائن وغرف ملابس فاخرة في سيهات والمنطقة الشرقية. ما عندنا قطعة جاهزة: نرفع المقاسات، نصمم، ونصنّع كل قطعة على مقاسها.',
 
     skip: 'انتقل إلى المحتوى', // [NOT IN CONTENT.md]
     menu: 'القائمة', // accessible name of the phone menu button
@@ -37,6 +37,16 @@ window.I18N = {
     plan_heading: 'من مخطط بمقاسات… إلى قطعة تُركّب بالمليمتر',
     plan_body: 'ما نبدأ من كتالوج. نرفع المقاسات على الطبيعة، نرسم المساحة، ونحدد كل تفصيلة قبل ما يُقص أي لوح. المخطط هو العقد بيننا وبينك — واللي يطلع في النهاية هو نفسه اللي شفته على الورق.',
     plan_alt: 'فرجار على مخطط هندسي بمقاسات', // [NOT IN CONTENT.md]
+
+    how_heading: 'من المخطط إلى التركيب',
+    how_1_title: 'نقيس',
+    how_1_body: 'نزور موقعك ونأخذ المقاسات بدقة.',
+    how_2_title: 'نصمم',
+    how_2_body: 'نرسم التصميم ونختار معك الخامات والألوان.',
+    how_3_title: 'نصنع',
+    how_3_body: 'كل قطعة تُصنع بحرفية حسب المخطط المعتمد.',
+    how_4_title: 'نركّب',
+    how_4_body: 'نركّب ونسلّمك المساحة جاهزة.',
 
     material_heading: 'المادة قبل الشكل',
     mat_1: 'جوز طبيعي',
@@ -84,6 +94,19 @@ window.I18N = {
     why_4_title: 'نسلّم على تفصيلة',
     why_4_body: 'التركيب بإشراف مباشر، وجولة مراجعة أخيرة معك تفصيلة تفصيلة قبل ما نقول خلصنا.',
 
+    warranty_heading: 'ضمان يطمّنك',
+    war_1_unit: 'سنوات',
+    war_1_text: 'على الخشب',
+    war_2_unit: 'سنة',
+    war_2_text: 'على مفصلات بلوم',
+    war_3_unit: 'سنوات',
+    war_3_text: 'على الإكسسوارات',
+    brands_heading: 'من العلامات التي نعمل معها',
+    brands_1: 'الألواح والأخشاب',
+    brands_2: 'المفصلات والإكسسوارات',
+    brands_3: 'الأجهزة',
+    brands_more: 'وعلامات أخرى كثيرة نعرضها لك عند زيارتك للمعرض.',
+
     film_1: 'الأسود ما هو غياب اللون. هو أعلى درجات الانضباط',
     film_2: 'الجزيرة تتوسط الغرفة، والباقي يدور حولها',
     film_3: 'اللمعة تكشف كل عيب. فما نسمح بعيب',
@@ -128,8 +151,8 @@ window.I18N = {
   },
 
   en: {
-    meta_title: 'Obsidian Design — Kitchens · Wardrobes · Interior Solutions',
-    meta_desc: 'Nothing here is off the shelf. Every kitchen and every wardrobe begins on a blank sheet — then it’s built to your measurements, your material, your detail.',
+    meta_title: 'Obsidian Design — Bespoke Kitchens, Wardrobes & Dressing Rooms in Saihat',
+    meta_desc: 'Nothing here is off the shelf. Bespoke kitchens, wardrobes and dressing rooms in Saihat, Eastern Province — measured on site, designed and built to fit.',
 
     skip: 'Skip to content', // [NOT IN CONTENT.md]
     menu: 'Menu', // accessible name of the phone menu button
@@ -162,6 +185,16 @@ window.I18N = {
     plan_heading: 'From a drawing with dimensions… to a piece that fits to the millimetre',
     plan_body: 'We don’t start from a catalogue. We measure on site, draw the space, and settle every detail before a single board is cut. The drawing is the contract between us — and what arrives is exactly what you saw on paper.',
     plan_alt: 'A drawing compass resting on a dimensioned plan', // [NOT IN CONTENT.md]
+
+    how_heading: 'From the drawing to the fitting',
+    how_1_title: 'We measure',
+    how_1_body: 'We visit your space and take exact measurements.',
+    how_2_title: 'We design',
+    how_2_body: 'We draw the design and choose the materials and colours with you.',
+    how_3_title: 'We make',
+    how_3_body: 'Every piece is crafted to the approved drawing.',
+    how_4_title: 'We install',
+    how_4_body: 'We fit everything and hand the space over ready.',
 
     material_heading: 'Material before form',
     mat_1: 'Natural Walnut',
@@ -208,6 +241,19 @@ window.I18N = {
     why_3_body: 'We choose the timber and the hardware before we talk about price. A piece opened every day has to stay like day one.',
     why_4_title: 'We hand over on a detail',
     why_4_body: 'Installation under direct supervision, and a final walkthrough with you, detail by detail, before we call it done.',
+
+    warranty_heading: 'A warranty you can rely on',
+    war_1_unit: 'years',
+    war_1_text: 'on the timber',
+    war_2_unit: 'years',
+    war_2_text: 'on Blum hinges',
+    war_3_unit: 'years',
+    war_3_text: 'on the accessories',
+    brands_heading: 'Brands we work with',
+    brands_1: 'Panels & timber',
+    brands_2: 'Hinges & accessories',
+    brands_3: 'Appliances',
+    brands_more: 'And many more we’ll show you when you visit the showroom.',
 
     film_1: 'Black isn’t the absence of colour. It’s the highest form of discipline',
     film_2: 'The island sits at the centre. Everything else moves around it',
@@ -257,4 +303,10 @@ window.I18N = {
 window.WA = {
   number: '966579385265',
   template: 'مرحباً أوبسيديان 👋\nالاسم: {name}\nالجوال: {phone}\nنوع المشروع: {type}\nملاحظات: {note}\n— مُرسل من الموقع',
+};
+
+/* Lead copy to Google Sheets: paste the Apps Script web-app URL from tools/leads-sheet.gs here.
+   Empty = WhatsApp only (no request leaves the page). */
+window.LEADS = {
+  endpoint: '',
 };

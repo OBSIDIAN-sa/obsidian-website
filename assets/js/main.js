@@ -395,6 +395,20 @@
       return null;
     }
 
+    // Also keep a copy of the lead in the Google Sheet (tools/leads-sheet.gs), so one that never
+    // gets sent from WhatsApp isn't lost. Only on submit, and only once LEADS.endpoint is set.
+    function logLead(typeIdx) {
+      var LEADS = window.LEADS;
+      if (!LEADS || !LEADS.endpoint || !window.fetch) return;
+      var data = new URLSearchParams();
+      data.append('name', f.elements.name.value.trim());
+      data.append('phone', toLatinDigits(f.elements.phone.value.trim()));
+      data.append('type', typeIdx === '' ? '' : I18N.ar.f_type_opts[+typeIdx]);
+      data.append('note', f.elements.note.value.trim());
+      data.append('lang', lang);
+      try { fetch(LEADS.endpoint, { method: 'POST', mode: 'no-cors', body: data, keepalive: true }).catch(function () {}); } catch (err) {}
+    }
+
     var required = $$('[required]', f);
     required.forEach(function (input) {
       input.addEventListener('input', function () {
@@ -423,6 +437,7 @@
         .replace('{type}', typeIdx === '' ? '—' : I18N.ar.f_type_opts[+typeIdx])
         .replace('{note}', f.elements.note.value.trim() || '—');
       var url = 'https://wa.me/' + WA.number + '?text=' + encodeURIComponent(msg);
+      logLead(typeIdx);
 
       var w = window.open(url, '_blank');
       if (w) { try { w.opener = null; } catch (err) {} } else { window.location.href = url; }
@@ -438,6 +453,22 @@
       $$('.field__err[data-key]', f).forEach(function (err) { err.textContent = t(err.dataset.key); });
       if (success.textContent) success.textContent = t('f_success');
     });
+  })();
+
+  /* ------------------------------------------------- phone WhatsApp shortcut */
+  // CSS hides it at ≥760px. Shown once the hero has scrolled away; hidden over the form and the footer
+  // so it never sits on the submit button.
+  (function waFab() {
+    var fab = $('[data-wa-fab]');
+    if (!fab || !('IntersectionObserver' in window)) return;
+    var inView = {};
+    var watch = [$('.hero'), $('#register'), $('.site-footer')].filter(Boolean);
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) { inView[watch.indexOf(e.target)] = e.isIntersecting; });
+      var hide = watch.some(function (el, i) { return inView[i]; });
+      fab.classList.toggle('is-shown', !hide);
+    });
+    watch.forEach(function (el) { io.observe(el); });
   })();
 
   /* ------------------------------------------------------- easter egg */

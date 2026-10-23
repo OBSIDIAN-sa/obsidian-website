@@ -104,10 +104,12 @@ Sections in order; content per `CONTENT.md`.
 | 04 | Interstitial line | Single line, enormous negative space. Resist filling it. |
 | 05 | The Island | Full-bleed image, parallax. The emotional peak. |
 | 06 | Drawing → Piece | Process. Text-led, image supporting. |
+| 06a | How we work | Four steps from the company profile on one bronze rule. |
 | 07 | Material | Four macro shots, horizontal scroll. Tactile. |
 | 08 | Standards | Four criteria. Editorial, indexed, hairline-separated. |
 | 09 | Services | Three cards. Cards are the cliché risk — kill the borders, use hairlines and space. |
 | 10 | Why Obsidian | Numbered 01–04. Large bronze indices. |
+| 10a | Warranty + brands | Profile figures (10 / 22 / 5) and brand names as text, no logos. |
 | 11 | Film | Six frames, scroll-scrubbed. The technical showpiece. |
 | 12 | FAQ | Accordion. Restrained. |
 | 13 | Register interest | The conversion point. Must feel considered, not bolted on. |
@@ -123,9 +125,10 @@ The light Principle section (03) and the full-bleed Island (05) are the page's t
 
 - Zero runtime network requests to third parties. Fonts, images, scripts — all local. Verify in the Network panel.
 - No backend. The interest form composes a WhatsApp deep link to `966579385265` with fields pre-filled (`CONTENT.md §15`). Validate client-side before opening.
+- Exception (approved by ali, 2026-10-23): on submit only, the form also posts a copy of the lead to a Google Apps Script web app (`tools/leads-sheet.gs`) when `window.LEADS.endpoint` is set. Nothing is requested on page load.
 - `logo.png` is used as-is. Not redrawn, re-traced, converted to SVG, or procedurally reconstructed. Brand requirement, not a preference.
 - No maps, no coordinates, no street address. City only.
-- No testimonials, lead times, warranty terms, payment terms, or opening date.
+- No testimonials, lead times, payment terms, or opening date. Warranty only as the company-profile figures in `CONTENT.md §10أ` (added 2026-10-23).
 
 **Bilingual**
 
@@ -168,6 +171,7 @@ Get Phase 1 clean and reviewed before touching Phase 2. A polished simple versio
 | Magnetic buttons | Desktop only |
 | Scroll progress hairline | Always acceptable |
 | Typed easter egg (`OBSIDIAN`) | Desktop only; breaks nothing |
+| Phone WhatsApp shortcut | < 760px only; shown between the hero and the form, hidden over the form and footer |
 | Service clips (board → piece) | Muted, no audio track, ~1MB each (`assets/video/`, MP4 + WebM); built only near the viewport, plays only while half in view, never under reduced motion; the still photo is the fallback |
 
 **Out of scope:** ambient audio, background video in hero, WebGL, infinite 3D grid, any procedural reconstruction of the logo.

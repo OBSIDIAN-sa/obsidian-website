@@ -68,7 +68,7 @@ async function scrollThrough(page) {
 
 // 3 — direction flips across every section
 {
-  const sections = ['.site-header', '.hero', '.marquee', '.principle', '.interstitial', '.island', '.plan', '.material', '.standards', '.services', '.why', '.film', '.faq', '.register', '.site-footer'];
+  const sections = ['.site-header', '.hero', '.marquee', '.principle', '.interstitial', '.island', '.plan', '.how', '.material', '.standards', '.services', '.why', '.warranty', '.film', '.faq', '.register', '.site-footer'];
   const problems = [];
   for (const lang of ['ar', 'en']) {
     const { ctx, page } = await open({ lang });
@@ -80,7 +80,7 @@ async function scrollThrough(page) {
         const sec = document.querySelector(s);
         if (getComputedStyle(sec).direction !== want) out.push(`${s} direction=${getComputedStyle(sec).direction}`);
         // Text starts on the correct side: a left/right-aligned block's text hugs the start edge
-        for (const el of sec.querySelectorAll('h2, h3, .hero__intro, .split__body, .plan__body, .standards__text, .service__body, .why__text, .register__body, .faq__q [data-i18n], .field__label, .footer__h')) {
+        for (const el of sec.querySelectorAll('h2, h3, .hero__intro, .split__body, .plan__body, .standards__text, .service__body, .why__text, .how__text, .register__body, .faq__q [data-i18n], .field__label, .footer__h')) {
           if (!el.offsetWidth || el.closest('[dir="ltr"]') || getComputedStyle(el).textAlign === 'center') continue;
           const rng = document.createRange(); rng.selectNodeContents(el);
           const t = rng.getBoundingClientRect(), b = el.getBoundingClientRect();
@@ -107,7 +107,7 @@ async function scrollThrough(page) {
     await ctx.close();
   }
   report('3. AR/EN switch flips direction across every section', problems.length === 0,
-    problems.length ? problems.join(' | ') : 'html + all 15 regions resolve to rtl/ltr; headings, body copy, FAQ, form labels hug the start edge; footer columns reverse; marquee travels toward the reading end in each language');
+    problems.length ? problems.join(' | ') : 'html + all 17 regions resolve to rtl/ltr; headings, body copy, FAQ, form labels hug the start edge; footer columns reverse; marquee travels toward the reading end in each language');
 }
 
 // 4 — 380px: no horizontal overflow, no clipped text
@@ -310,7 +310,8 @@ async function scrollThrough(page) {
     // "review" alone is CONTENT.md's own FAQ copy ("review it with you"); look for review/testimonial language
     ['testimonials / reviews', /testimonial|\breviews\b|customer review|client review|\brating|★|\b\d(\.\d)? stars?\b|آراء العملاء|تقييم|قالوا عنا|قال عنا/i],
     ['lead times', /\b\d+\s*(day|days|week|weeks|month|months)\b|lead time|turnaround|مدة التنفيذ|\d+\s*(يوم|أيام|أسبوع|أسابيع|شهر|أشهر)/i],
-    ['warranty', /warrant|guarantee|ضمان|كفالة/i],
+    // Warranty is allowed only as the company-profile figures in CONTENT.md §10أ (checked below); no other guarantee language
+    ['guarantee / other warranty terms', /guarantee|كفالة|lifetime|مدى الحياة/i],
     ['payment terms', /payment|instal+ment|deposit|down ?payment|دفعة|الدفع|أقساط|عربون|تقسيط/i],
     ['map / address', /<iframe|maps\.google|google\.com\/maps|openstreetmap|mapbox|latitude|longitude|coordinates|\bst\.|street|حي |شارع|إحداثيات|خريطة/i],
     ['opening date', /open(s|ing)? (on|in) |\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.? \d|\b20\d\d-\d\d|q[1-4] 20\d\d|يفتتح في|الافتتاح في|(يناير|فبراير|مارس|أبريل|مايو|يونيو|يوليو|أغسطس|سبتمبر|أكتوبر|نوفمبر|ديسمبر)/i],
@@ -321,8 +322,14 @@ async function scrollThrough(page) {
     const m = text.match(new RegExp(re.source, re.flags + 'g'));
     if (m) hits.push(`${label} in ${f}: ${[...new Set(m)].join(', ')}`);
   }
+  // Warranty figures: exactly the three from the company profile (10 timber, 22 Blum hinges, 5 accessories)
+  {
+    const html = files[0][1];
+    const nums = [...html.matchAll(/class="warranty__num"[^>]*>(\d+)</g)].map((m) => m[1]).join(',');
+    if (nums !== '10,22,5') hits.push(`warranty figures are ${nums || 'missing'}, CONTENT.md §10أ says 10,22,5`);
+  }
   const years = [...new Set(files.flatMap(([, s]) => s.match(/(?<![\w-])20\d\d(?![\w.])/g) || []))]; // skip "-2000.webp" filenames
-  report('11. No testimonials, lead times, warranty, payment terms, map or opening date', hits.length === 0,
+  report('11. No testimonials, lead times, payment terms, map or opening date; warranty only as in the profile', hits.length === 0,
     hits.length ? hits.join(' | ') : `none found in the page or string table; the only year is ${years.join(', ')} (copyright line); "قريباً / Opening soon" carries no date; location is city-level only`);
 }
 
