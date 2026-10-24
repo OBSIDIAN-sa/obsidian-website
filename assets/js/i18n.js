@@ -310,11 +310,11 @@ window.I18N = {
 /* WhatsApp message (CONTENT.md §15). Always sent in Arabic so every lead reads the same. */
 window.WA = {
   number: '966579385265',
-  template: 'مرحباً أوبسيديان 👋\nالاسم: {name}\nالجوال: {phone}\nنوع المشروع: {type}\nملاحظات: {note}\n— مُرسل من الموقع',
+  template: 'مرحباً أوبسيديان\nالاسم: {name}\nالجوال: {phone}\nنوع المشروع: {type}\nملاحظات: {note}\n— مُرسل من الموقع',
 };
 
-/* Form → email via FormSubmit (formsubmit.co). The first submission sends an "Activate Form" email to this
-   address; after that click, every lead arrives there. Empty = the form opens WhatsApp instead. */
+/* Form → email via FormSubmit (formsubmit.co). The id is FormSubmit's alias for obsidian.design.2026@gmail.com
+   (activated by ali), so the address isn't in the request. Empty = the form opens WhatsApp instead. */
 window.LEADS = {
-  endpoint: 'https://formsubmit.co/ajax/obsidian.design.2026@gmail.com',
+  endpoint: 'https://formsubmit.co/ajax/e0422209e886121dc27439b0af4cd20f',
 };

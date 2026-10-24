@@ -20,6 +20,13 @@ const problems = [], summary = [];
 const only = process.env.ENGINES ? process.env.ENGINES.split(',') : null; // e.g. ENGINES=chrome
 for (const [name, launch] of engines.filter(([n]) => !only || only.includes(n))) {
   const browser = await launch();
+  // Warm the engine up once (process start, first compile) so the first timed first-visit measures the page,
+  // not a cold browser: on CI, WebKit's very first load could leave the curtain up past the limit.
+  {
+    const c = await browser.newContext({ viewport: { width: 375, height: 812 }, hasTouch: name !== 'firefox', isMobile: name !== 'firefox' });
+    await (await c.newPage()).goto(BASE, { waitUntil: 'load' }).catch(() => {});
+    await c.close();
+  }
   for (const [w, h] of [[375, 812], [768, 1024], [1440, 900]]) for (const lang of ['ar', 'en']) {
     const key = `${name} ${lang}@${w}`;
     const ctx = await browser.newContext({ viewport: { width: w, height: h }, hasTouch: w < 1000 && name !== 'firefox', isMobile: w < 1000 && name !== 'firefox' });

@@ -405,7 +405,7 @@ Bespoke Kitchens · Wardrobes & Dressing Rooms · Interior Solutions · Made to 
 عند إرسال نموذج تسجيل الاهتمام، يُفتح واتساب على الرقم `966579385265` بهذا النص (مُرمّز URL):
 
 ```
-مرحباً أوبسيديان 👋
+مرحباً أوبسيديان
 الاسم: {name}
 الجوال: {phone}
 نوع المشروع: {type}
