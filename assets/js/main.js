@@ -365,6 +365,21 @@
     if (!f) return;
     var success = $('[data-form-success]', f);
     var typeSel = $('[data-type-select]', f);
+    var submit = $('.form__submit', f);
+    // With the Apps Script endpoint set (tools/leads-sheet.gs) the form posts there: the lead is saved to the
+    // sheet and emailed, and WhatsApp becomes the second option. Without it, the form opens WhatsApp as before.
+    var endpoint = window.LEADS && window.LEADS.endpoint;
+    if (endpoint && window.fetch) {
+      var hint = $('#f-hint', f);
+      hint.dataset.i18n = 'f_hint_direct';
+      hint.textContent = t('f_hint_direct');
+      $('[data-wa-alt]', f).hidden = false;
+    } else endpoint = '';
+
+    function say(key) {
+      if (key) { success.dataset.key = key; success.textContent = t(key); }
+      else { delete success.dataset.key; success.textContent = ''; }
+    }
 
     function toLatinDigits(s) {
       return s.replace(/[٠-٩]/g, function (c) { return c.charCodeAt(0) - 0x0660; })
@@ -395,20 +410,6 @@
       return null;
     }
 
-    // Also keep a copy of the lead in the Google Sheet (tools/leads-sheet.gs), so one that never
-    // gets sent from WhatsApp isn't lost. Only on submit, and only once LEADS.endpoint is set.
-    function logLead(typeIdx) {
-      var LEADS = window.LEADS;
-      if (!LEADS || !LEADS.endpoint || !window.fetch) return;
-      var data = new URLSearchParams();
-      data.append('name', f.elements.name.value.trim());
-      data.append('phone', toLatinDigits(f.elements.phone.value.trim()));
-      data.append('type', typeIdx === '' ? '' : I18N.ar.f_type_opts[+typeIdx]);
-      data.append('note', f.elements.note.value.trim());
-      data.append('lang', lang);
-      try { fetch(LEADS.endpoint, { method: 'POST', mode: 'no-cors', body: data, keepalive: true }).catch(function () {}); } catch (err) {}
-    }
-
     var required = $$('[required]', f);
     required.forEach(function (input) {
       input.addEventListener('input', function () {
@@ -421,7 +422,8 @@
 
     f.addEventListener('submit', function (e) {
       e.preventDefault();
-      success.textContent = '';
+      if (submit.disabled) return;
+      say(null);
       var firstBad = null;
       required.forEach(function (input) {
         var key = check(input);
@@ -431,19 +433,44 @@
       if (firstBad) { firstBad.focus(); return; }
 
       var typeIdx = typeSel.value;
+      var lead = {
+        name: f.elements.name.value.trim(),
+        phone: toLatinDigits(f.elements.phone.value.trim()),
+        type: typeIdx === '' ? '' : I18N.ar.f_type_opts[+typeIdx],
+        note: f.elements.note.value.trim(),
+      };
+
+      if (endpoint) {
+        var data = new URLSearchParams();
+        Object.keys(lead).forEach(function (k) { data.append(k, lead[k]); });
+        data.append('lang', lang);
+        data.append('website', f.elements.website.value);
+        submit.disabled = true;
+        say('f_sending');
+        fetch(endpoint, { method: 'POST', body: data })
+          .then(function (r) { return r.json(); })
+          .then(function (res) {
+            if (!res || !res.ok) throw new Error('rejected');
+            f.reset();
+            say('f_success');
+          })
+          .catch(function () { say('f_error'); })
+          .then(function () { submit.disabled = false; });
+        return;
+      }
+
       var msg = WA.template
-        .replace('{name}', f.elements.name.value.trim())
-        .replace('{phone}', toLatinDigits(f.elements.phone.value.trim()))
-        .replace('{type}', typeIdx === '' ? '—' : I18N.ar.f_type_opts[+typeIdx])
-        .replace('{note}', f.elements.note.value.trim() || '—');
+        .replace('{name}', lead.name)
+        .replace('{phone}', lead.phone)
+        .replace('{type}', lead.type || '—')
+        .replace('{note}', lead.note || '—');
       var url = 'https://wa.me/' + WA.number + '?text=' + encodeURIComponent(msg);
-      logLead(typeIdx);
 
       var w = window.open(url, '_blank');
       if (w) { try { w.opener = null; } catch (err) {} } else { window.location.href = url; }
 
       f.reset();
-      success.textContent = t('f_success');
+      say('f_success');
     });
 
     langHooks.push(function () {
@@ -451,7 +478,7 @@
         if (o.value !== '') o.textContent = t('f_type_opts')[+o.value];
       });
       $$('.field__err[data-key]', f).forEach(function (err) { err.textContent = t(err.dataset.key); });
-      if (success.textContent) success.textContent = t('f_success');
+      if (success.dataset.key) success.textContent = t(success.dataset.key);
     });
   })();
 

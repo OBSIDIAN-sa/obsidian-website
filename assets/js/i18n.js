@@ -135,6 +135,10 @@ window.I18N = {
     f_submit: 'أرسل',
     f_hint: 'يفتح لك واتساب برسالة جاهزة فيها تفاصيلك، وما عليك إلا ترسلها.',
     f_success: 'وصلنا طلبك. بنتواصل معك قريباً.',
+    f_hint_direct: 'تصلنا تفاصيلك مباشرة، ونرجع لك في أقرب وقت.',
+    f_sending: 'جارٍ الإرسال…',
+    f_error: 'ما وصل الطلب، جرّب مرة ثانية أو راسلنا على واتساب.',
+    f_wa_alt: 'تفضّل واتساب؟ راسلنا مباشرة',
     f_err_required: 'هذا الحقل مطلوب', // [NOT IN CONTENT.md]
     f_err_phone: 'أدخل رقم جوال صحيح', // [NOT IN CONTENT.md]
 
@@ -283,6 +287,10 @@ window.I18N = {
     f_submit: 'Send',
     f_hint: 'This opens WhatsApp with your details ready to send.',
     f_success: 'We’ve got it. We’ll be in touch shortly.',
+    f_hint_direct: 'Your details come straight to us, and we’ll get back to you soon.',
+    f_sending: 'Sending…',
+    f_error: 'That didn’t go through. Try again, or message us on WhatsApp.',
+    f_wa_alt: 'Prefer WhatsApp? Message us directly',
     f_err_required: 'This field is required', // [NOT IN CONTENT.md]
     f_err_phone: 'Enter a valid mobile number', // [NOT IN CONTENT.md]
 
@@ -305,8 +313,8 @@ window.WA = {
   template: 'مرحباً أوبسيديان 👋\nالاسم: {name}\nالجوال: {phone}\nنوع المشروع: {type}\nملاحظات: {note}\n— مُرسل من الموقع',
 };
 
-/* Lead copy to Google Sheets: paste the Apps Script web-app URL from tools/leads-sheet.gs here.
-   Empty = WhatsApp only (no request leaves the page). */
+/* Form → Google Sheet + email: paste the Apps Script web-app URL from tools/leads-sheet.gs here.
+   Empty = the form opens WhatsApp instead (no request leaves the page). */
 window.LEADS = {
   endpoint: '',
 };
