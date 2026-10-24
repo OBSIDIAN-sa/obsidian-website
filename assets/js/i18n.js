@@ -313,8 +313,8 @@ window.WA = {
   template: 'مرحباً أوبسيديان 👋\nالاسم: {name}\nالجوال: {phone}\nنوع المشروع: {type}\nملاحظات: {note}\n— مُرسل من الموقع',
 };
 
-/* Form → Google Sheet + email: paste the Apps Script web-app URL from tools/leads-sheet.gs here.
-   Empty = the form opens WhatsApp instead (no request leaves the page). */
+/* Form → email via FormSubmit (formsubmit.co). The first submission sends an "Activate Form" email to this
+   address; after that click, every lead arrives there. Empty = the form opens WhatsApp instead. */
 window.LEADS = {
-  endpoint: '',
+  endpoint: 'https://formsubmit.co/ajax/obsidian.design.2026@gmail.com',
 };
