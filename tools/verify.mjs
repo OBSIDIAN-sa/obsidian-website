@@ -236,11 +236,11 @@ async function scrollThrough(page) {
   for (const lang of ['ar', 'en']) {
     const { ctx, page } = await open({ lang });
     if (await page.evaluate(() => !!(window.LEADS && window.LEADS.endpoint))) {
-      // Form posts to the Apps Script (sheet + email): check the payload, the success and failure messages, no WhatsApp pop-up
+      // Form posts to FormSubmit (email): check the payload, the success and failure messages, no WhatsApp pop-up
       await page.evaluate(() => {
         window.__opened = []; window.open = (u) => { window.__opened.push(u); return {}; };
         window.__posts = []; window.__fail = false;
-        window.fetch = (u, o) => { window.__posts.push({ u, body: String(o.body) }); return window.__fail ? Promise.reject(new Error('x')) : Promise.resolve(new Response('{"ok":true}')); };
+        window.fetch = (u, o) => { window.__posts.push({ u, body: String(o.body) }); return window.__fail ? Promise.reject(new Error('x')) : Promise.resolve(new Response('{"success":"true"}')); };
       });
       await page.click('.form__submit');
       if (await page.evaluate(() => window.__posts.length)) problems.push(`${lang}: posted with empty required fields`);
@@ -250,8 +250,8 @@ async function scrollThrough(page) {
       };
       await fill(); await page.click('.form__submit'); await page.waitForTimeout(200);
       const r = await page.evaluate(() => ({ posts: window.__posts, opened: window.__opened.length, msg: document.querySelector('[data-form-success]').textContent, name: document.querySelector('#f-name').value, alt: !document.querySelector('[data-wa-alt]').hidden, disabled: document.querySelector('.form__submit').disabled }));
-      const body = r.posts[0] && new URLSearchParams(r.posts[0].body);
-      if (!body || body.get('name') !== 'نورة' || body.get('phone') !== '055 123 4567' || body.get('type') !== 'مطبخ' || body.get('note') !== 'مطبخ بجزيرة' || body.get('lang') !== lang) problems.push(`${lang}: payload ${r.posts[0] && r.posts[0].body}`);
+      const body = r.posts[0] && JSON.parse(r.posts[0].body);
+      if (!body || body['الاسم'] !== 'نورة' || body['الجوال'] !== '055 123 4567' || body['نوع المشروع'] !== 'مطبخ' || body['ملاحظات'] !== 'مطبخ بجزيرة' || body['واتساب العميل'] !== 'https://wa.me/966551234567' || body._honey !== '') problems.push(`${lang}: payload ${r.posts[0] && r.posts[0].body}`);
       if (r.opened) problems.push(`${lang}: WhatsApp opened although the form posted`);
       if (r.msg !== (lang === 'ar' ? 'وصلنا طلبك. بنتواصل معك قريباً.' : 'We’ve got it. We’ll be in touch shortly.') || r.name) problems.push(`${lang}: no success message / form not cleared (${r.msg})`);
       if (!r.alt || r.disabled) problems.push(`${lang}: WhatsApp alternative hidden or button left disabled`);
@@ -259,7 +259,7 @@ async function scrollThrough(page) {
       await fill(); await page.click('.form__submit'); await page.waitForTimeout(200);
       const err = await page.evaluate(() => ({ msg: document.querySelector('[data-form-success]').textContent, name: document.querySelector('#f-name').value }));
       if (!/WhatsApp|واتساب/.test(err.msg) || !err.name) problems.push(`${lang}: failure should keep the details and point to WhatsApp (${err.msg})`);
-      samples.push('Apps Script endpoint (sheet + email)');
+      samples.push('FormSubmit (email)');
       await ctx.close();
       continue;
     }

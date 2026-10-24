@@ -366,8 +366,8 @@
     var success = $('[data-form-success]', f);
     var typeSel = $('[data-type-select]', f);
     var submit = $('.form__submit', f);
-    // With the Apps Script endpoint set (tools/leads-sheet.gs) the form posts there: the lead is saved to the
-    // sheet and emailed, and WhatsApp becomes the second option. Without it, the form opens WhatsApp as before.
+    // With LEADS.endpoint set (FormSubmit) the form posts there and the lead arrives by email; WhatsApp becomes
+    // the second option. Without it, the form opens WhatsApp as before.
     var endpoint = window.LEADS && window.LEADS.endpoint;
     if (endpoint && window.fetch) {
       var hint = $('#f-hint', f);
@@ -386,6 +386,7 @@
               .replace(/[۰-۹]/g, function (c) { return c.charCodeAt(0) - 0x06F0; });
     }
     function phoneDigits(v) { return toLatinDigits(v).replace(/\D/g, ''); }
+    function waNumber(v) { return phoneDigits(v).replace(/^(?:00966|966|0)?/, '966'); }
     function validPhone(v) { return /^(?:00966|966|0)?5\d{8}$/.test(phoneDigits(v)); }
 
     function setError(input, key) {
@@ -441,16 +442,25 @@
       };
 
       if (endpoint) {
-        var data = new URLSearchParams();
-        Object.keys(lead).forEach(function (k) { data.append(k, lead[k]); });
-        data.append('lang', lang);
-        data.append('website', f.elements.website.value);
+        // FormSubmit emails these fields as a table, so the keys are the labels ali reads
+        var data = {
+          'الاسم': lead.name,
+          'الجوال': lead.phone,
+          'نوع المشروع': lead.type || '—',
+          'ملاحظات': lead.note || '—',
+          'واتساب العميل': 'https://wa.me/' + waNumber(lead.phone),
+          'لغة الصفحة': lang === 'en' ? 'English' : 'العربية',
+          _subject: 'طلب جديد من الموقع: ' + lead.name,
+          _template: 'table',
+          _captcha: 'false',
+          _honey: f.elements._honey.value,
+        };
         submit.disabled = true;
         say('f_sending');
-        fetch(endpoint, { method: 'POST', body: data })
+        fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(data) })
           .then(function (r) { return r.json(); })
           .then(function (res) {
-            if (!res || !res.ok) throw new Error('rejected');
+            if (!res || String(res.success) !== 'true') throw new Error('rejected');
             f.reset();
             say('f_success');
           })
