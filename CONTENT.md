@@ -364,6 +364,11 @@ Bespoke Kitchens · Wardrobes & Dressing Rooms · Interior Solutions · Made to 
 - زر الإرسال: `أرسل`
 - ملاحظة تحت زر الإرسال: `يفتح لك واتساب برسالة جاهزة فيها تفاصيلك، وما عليك إلا ترسلها.`
 - رسالة النجاح: `وصلنا طلبك. بنتواصل معك قريباً.`
+- عند ربط النموذج بالشيت والإيميل (tools/leads-sheet.gs):
+  - ملاحظة تحت زر الإرسال: `تصلنا تفاصيلك مباشرة، ونرجع لك في أقرب وقت.`
+  - أثناء الإرسال: `جارٍ الإرسال…`
+  - عند الفشل: `ما وصل الطلب، جرّب مرة ثانية أو راسلنا على واتساب.`
+  - رابط تحت النموذج: `تفضّل واتساب؟ راسلنا مباشرة`
 
 **EN**
 - Heading: `Register your interest before we open`
@@ -374,6 +379,7 @@ Bespoke Kitchens · Wardrobes & Dressing Rooms · Interior Solutions · Made to 
 - Submit: `Send`
 - Note under Send: `This opens WhatsApp with your details ready to send.`
 - Success: `We've got it. We'll be in touch shortly.`
+- When connected to the sheet + email: hint `Your details come straight to us, and we'll get back to you soon.` · sending `Sending…` · failure `That didn't go through. Try again, or message us on WhatsApp.` · link `Prefer WhatsApp? Message us directly`
 
 ---
 
