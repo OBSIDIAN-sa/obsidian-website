@@ -314,7 +314,7 @@ window.WA = {
 };
 
 /* Form → email via FormSubmit (formsubmit.co). The id is FormSubmit's alias for obsidian.design.2026@gmail.com
-   (activated 2026-10-24), so the address isn't in the request. Empty = the form opens WhatsApp instead. */
+   (activated by ali), so the address isn't in the request. Empty = the form opens WhatsApp instead. */
 window.LEADS = {
   endpoint: 'https://formsubmit.co/ajax/e0422209e886121dc27439b0af4cd20f',
 };
