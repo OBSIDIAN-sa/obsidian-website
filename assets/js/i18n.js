@@ -310,7 +310,7 @@ window.I18N = {
 /* WhatsApp message (CONTENT.md §15). Always sent in Arabic so every lead reads the same. */
 window.WA = {
   number: '966579385265',
-  template: 'مرحباً أوبسيديان 👋\nالاسم: {name}\nالجوال: {phone}\nنوع المشروع: {type}\nملاحظات: {note}\n— مُرسل من الموقع',
+  template: 'مرحباً أوبسيديان\nالاسم: {name}\nالجوال: {phone}\nنوع المشروع: {type}\nملاحظات: {note}\n— مُرسل من الموقع',
 };
 
 /* Form → email via FormSubmit (formsubmit.co). The first submission sends an "Activate Form" email to this
