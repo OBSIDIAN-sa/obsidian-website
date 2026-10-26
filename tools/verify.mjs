@@ -623,7 +623,7 @@ async function scrollThrough(page) {
 // 18 — SEO: canonical + hreflang, ?lang=en, URL follows the toggle, JSON-LD from CONTENT.md only, robots + sitemap
 {
   const problems = [];
-  const BASE = 'https://obsidian-sa.github.io/obsidian-website/';
+  const BASE = 'https://obsidiandesign.pages.dev/';
   const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   for (const [l, u] of [['ar', BASE], ['en', BASE + '?lang=en'], ['x-default', BASE]]) if (!html.includes(`hreflang="${l}" href="${u}"`)) problems.push(`hreflang ${l} missing`);
   const ld = JSON.parse(html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1]);
