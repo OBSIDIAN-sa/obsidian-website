@@ -515,6 +515,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 /* ---- 09 Services (no card borders: hairlines and space) ----------------- */
 .services { padding-block: var(--section-half); }
+.services__cta { margin-block-start: var(--space-5); }
 .services__title { font-size: var(--step-3); margin-block-end: var(--space-5); max-inline-size: 20ch; }
 .services__grid { display: grid; gap: var(--space-5) clamp(1.5rem, 3vw, 3rem); }
 @media (min-width: 900px) { .services__grid { grid-template-columns: repeat(3, 1fr); } }
