@@ -588,7 +588,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 /* Each caption carries its own soft ink pool, so it stays readable wherever it is on the frame */
 .film__line::before {
   content: ''; position: absolute; z-index: -1; pointer-events: none;
-  inset-block-end: -5rem; inset-inline-start: -6rem; inline-size: min(130%, 56rem); block-size: 26rem;
+  inset-block-end: -5rem; inset-inline-start: -6rem; inline-size: min(100% + 6rem, 56rem); block-size: 26rem;
   background: radial-gradient(ellipse closest-side, color-mix(in srgb, var(--ink) 84%, transparent) 0%, color-mix(in srgb, var(--ink) 60%, transparent) 45%, transparent 100%);
 }
 .film__line p { font-size: var(--step-3); max-inline-size: 22ch; text-shadow: 0 0 2.5rem var(--ink), 0 0 1.25rem var(--ink), 0 0 0.4rem var(--ink); }
