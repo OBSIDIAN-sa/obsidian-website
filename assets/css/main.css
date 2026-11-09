@@ -584,14 +584,14 @@ button, input, select, textarea { font: inherit; color: inherit; }
   padding-inline: var(--gutter); padding-block-end: clamp(3rem, 10vh, 7rem);
   max-inline-size: var(--max); margin-inline: auto;
 }
-.film__line { position: relative; }
-/* Each caption carries its own soft ink pool, so it stays readable wherever it is on the frame */
-.film__line::before {
-  content: ''; position: absolute; z-index: -1; pointer-events: none;
-  inset-block-end: -5rem; inset-inline-start: -6rem; inline-size: min(100% + 6rem, 56rem); block-size: 26rem;
-  background: radial-gradient(ellipse closest-side, color-mix(in srgb, var(--ink) 84%, transparent) 0%, color-mix(in srgb, var(--ink) 60%, transparent) 45%, transparent 100%);
+/* Each caption carries its own soft ink pool (an even tone under the words, feathered outside them),
+   so it clears 3:1 on the brightest frame without a scrim over the whole picture */
+.film__line p {
+  font-size: var(--step-3); max-inline-size: 22ch;
+  --pool: color-mix(in srgb, var(--ink) 66%, transparent);
+  background-color: var(--pool); box-shadow: 0 0 2.75rem 2.25rem var(--pool); border-radius: 1rem;
+  text-shadow: 0 0 1.25rem var(--ink), 0 0 0.4rem var(--ink);
 }
-.film__line p { font-size: var(--step-3); max-inline-size: 22ch; text-shadow: 0 0 2.5rem var(--ink), 0 0 1.25rem var(--ink), 0 0 0.4rem var(--ink); }
 :root:lang(en) .film__line p { max-inline-size: 24ch; }
 
 /* ---- 12 FAQ --------------------------------------------------------------- */
