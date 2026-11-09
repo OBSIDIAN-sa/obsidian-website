@@ -82,7 +82,7 @@ window.I18N = {
     svc_3_p1: 'تنسيق كامل بين الغرف',
     svc_3_p2: 'مطابقة العروق والألوان',
     svc_3_p3: 'حلول تخزين مخفية',
-    svc_3_alt: 'مكتب بمكتبة خشب مدمجة وإضاءة داخل الرفوف', // [NOT IN CONTENT.md]
+    svc_3_alt: 'جدار خشب داكن بألواح كاملة يخفي الثلاجة والخزائن بجانب جزيرة رخام', // [NOT IN CONTENT.md]
 
     why_heading: 'ليش أوبسيديان',
     why_1_title: 'ما نبيع جاهز',
@@ -234,7 +234,7 @@ window.I18N = {
     svc_3_p1: 'Full coordination room to room',
     svc_3_p2: 'Grain and colour matched throughout',
     svc_3_p3: 'Concealed storage solutions',
-    svc_3_alt: 'A study with a built-in timber bookcase and lighting inside the shelves', // [NOT IN CONTENT.md]
+    svc_3_alt: 'A full-height dark timber wall concealing the fridge and storage beside a marble island', // [NOT IN CONTENT.md]
 
     why_heading: 'Why Obsidian',
     why_1_title: 'Nothing pre-made',
