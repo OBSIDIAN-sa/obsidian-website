@@ -19,13 +19,15 @@
 | واتساب (دولي) | 966579385265 |
 | البريد | obsidian.design.2026@gmail.com |
 | المدينة | سيهات، المنطقة الشرقية / Saihat, Eastern Province |
+| العنوان | شارع الخليج، حي النسيم — معرض رقم 15 / Al Khaleej Street, Al Naseem District — Showroom 15 · الرمز البريدي 32453 |
+| خرائط قوقل | https://www.google.com/maps/search/?api=1&query=Obsidian+Design+Saihat&query_place_id=ChIJSXX3sh7_ST4R4oD0fokqZiQ |
 | إنستقرام | obsidian.design.ksa |
 | سناب شات | obsidian_design |
 | تيك توك | obsidian.design.ksa |
 | إكس | obsidiandesign2 |
 
 **ملاحظات إلزامية:**
-- لا تضع خريطة ولا إحداثيات ولا عنواناً تفصيلياً. المدينة فقط: "سيهات — المنطقة الشرقية".
+- موقع المعرض يُكتب نصاً مع رابط خرائط قوقل (قرار المالك، نوفمبر 2026). لا خريطة مضمّنة ولا إحداثيات.
 - لا تكتب أي آراء عملاء أو تقييمات — المعرض لم يفتتح بعد.
 - لا تكتب أرقام مدة تنفيذ أو شروط دفع.
 - الضمان: فقط الأرقام المعتمدة في ملف الشركة التعريفي (أكتوبر 2026) كما في §10أ، بلا شروط إضافية.
@@ -277,7 +279,7 @@ Bespoke Kitchens · Wardrobes & Dressing Rooms · Interior Solutions · Made to 
 |---|---|
 | الألواح والأخشاب | EGGER · CLEAF · SAVIOLA · SMART WOOD |
 | المفصلات والإكسسوارات | BLUM · HÄFELE · TALLSEN · NUOMI |
-| الأجهزة | TEKA |
+| الأجهزة | TEKA — `من المصدر المعتمد: عبداللطيف جميل للإلكترونيات` / `From the authorised source: Abdul Latif Jameel Electronics` |
 
 - سطر ختامي: `وعلامات أخرى كثيرة نعرضها لك عند زيارتك للمعرض.`
 
@@ -334,7 +336,7 @@ Bespoke Kitchens · Wardrobes & Dressing Rooms · Interior Solutions · Made to 
 | كيف تبدأ العملية؟ | تتواصل معنا، نحدد موعد زيارة للموقع، نرفع المقاسات ونشوف الكهرباء والسباكة والفتحات. بعدها نرسم تصميماً كاملاً ونراجعه معك حتى تعتمده — وما يُقص أي لوح قبل الاعتماد. |
 | عندي مساحة غير قياسية أو زوايا صعبة | هذي حالتنا الطبيعية. ما نشتغل بمقاسات جاهزة أصلاً، فالمساحة الصعبة تُرسم وتُصنّع على وضعها بالضبط بدل ما نجبرها على قطعة جاهزة. |
 | وش الفرق بينكم وبين نجّار عادي؟ | الفرق في المرحلة اللي قبل التنفيذ وبعده: تصميم معتمد بالمقاسات، اختيار مواد واضح بالاسم، إشراف على التركيب، ومراجعة نهائية. التنفيذ وحده مو كافي. |
-| وين موقعكم ومتى الافتتاح؟ | المعرض في سيهات، المنطقة الشرقية، وهو تحت التجهيز حالياً. سجّل اهتمامك وبنتواصل معك أول ما نفتح، مع أولوية في مواعيد الاستشارة. |
+| وين موقعكم؟ | المعرض في سيهات، المنطقة الشرقية: شارع الخليج، حي النسيم، معرض رقم 15. رابط الموقع على خرائط قوقل تلقاه في أسفل الصفحة. |
 
 **EN**
 
@@ -343,7 +345,7 @@ Bespoke Kitchens · Wardrobes & Dressing Rooms · Interior Solutions · Made to 
 | How does the process start? | You get in touch, we book a site visit, take the measurements and check the electrics, plumbing and openings. Then we draw a full design and review it with you until you approve it — and no board is cut before that. |
 | My space is non-standard, with awkward corners | That's our normal case. We don't work to stock sizes at all, so a difficult space gets drawn and built exactly as it is, instead of being forced into a ready-made unit. |
 | What's the difference between you and a regular carpenter? | The difference sits before and after the build: an approved design with dimensions, materials named and chosen, supervised installation, and a final review. Building alone isn't enough. |
-| Where are you, and when do you open? | The showroom is in Saihat, Eastern Province, and it's being fitted out now. Register your interest and we'll contact you the moment we open, with priority on consultation slots. |
+| Where are you? | The showroom is in Saihat, Eastern Province: Al Khaleej Street, Al Naseem District, showroom 15. You'll find the Google Maps link at the foot of the page. |
 
 ---
 
@@ -388,14 +390,14 @@ Bespoke Kitchens · Wardrobes & Dressing Rooms · Interior Solutions · Made to 
 **AR**
 - عمود 1 — **خدماتنا**: مطابخ · خزائن وغرف ملابس · حلول داخلية
 - عمود 2 — **تواصل**: واتساب · البريد · الحسابات
-- عمود 3 — **المعرض**: سيهات — المنطقة الشرقية · قريباً
+- عمود 3 — **المعرض**: سيهات — المنطقة الشرقية · شارع الخليج، حي النسيم — معرض رقم 15 · الموقع على خرائط قوقل · قريباً
 - الوردمارك العملاق: `OBSIDIAN`
 - سطر الحقوق: `© 2026 أوبسيديان ديزاين. جميع الحقوق محفوظة.`
 
 **EN**
 - Column 1 — **Services**: Kitchens · Wardrobes & Dressing Rooms · Interior Solutions
 - Column 2 — **Contact**: WhatsApp · Email · Social
-- Column 3 — **Showroom**: Saihat — Eastern Province · Opening soon
+- Column 3 — **Showroom**: Saihat — Eastern Province · Al Khaleej Street, Al Naseem District — Showroom 15 · Find us on Google Maps · Opening soon
 - Copyright: `© 2026 Obsidian Design. All rights reserved.`
 
 ---
