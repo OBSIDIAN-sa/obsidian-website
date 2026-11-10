@@ -262,6 +262,49 @@
     els.forEach(function (el) { io.observe(el); });
   })();
 
+  /* ------------------------------------------------------------- hero */
+  // The drawing draws itself once the curtain is gone (CSS does the rest from .hero-go), and the scroll through
+  // the hero is written to --hp so CSS can push the camera in. One rAF per scroll; transform/opacity only.
+  (function hero() {
+    var el = $('[data-hero]');
+    if (!el) return;
+    var svg = $('.hero__draw', el);
+    var tallMQ = window.matchMedia('(max-width: 700px), (max-width: 1023px) and (orientation: portrait)');
+    // Give the drawing the photo's own crop (object-fit: cover + object-position in CSS): centred on wide
+    // screens, the kitchen side (78%) on tall ones. The SVG's viewBox becomes exactly the visible part of the frame.
+    var media = $('.hero__media', el), FW = 2000, FH = 1125;
+    function frame() {
+      if (!svg || !media.offsetWidth) return;
+      var cw = media.offsetWidth, ch = media.offsetHeight, fx = tallMQ.matches ? 0.78 : 0.5;
+      var vw = Math.min(FW, FH * cw / ch), vh = Math.min(FH, FW * ch / cw);
+      svg.setAttribute('viewBox', [((FW - vw) * fx).toFixed(1), ((FH - vh) * 0.5).toFixed(1), vw.toFixed(1), vh.toFixed(1)].join(' '));
+    }
+    frame();
+    tallMQ.addEventListener('change', frame);
+    if (root.classList.contains('hero-draw')) {
+      var go = function () { root.classList.add('hero-go'); };
+      if (root.classList.contains('intro')) document.addEventListener('obsidian:intro-done', function () { setTimeout(go, 250); }, { once: true });
+      else requestAnimationFrame(function () { requestAnimationFrame(go); });
+    }
+    var span = 1, queued = false;
+    function measure() {
+      var vh = window.innerHeight;
+      span = el.offsetHeight - vh;
+      if (span < vh * 0.3) span = vh * 0.6; // not pinned (phones): the first part of the scroll
+    }
+    function write() {
+      queued = false;
+      var p = reduceMQ.matches ? 0 : Math.min(1, Math.max(0, window.scrollY / span));
+      el.style.setProperty('--hp', p.toFixed(4));
+      el.classList.toggle('is-away', p > 0.6);
+    }
+    function onScroll() { if (!queued) { queued = true; requestAnimationFrame(write); } }
+    measure(); write();
+    addEventListener('scroll', onScroll, { passive: true });
+    addEventListener('resize', function () { frame(); measure(); onScroll(); });
+    reduceMQ.addEventListener('change', onScroll);
+  })();
+
   /* ------------------------------------------------------ header state */
   (function header() {
     var h = $('[data-header]'), hero = $('.hero');

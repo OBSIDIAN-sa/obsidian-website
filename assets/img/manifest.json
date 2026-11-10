@@ -25,38 +25,6 @@
         }
       ]
     },
-    "hero-mobile": {
-      "source": "hero-mobile/hero-mobile-3.jpg",
-      "crop": {
-        "left": 570,
-        "top": 0,
-        "width": 3266,
-        "height": 5807
-      },
-      "variants": [
-        {
-          "w": 800,
-          "h": 1422,
-          "avif": "hero-mobile-800.avif",
-          "webp": "hero-mobile-800.webp",
-          "jpg": "hero-mobile-800.jpg"
-        },
-        {
-          "w": 1200,
-          "h": 2134,
-          "avif": "hero-mobile-1200.avif",
-          "webp": "hero-mobile-1200.webp",
-          "jpg": "hero-mobile-1200.jpg"
-        },
-        {
-          "w": 1600,
-          "h": 2845,
-          "avif": "hero-mobile-1600.avif",
-          "webp": "hero-mobile-1600.webp",
-          "jpg": "hero-mobile-1600.jpg"
-        }
-      ]
-    },
     "island": {
       "source": "island/island-1.jpg",
       "crop": {

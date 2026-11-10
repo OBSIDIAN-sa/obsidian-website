@@ -306,37 +306,62 @@ button, input, select, textarea { font: inherit; color: inherit; }
 @media (min-width: 760px) and (max-width: 1023px) { .nav__list { gap: 1.1rem; } }
 
 /* ---- 01 Hero -------------------------------------------------------------- */
-.hero { position: relative; min-block-size: 100svh; display: flex; align-items: flex-end; overflow: hidden; }
-.hero__media, .hero__media img { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; }
-.hero__media img { object-fit: cover; object-position: 60% 50%; }
-/* The knife block sits inline-end in both directions: mirror the frame in RTL (no text in the image) */
-[dir='rtl'] .hero__media img { transform: scaleX(-1); }
-.hero::after {
+/* The stage is one screen; on wider screens it pins while the camera pushes into the room (see below). */
+.hero { position: relative; }
+.hero__stage { position: relative; min-block-size: 100svh; display: flex; align-items: flex-end; overflow: hidden; }
+.hero__media, .hero__frame, .hero__media img, .hero__draw { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; }
+.hero__media { overflow: hidden; }
+/* --hp (0 → 1) is the scroll through the hero, written by main.js; --hz is how far the camera pushes in.
+   The timber wall holds the type, so it sits inline-start: as shot in RTL, mirrored in LTR (no text in the frame). */
+.hero__frame {
+  --z: calc(1 + var(--hp, 0) * var(--hz, 0.12));
+  transform: scale(calc(var(--flip, 1) * var(--z)), var(--z)); transform-origin: 50% 58%; will-change: transform;
+}
+[dir='ltr'] .hero__frame { --flip: -1; }
+.hero__media img { object-fit: cover; object-position: 50% 50%; }
+/* Tall screens keep the kitchen side of the frame (the drawing follows: main.js gives the SVG the same crop) */
+@media (max-width: 700px), (max-width: 1023px) and (orientation: portrait) { .hero__media img { object-position: 78% 50%; } }
+.hero__stage::after {
   content: ''; position: absolute; inset: 0; pointer-events: none;
   background:
-    linear-gradient(to top, var(--ink) 0%, transparent 38%),
-    linear-gradient(to right, color-mix(in srgb, var(--ink) 70%, transparent) 0%, transparent 60%);
+    linear-gradient(to top, var(--ink) 0%, color-mix(in srgb, var(--ink) 55%, transparent) 30%, transparent 62%),
+    linear-gradient(to right, color-mix(in srgb, var(--ink) 82%, transparent) 0%, transparent 62%);
 }
-[dir='rtl'] .hero::after {
+[dir='rtl'] .hero__stage::after {
   background:
-    linear-gradient(to top, var(--ink) 0%, transparent 38%),
-    linear-gradient(to left, color-mix(in srgb, var(--ink) 70%, transparent) 0%, transparent 60%);
+    linear-gradient(to top, var(--ink) 0%, color-mix(in srgb, var(--ink) 55%, transparent) 30%, transparent 62%),
+    linear-gradient(to left, color-mix(in srgb, var(--ink) 82%, transparent) 0%, transparent 62%);
 }
-/* Portrait tablets use the portrait crop (see <picture>): lift the frame so the type clears it */
-@media (min-width: 701px) and (max-width: 1023px) and (orientation: portrait) {
-  .hero__media img { object-position: 50% 100%; }
+/* The drawing: the same frame in line, traced over it. Hidden unless the head script allows motion (.hero-draw);
+   then the lines draw themselves, the material arrives across them, and the drawing fades. Started by .hero-go. */
+.hero__draw { display: none; pointer-events: none; }
+.hero-draw .hero__draw { display: block; }
+.hero__draw path { stroke: var(--bone); stroke-width: var(--hero-line, 1.7); stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; }
+.hero__draw path.b { stroke-opacity: 0.5; }
+.hero-draw .hero__frame img { clip-path: inset(0 100% 0 0); }
+.hero-go .hero__draw path { stroke-dashoffset: 0; transition: stroke-dashoffset 1100ms cubic-bezier(0.2, 0.7, 0.2, 1) var(--d, 0s); }
+.hero-go .hero__frame img { clip-path: inset(0 0 0 0); transition: clip-path 2300ms cubic-bezier(0.65, 0, 0.35, 1) 2500ms; }
+.hero-go .hero__draw { opacity: 0; transition: opacity 1300ms linear 4100ms; }
+/* Wider screens: the hero pins for most of a screen while the camera pushes in and the type clears */
+@media (min-width: 701px) and (prefers-reduced-motion: no-preference) {
+  .js .hero { block-size: 185svh; --hz: 0.5; }
+  .js .hero__stage { position: sticky; inset-block-start: 0; block-size: 100svh; min-block-size: 0; }
+  .js .hero__content { opacity: calc(1 - var(--hp, 0) * 1.8); transform: translate3d(0, calc(var(--hp, 0) * -5rem), 0); }
+  .js .hero.is-away .hero__content { visibility: hidden; }
 }
-/* Phones: the portrait frame holds the top of the screen; the type sits below it on ink */
+/* Phones: the frame holds the top of the screen; the type sits below it on ink */
 @media (max-width: 700px) {
-  .hero { display: block; min-block-size: 0; }
+  .hero__stage { display: block; min-block-size: 0; }
   .hero__media { position: relative; display: block; block-size: 56svh; }
-  .hero__media img { object-position: 50% 40%; }
-  .hero::after, [dir='rtl'] .hero::after { background: linear-gradient(to top, var(--ink) 45%, transparent 70%); }
+  .hero__draw { --hero-line: 3; }
+  .hero__stage::after, [dir='rtl'] .hero__stage::after { background: linear-gradient(to top, var(--ink) 45%, transparent 70%); }
   .hero .hero__content { padding-block: 0 var(--space-5); margin-block-start: -3rem; }
 }
 .hero__content { position: relative; z-index: 1; padding-block: 8rem var(--space-5); }
 .hero__mark { display: flex; align-items: center; gap: clamp(1rem, 2.5vw, 2.5rem); margin-block-end: var(--space-4); }
-.hero__logo { inline-size: clamp(4.5rem, 3rem + 6vw, 9rem); flex: none; }
+/* The mark is the O of OBSIDIAN: the official file, set at the height of the capitals and on their baseline */
+.wordmark__o { display: inline-block; }
+.hero__logo { display: inline-block; block-size: 0.62em; inline-size: auto; vertical-align: baseline; margin-inline-end: 0.04em; }
 /* Logo swing: the untouched mark, hung from the top of the ring, is set moving once and settles —
    a damped pendulum, transform only. Classes come from JS, so without JS it is a still frame. */
 .hero__logo { transform-origin: 50% 0; }
@@ -360,7 +385,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
   100% { transform: rotate(0deg); }
 }
 .wordmark { display: inline-block; font-family: var(--ff-latin-display); font-weight: 300; line-height: 0.86; direction: ltr; }
-.wordmark__top { display: block; font-size: var(--step-6); letter-spacing: 0.01em; margin-inline-start: -0.05em; }
+.wordmark__top { display: block; font-size: var(--step-6); letter-spacing: 0.01em; white-space: nowrap; }
 /* DESIGN is spread to exactly the width of OBSIDIAN, so the two lines read as one block */
 .wordmark__bottom {
   display: flex; justify-content: space-between; margin-block-start: 0.9rem; padding-inline: 0.15em 0.1em;
