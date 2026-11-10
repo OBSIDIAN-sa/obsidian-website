@@ -342,7 +342,8 @@ async function scrollThrough(page) {
     // Warranty is allowed only as the company-profile figures in CONTENT.md §10أ (checked below); no other guarantee language
     ['guarantee / other warranty terms', /guarantee|كفالة|lifetime|مدى الحياة/i],
     ['payment terms', /payment|instal+ment|deposit|down ?payment|دفعة|الدفع|أقساط|عربون|تقسيط/i],
-    ['map / address', /<iframe|maps\.google|google\.com\/maps|openstreetmap|mapbox|latitude|longitude|coordinates|\bst\.|street|حي |شارع|إحداثيات|خريطة/i],
+    // Nov 2026 (owner): the showroom address is published as text with a Google Maps link. Still no embedded map or coordinates.
+    ['embedded map / coordinates', /<iframe|openstreetmap|mapbox|latitude|longitude|coordinates|إحداثيات/i],
     ['opening date', /open(s|ing)? (on|in) |\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.? \d|\b20\d\d-\d\d|q[1-4] 20\d\d|يفتتح في|الافتتاح في|(يناير|فبراير|مارس|أبريل|مايو|يونيو|يوليو|أغسطس|سبتمبر|أكتوبر|نوفمبر|ديسمبر)/i],
   ];
   const hits = [];
@@ -636,7 +637,8 @@ async function scrollThrough(page) {
   if (!content.includes(ld.email)) problems.push('JSON-LD email not in CONTENT.md');
   if (!content.includes(ld.address.addressLocality) || !content.includes(ld.address.addressRegion)) problems.push('JSON-LD address not from CONTENT.md');
   for (const k of ['openingHours', 'openingHoursSpecification', 'geo', 'priceRange', 'aggregateRating', 'review']) if (k in ld) problems.push(`JSON-LD invents ${k}`);
-  if ('streetAddress' in ld.address || 'postalCode' in ld.address) problems.push('JSON-LD has a street address');
+  // Nov 2026 (owner): the address is published — it must be the one in CONTENT.md, with its Maps link
+  if (!content.includes(ld.address.streetAddress) || !content.includes(ld.address.postalCode) || !content.includes(ld.hasMap)) problems.push('JSON-LD address / map link not in CONTENT.md');
   for (const handle of ['obsidian.design.ksa', 'obsidian_design', 'obsidiandesign2']) if (!ld.sameAs.some((u) => u.includes(handle))) problems.push(`JSON-LD sameAs missing ${handle}`);
   // ?lang=en opens English with its own canonical and title
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } }); const page = await ctx.newPage();
