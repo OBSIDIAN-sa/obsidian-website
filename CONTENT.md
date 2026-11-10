@@ -147,7 +147,7 @@ Bespoke Kitchens · Wardrobes & Dressing Rooms · Interior Solutions · Made to 
 |---|---|---|
 | 01 | نقيس | نزور موقعك ونأخذ المقاسات بدقة. |
 | 02 | نصمم | نرسم التصميم ونختار معك الخامات والألوان. |
-| 03 | نصنع | كل قطعة تُصنع بحرفية حسب المخطط المعتمد. |
+| 03 | نصنع | كل قطعة تُقص بأحدث أجهزة قص الخشب وأدقّها، وتُصنع بحرفية حسب المخطط المعتمد. |
 | 04 | نركّب | نركّب ونسلّمك المساحة جاهزة. |
 
 **EN**
@@ -157,7 +157,7 @@ Bespoke Kitchens · Wardrobes & Dressing Rooms · Interior Solutions · Made to 
 |---|---|---|
 | 01 | We measure | We visit your space and take exact measurements. |
 | 02 | We design | We draw the design and choose the materials and colours with you. |
-| 03 | We make | Every piece is crafted to the approved drawing. |
+| 03 | We make | Every panel is cut on the latest, most precise wood-cutting machinery, then crafted to the approved drawing. |
 | 04 | We install | We fit everything and hand the space over ready. |
 
 ---
@@ -335,7 +335,7 @@ Bespoke Kitchens · Wardrobes & Dressing Rooms · Interior Solutions · Made to 
 |---|---|
 | كيف تبدأ العملية؟ | تتواصل معنا، نحدد موعد زيارة للموقع، نرفع المقاسات ونشوف الكهرباء والسباكة والفتحات. بعدها نرسم تصميماً كاملاً ونراجعه معك حتى تعتمده — وما يُقص أي لوح قبل الاعتماد. |
 | عندي مساحة غير قياسية أو زوايا صعبة | هذي حالتنا الطبيعية. ما نشتغل بمقاسات جاهزة أصلاً، فالمساحة الصعبة تُرسم وتُصنّع على وضعها بالضبط بدل ما نجبرها على قطعة جاهزة. |
-| وش الفرق بينكم وبين نجّار عادي؟ | الفرق في المرحلة اللي قبل التنفيذ وبعده: تصميم معتمد بالمقاسات، اختيار مواد واضح بالاسم، إشراف على التركيب، ومراجعة نهائية. التنفيذ وحده مو كافي. |
+| كيف تصنعون القطع؟ | نستخدم في التصنيع أحدث وأفضل الأجهزة الخاصة بقص الخشب، فكل لوح يُقص بدقة عالية حسب المخطط المعتمد، ثم يُجمّع ويُراجع قطعة قطعة قبل التركيب. |
 | وين موقعكم؟ | المعرض في سيهات، المنطقة الشرقية: شارع الخليج، حي النسيم. رابط الموقع على خرائط قوقل تلقاه في أسفل الصفحة. |
 
 **EN**
@@ -344,7 +344,7 @@ Bespoke Kitchens · Wardrobes & Dressing Rooms · Interior Solutions · Made to 
 |---|---|
 | How does the process start? | You get in touch, we book a site visit, take the measurements and check the electrics, plumbing and openings. Then we draw a full design and review it with you until you approve it — and no board is cut before that. |
 | My space is non-standard, with awkward corners | That's our normal case. We don't work to stock sizes at all, so a difficult space gets drawn and built exactly as it is, instead of being forced into a ready-made unit. |
-| What's the difference between you and a regular carpenter? | The difference sits before and after the build: an approved design with dimensions, materials named and chosen, supervised installation, and a final review. Building alone isn't enough. |
+| How are the pieces made? | Our manufacturing uses the latest and best wood-cutting machinery, so every panel is cut with high precision to the approved drawing, then assembled and checked piece by piece before installation. |
 | Where are you? | The showroom is in Saihat, Eastern Province: Al Khaleej Street, Al Naseem District. You'll find the Google Maps link at the foot of the page. |
 
 ---
