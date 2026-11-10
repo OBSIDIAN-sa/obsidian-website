@@ -360,7 +360,7 @@ async function scrollThrough(page) {
   }
   const years = [...new Set(files.flatMap(([, s]) => s.match(/(?<![\w-])20\d\d(?![\w.])/g) || []))]; // skip "-2000.webp" filenames
   report('11. No testimonials, lead times, payment terms, map or opening date; warranty only as in the profile', hits.length === 0,
-    hits.length ? hits.join(' | ') : `none found in the page or string table; the only year is ${years.join(', ')} (copyright line); "قريباً / Opening soon" carries no date; location is city-level only`);
+    hits.length ? hits.join(' | ') : `none found in the page or string table; the only year is ${years.join(', ')} (copyright line); no "opening soon" line any more (owner, Nov 2026); location is city-level only`);
 }
 
 // 12 — social preview (Open Graph / X card): tags present, absolute, and matching the image file

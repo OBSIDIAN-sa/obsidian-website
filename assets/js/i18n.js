@@ -19,7 +19,7 @@ window.I18N = {
 
     hero_words: ['مطابخ', 'خزائن', 'تصاميم داخلية'],
     hero_intro: 'ما عندنا قطعة جاهزة واحدة. كل مطبخ وكل خزانة تبدأ من ورقة بيضاء، وتُصنّع بمقاسها ومادتها وتفصيلها.',
-    hero_status: 'قريباً — سيهات',
+    hero_status: 'سيهات — المنطقة الشرقية',
     hero_cta_primary: 'سجّل اهتمامك',
     hero_cta_secondary: 'تواصل عبر واتساب',
 
@@ -125,8 +125,8 @@ window.I18N = {
     faq_4_q: 'وين موقعكم؟',
     faq_4_a: 'المعرض في سيهات، المنطقة الشرقية: شارع الخليج، حي النسيم. رابط الموقع على خرائط قوقل تلقاه في أسفل الصفحة.',
 
-    register_heading: 'سجّل اهتمامك قبل الافتتاح',
-    register_body: 'اترك تفاصيلك وبنرجع لك أول ما يفتح المعرض، مع أولوية في مواعيد الاستشارة والتصميم.',
+    register_heading: 'سجّل اهتمامك',
+    register_body: 'اترك تفاصيلك وبنرجع لك في أقرب وقت، مع أولوية في مواعيد الاستشارة والتصميم.',
     f_name: 'الاسم',
     f_phone: 'رقم الجوال',
     f_type: 'نوع المشروع',
@@ -153,7 +153,6 @@ window.I18N = {
     footer_city: 'سيهات — المنطقة الشرقية',
     footer_address: 'شارع الخليج، حي النسيم',
     footer_map: 'الموقع على خرائط قوقل',
-    footer_soon: 'قريباً',
     footer_copy: '© 2026 أوبسيديان ديزاين. جميع الحقوق محفوظة.',
   },
 
@@ -174,7 +173,7 @@ window.I18N = {
 
     hero_words: ['Kitchens', 'Wardrobes', 'Interiors'],
     hero_intro: 'Nothing here is off the shelf. Every kitchen and every wardrobe begins on a blank sheet — then it’s built to your measurements, your material, your detail.',
-    hero_status: 'Opening soon — Saihat',
+    hero_status: 'Saihat — Eastern Province',
     hero_cta_primary: 'Register your interest',
     hero_cta_secondary: 'Message us on WhatsApp',
 
@@ -280,8 +279,8 @@ window.I18N = {
     faq_4_q: 'Where are you?',
     faq_4_a: 'The showroom is in Saihat, Eastern Province: Al Khaleej Street, Al Naseem District. You’ll find the Google Maps link at the foot of the page.',
 
-    register_heading: 'Register your interest before we open',
-    register_body: 'Leave your details and we’ll come back to you the moment the showroom opens — with priority on consultation and design slots.',
+    register_heading: 'Register your interest',
+    register_body: 'Leave your details and we’ll come back to you shortly — with priority on consultation and design slots.',
     f_name: 'Name',
     f_phone: 'Mobile number',
     f_type: 'Project type',
@@ -308,7 +307,6 @@ window.I18N = {
     footer_city: 'Saihat — Eastern Province',
     footer_address: 'Al Khaleej Street, Al Naseem District',
     footer_map: 'Find us on Google Maps',
-    footer_soon: 'Opening soon',
     footer_copy: '© 2026 Obsidian Design. All rights reserved.',
   },
 };

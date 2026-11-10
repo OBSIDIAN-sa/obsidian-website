@@ -52,7 +52,7 @@
 - كلمات متبدلة (تتبدل كل ~2.5 ثانية): `مطابخ` ← `خزائن` ← `تصاميم داخلية`
 - النص التعريفي:
   > ما عندنا قطعة جاهزة واحدة. كل مطبخ وكل خزانة تبدأ من ورقة بيضاء، وتُصنّع بمقاسها ومادتها وتفصيلها.
-- سطر الحالة: `قريباً — سيهات`
+- سطر الحالة: `سيهات — المنطقة الشرقية`
 - زر أساسي: `سجّل اهتمامك`
 - زر ثانوي: `تواصل عبر واتساب`
 
@@ -60,7 +60,7 @@
 - Rotating words: `Kitchens` → `Wardrobes` → `Interiors`
 - Intro line:
   > Nothing here is off the shelf. Every kitchen and every wardrobe begins on a blank sheet — then it's built to your measurements, your material, your detail.
-- Status line: `Opening soon — Saihat`
+- Status line: `Saihat — Eastern Province`
 - Primary button: `Register your interest`
 - Secondary button: `Message us on WhatsApp`
 
@@ -352,9 +352,9 @@ Bespoke Kitchens · Wardrobes & Dressing Rooms · Interior Solutions · Made to 
 ## 13. تسجيل الاهتمام
 
 **AR**
-- العنوان: `سجّل اهتمامك قبل الافتتاح`
+- العنوان: `سجّل اهتمامك`
 - الفقرة:
-  > اترك تفاصيلك وبنرجع لك أول ما يفتح المعرض، مع أولوية في مواعيد الاستشارة والتصميم.
+  > اترك تفاصيلك وبنرجع لك في أقرب وقت، مع أولوية في مواعيد الاستشارة والتصميم.
 - حقول النموذج:
   | الحقل | التسمية | نوع |
   |---|---|---|
@@ -373,9 +373,9 @@ Bespoke Kitchens · Wardrobes & Dressing Rooms · Interior Solutions · Made to 
   - رابط تحت النموذج: `تفضّل واتساب؟ راسلنا مباشرة`
 
 **EN**
-- Heading: `Register your interest before we open`
+- Heading: `Register your interest`
 - Paragraph:
-  > Leave your details and we'll come back to you the moment the showroom opens — with priority on consultation and design slots.
+  > Leave your details and we'll come back to you shortly — with priority on consultation and design slots.
 - Fields: `Name` / `Mobile number` / `Project type` (`Kitchen` / `Wardrobes & Dressing Rooms` / `Interior Solutions` / `More than one`) / `Notes (optional)`
 - Project type placeholder: `Choose a project type`
 - Submit: `Send`
@@ -390,14 +390,14 @@ Bespoke Kitchens · Wardrobes & Dressing Rooms · Interior Solutions · Made to 
 **AR**
 - عمود 1 — **خدماتنا**: مطابخ · خزائن وغرف ملابس · حلول داخلية
 - عمود 2 — **تواصل**: واتساب · البريد · الحسابات
-- عمود 3 — **المعرض**: سيهات — المنطقة الشرقية · شارع الخليج، حي النسيم · الموقع على خرائط قوقل · قريباً
+- عمود 3 — **المعرض**: سيهات — المنطقة الشرقية · شارع الخليج، حي النسيم · الموقع على خرائط قوقل
 - الوردمارك العملاق: `OBSIDIAN`
 - سطر الحقوق: `© 2026 أوبسيديان ديزاين. جميع الحقوق محفوظة.`
 
 **EN**
 - Column 1 — **Services**: Kitchens · Wardrobes & Dressing Rooms · Interior Solutions
 - Column 2 — **Contact**: WhatsApp · Email · Social
-- Column 3 — **Showroom**: Saihat — Eastern Province · Al Khaleej Street, Al Naseem District · Find us on Google Maps · Opening soon
+- Column 3 — **Showroom**: Saihat — Eastern Province · Al Khaleej Street, Al Naseem District · Find us on Google Maps
 - Copyright: `© 2026 Obsidian Design. All rights reserved.`
 
 ---
