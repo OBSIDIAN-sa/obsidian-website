@@ -120,7 +120,8 @@ async function scrollThrough(page) {
       const out = [], vw = document.documentElement.clientWidth;
       if (document.documentElement.scrollWidth > vw) out.push(`page scrollWidth ${document.documentElement.scrollWidth} > ${vw}`);
       // .film__frame: the scrubbed push-in scales frames past the stage, which clips them (overflow: hidden)
-      const skip = '.material__track, .marquee, .footer__wordmark, .sr-only, .skip-link, .hero__rotator, .film__frame';
+      // .hero__frame: same again — the hero's push-in scales the frame inside .hero__media, which clips it
+      const skip = '.material__track, .marquee, .footer__wordmark, .sr-only, .skip-link, .hero__rotator, .film__frame, .hero__frame';
       for (const el of document.querySelectorAll('body *')) {
         if (!el.offsetWidth || el.closest(skip)) continue;
         const r = el.getBoundingClientRect();
@@ -568,15 +569,18 @@ async function scrollThrough(page) {
   { const { ctx, page } = await open({ width: 1440 });
     if (await page.evaluate(() => !!document.querySelector('[data-menu-toggle]').offsetWidth)) problems.push('menu button visible on desktop');
     await ctx.close(); }
-  // Portrait tablet gets the portrait crop; landscape keeps the wide frame
-  for (const [w, h, want] of [[768, 1024, 'hero-mobile-'], [1024, 768, 'hero-'], [375, 812, 'hero-mobile-']]) {
+  // One hero frame for every screen (Nov 2026): tall screens crop to its kitchen side, and the drawing gets the photo's exact crop
+  for (const [w, h, pos] of [[768, 1024, 0.78], [1024, 768, 0.5], [375, 812, 0.78]]) {
     const { ctx, page } = await open({ width: w, height: h });
-    const src = await page.evaluate(() => document.querySelector('.hero__media img').currentSrc.split('/').pop());
-    if (!src.startsWith(want) || (want === 'hero-' && src.startsWith('hero-mobile'))) problems.push(`${w}x${h} hero uses ${src}`);
+    const got = await page.evaluate(() => { const i = document.querySelector('.hero__media img'), m = document.querySelector('.hero__media');
+      return { src: i.currentSrc.split('/').pop(), pos: getComputedStyle(i).objectPosition, vb: document.querySelector('.hero__draw').getAttribute('viewBox').split(' ').map(Number), cw: m.offsetWidth, ch: m.offsetHeight }; });
+    const vw = Math.min(2000, 1125 * got.cw / got.ch), vh = Math.min(1125, 2000 * got.ch / got.cw);
+    const want = [(2000 - vw) * pos, (1125 - vh) * 0.5, vw, vh];
+    if (!/^hero-\d+\./.test(got.src) || got.pos !== `${pos * 100}% 50%` || want.some((v, k) => Math.abs(v - got.vb[k]) > 1)) problems.push(`${w}x${h} hero: ${JSON.stringify(got)}`);
     await ctx.close();
   }
   report('16. Phone menu + portrait-tablet hero', problems.length === 0,
-    problems.length ? problems.join(' | ') : 'AR+EN at 375: opens with focus in the menu and the page inert; 5 links ≥44px at the reading start; Escape closes and returns focus; a link tap closes and navigates; widening past 760 closes it; hidden on desktop. 768×1024 portrait serves the portrait crop, 1024×768 landscape the wide frame');
+    problems.length ? problems.join(' | ') : 'AR+EN at 375: opens with focus in the menu and the page inert; 5 links ≥44px at the reading start; Escape closes and returns focus; a link tap closes and navigates; widening past 760 closes it; hidden on desktop. tall screens (768×1024, 375×812) crop the hero frame and its drawing to the kitchen side; 1024×768 landscape keeps them centred');
 }
 
 // 17 — accessibility: axe-core WCAG 2.1 AA, skip-link focus, pixel contrast of text over photos
