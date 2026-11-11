@@ -312,15 +312,13 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .hero__media, .hero__frame, .hero__media img, .hero__draw { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; }
 .hero__media { overflow: hidden; }
 /* --hp (0 → 1) is the scroll through the hero, written by main.js; --hz is how far the camera pushes in.
-   The timber wall holds the type, so it sits inline-start: as shot in RTL, mirrored in LTR (no text in the frame). */
+   The frame is the showroom as it is built, so it is never mirrored. */
 .hero__frame {
   --z: calc(1 + var(--hp, 0) * var(--hz, 0.12));
-  transform: scale(calc(var(--flip, 1) * var(--z)), var(--z)); transform-origin: 50% 58%; will-change: transform;
+  transform: scale(var(--z)); transform-origin: 50% 56%; will-change: transform;
 }
-[dir='ltr'] .hero__frame { --flip: -1; }
 .hero__media img { object-fit: cover; object-position: 50% 50%; }
-/* Tall screens keep the kitchen side of the frame (the drawing follows: main.js gives the SVG the same crop) */
-@media (max-width: 700px), (max-width: 1023px) and (orientation: portrait) { .hero__media img { object-position: 78% 50%; } }
+/* Tall screens show the middle of the frame — the table, the island, both kitchens (main.js gives the drawing the same crop) */
 .hero__stage::after {
   content: ''; position: absolute; inset: 0; pointer-events: none;
   background:

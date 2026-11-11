@@ -270,12 +270,12 @@
     if (!el) return;
     var svg = $('.hero__draw', el);
     var tallMQ = window.matchMedia('(max-width: 700px), (max-width: 1023px) and (orientation: portrait)');
-    // Give the drawing the photo's own crop (object-fit: cover + object-position in CSS): centred on wide
-    // screens, the kitchen side (78%) on tall ones. The SVG's viewBox becomes exactly the visible part of the frame.
-    var media = $('.hero__media', el), FW = 2000, FH = 1125;
+    // Give the drawing the photo's own crop (object-fit: cover, centred): the SVG's viewBox becomes exactly
+    // the visible part of the frame, on any screen shape.
+    var media = $('.hero__media', el), FW = 1390, FH = 752;
     function frame() {
       if (!svg || !media.offsetWidth) return;
-      var cw = media.offsetWidth, ch = media.offsetHeight, fx = tallMQ.matches ? 0.78 : 0.5;
+      var cw = media.offsetWidth, ch = media.offsetHeight, fx = 0.5;
       var vw = Math.min(FW, FH * cw / ch), vh = Math.min(FH, FW * ch / cw);
       svg.setAttribute('viewBox', [((FW - vw) * fx).toFixed(1), ((FH - vh) * 0.5).toFixed(1), vw.toFixed(1), vh.toFixed(1)].join(' '));
     }
