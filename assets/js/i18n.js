@@ -19,7 +19,7 @@ window.I18N = {
 
     hero_words: ['مطابخ', 'خزائن', 'تصاميم داخلية'],
     hero_intro: 'ما عندنا قطعة جاهزة واحدة. كل مطبخ وكل خزانة تبدأ من ورقة بيضاء، وتُصنّع بمقاسها ومادتها وتفصيلها.',
-    hero_status: 'قريباً — سيهات',
+    hero_status: 'سيهات — المنطقة الشرقية',
     hero_cta_primary: 'سجّل اهتمامك',
     hero_cta_secondary: 'تواصل عبر واتساب',
 
@@ -44,7 +44,7 @@ window.I18N = {
     how_2_title: 'نصمم',
     how_2_body: 'نرسم التصميم ونختار معك الخامات والألوان.',
     how_3_title: 'نصنع',
-    how_3_body: 'كل قطعة تُصنع بحرفية حسب المخطط المعتمد.',
+    how_3_body: 'كل قطعة تُقص بأحدث أجهزة قص الخشب وأدقّها، وتُصنع بحرفية حسب المخطط المعتمد.',
     how_4_title: 'نركّب',
     how_4_body: 'نركّب ونسلّمك المساحة جاهزة.',
 
@@ -120,13 +120,13 @@ window.I18N = {
     faq_1_a: 'تتواصل معنا، نحدد موعد زيارة للموقع، نرفع المقاسات ونشوف الكهرباء والسباكة والفتحات. بعدها نرسم تصميماً كاملاً ونراجعه معك حتى تعتمده — وما يُقص أي لوح قبل الاعتماد.',
     faq_2_q: 'عندي مساحة غير قياسية أو زوايا صعبة',
     faq_2_a: 'هذي حالتنا الطبيعية. ما نشتغل بمقاسات جاهزة أصلاً، فالمساحة الصعبة تُرسم وتُصنّع على وضعها بالضبط بدل ما نجبرها على قطعة جاهزة.',
-    faq_3_q: 'وش الفرق بينكم وبين نجّار عادي؟',
-    faq_3_a: 'الفرق في المرحلة اللي قبل التنفيذ وبعده: تصميم معتمد بالمقاسات، اختيار مواد واضح بالاسم، إشراف على التركيب، ومراجعة نهائية. التنفيذ وحده مو كافي.',
+    faq_3_q: 'كيف تصنعون القطع؟',
+    faq_3_a: 'نستخدم في التصنيع أحدث وأفضل الأجهزة الخاصة بقص الخشب، فكل لوح يُقص بدقة عالية حسب المخطط المعتمد، ثم يُجمّع ويُراجع قطعة قطعة قبل التركيب.',
     faq_4_q: 'وين موقعكم؟',
     faq_4_a: 'المعرض في سيهات، المنطقة الشرقية: شارع الخليج، حي النسيم. رابط الموقع على خرائط قوقل تلقاه في أسفل الصفحة.',
 
-    register_heading: 'سجّل اهتمامك قبل الافتتاح',
-    register_body: 'اترك تفاصيلك وبنرجع لك أول ما يفتح المعرض، مع أولوية في مواعيد الاستشارة والتصميم.',
+    register_heading: 'سجّل اهتمامك',
+    register_body: 'اترك تفاصيلك وبنرجع لك في أقرب وقت، مع أولوية في مواعيد الاستشارة والتصميم.',
     f_name: 'الاسم',
     f_phone: 'رقم الجوال',
     f_type: 'نوع المشروع',
@@ -153,7 +153,6 @@ window.I18N = {
     footer_city: 'سيهات — المنطقة الشرقية',
     footer_address: 'شارع الخليج، حي النسيم',
     footer_map: 'الموقع على خرائط قوقل',
-    footer_soon: 'قريباً',
     footer_copy: '© 2026 أوبسيديان ديزاين. جميع الحقوق محفوظة.',
   },
 
@@ -174,7 +173,7 @@ window.I18N = {
 
     hero_words: ['Kitchens', 'Wardrobes', 'Interiors'],
     hero_intro: 'Nothing here is off the shelf. Every kitchen and every wardrobe begins on a blank sheet — then it’s built to your measurements, your material, your detail.',
-    hero_status: 'Opening soon — Saihat',
+    hero_status: 'Saihat — Eastern Province',
     hero_cta_primary: 'Register your interest',
     hero_cta_secondary: 'Message us on WhatsApp',
 
@@ -199,7 +198,7 @@ window.I18N = {
     how_2_title: 'We design',
     how_2_body: 'We draw the design and choose the materials and colours with you.',
     how_3_title: 'We make',
-    how_3_body: 'Every piece is crafted to the approved drawing.',
+    how_3_body: 'Every panel is cut on the latest, most precise wood-cutting machinery, then crafted to the approved drawing.',
     how_4_title: 'We install',
     how_4_body: 'We fit everything and hand the space over ready.',
 
@@ -275,13 +274,13 @@ window.I18N = {
     faq_1_a: 'You get in touch, we book a site visit, take the measurements and check the electrics, plumbing and openings. Then we draw a full design and review it with you until you approve it — and no board is cut before that.',
     faq_2_q: 'My space is non-standard, with awkward corners',
     faq_2_a: 'That’s our normal case. We don’t work to stock sizes at all, so a difficult space gets drawn and built exactly as it is, instead of being forced into a ready-made unit.',
-    faq_3_q: 'What’s the difference between you and a regular carpenter?',
-    faq_3_a: 'The difference sits before and after the build: an approved design with dimensions, materials named and chosen, supervised installation, and a final review. Building alone isn’t enough.',
+    faq_3_q: 'How are the pieces made?',
+    faq_3_a: 'Our manufacturing uses the latest and best wood-cutting machinery, so every panel is cut with high precision to the approved drawing, then assembled and checked piece by piece before installation.',
     faq_4_q: 'Where are you?',
     faq_4_a: 'The showroom is in Saihat, Eastern Province: Al Khaleej Street, Al Naseem District. You’ll find the Google Maps link at the foot of the page.',
 
-    register_heading: 'Register your interest before we open',
-    register_body: 'Leave your details and we’ll come back to you the moment the showroom opens — with priority on consultation and design slots.',
+    register_heading: 'Register your interest',
+    register_body: 'Leave your details and we’ll come back to you shortly — with priority on consultation and design slots.',
     f_name: 'Name',
     f_phone: 'Mobile number',
     f_type: 'Project type',
@@ -308,7 +307,6 @@ window.I18N = {
     footer_city: 'Saihat — Eastern Province',
     footer_address: 'Al Khaleej Street, Al Naseem District',
     footer_map: 'Find us on Google Maps',
-    footer_soon: 'Opening soon',
     footer_copy: '© 2026 Obsidian Design. All rights reserved.',
   },
 };

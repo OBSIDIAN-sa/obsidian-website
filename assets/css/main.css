@@ -312,15 +312,13 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .hero__media, .hero__frame, .hero__media img, .hero__draw { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; }
 .hero__media { overflow: hidden; }
 /* --hp (0 → 1) is the scroll through the hero, written by main.js; --hz is how far the camera pushes in.
-   The timber wall holds the type, so it sits inline-start: as shot in RTL, mirrored in LTR (no text in the frame). */
+   The frame is the showroom as it is built, so it is never mirrored. */
 .hero__frame {
   --z: calc(1 + var(--hp, 0) * var(--hz, 0.12));
-  transform: scale(calc(var(--flip, 1) * var(--z)), var(--z)); transform-origin: 50% 58%; will-change: transform;
+  transform: scale(var(--z)); transform-origin: 50% 56%; will-change: transform;
 }
-[dir='ltr'] .hero__frame { --flip: -1; }
 .hero__media img { object-fit: cover; object-position: 50% 50%; }
-/* Tall screens keep the kitchen side of the frame (the drawing follows: main.js gives the SVG the same crop) */
-@media (max-width: 700px), (max-width: 1023px) and (orientation: portrait) { .hero__media img { object-position: 78% 50%; } }
+/* Tall screens show the middle of the frame — the table, the island, both kitchens (main.js gives the drawing the same crop) */
 .hero__stage::after {
   content: ''; position: absolute; inset: 0; pointer-events: none;
   background:
@@ -339,9 +337,12 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .hero__draw path { stroke: var(--bone); stroke-width: var(--hero-line, 1.7); stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; }
 .hero__draw path.b { stroke-opacity: 0.5; }
 .hero-draw .hero__frame img { clip-path: inset(0 100% 0 0); }
-.hero-go .hero__draw path { stroke-dashoffset: 0; transition: stroke-dashoffset 1100ms cubic-bezier(0.2, 0.7, 0.2, 1) var(--d, 0s); }
-.hero-go .hero__frame img { clip-path: inset(0 0 0 0); transition: clip-path 2300ms cubic-bezier(0.65, 0, 0.35, 1) 2500ms; }
-.hero-go .hero__draw { opacity: 0; transition: opacity 1300ms linear 4100ms; }
+/* --lead pulls the whole sequence earlier on tall screens: they only show the kitchen side of the frame, whose
+   lines come late in the left-to-right sweep, so without it a phone opens on a second of empty ink */
+.hero-go .hero__draw path { stroke-dashoffset: 0; transition: stroke-dashoffset 1100ms cubic-bezier(0.2, 0.7, 0.2, 1) calc(var(--d, 0s) - var(--lead, 0s)); }
+.hero-go .hero__frame img { clip-path: inset(0 0 0 0); transition: clip-path 2300ms cubic-bezier(0.65, 0, 0.35, 1) calc(2500ms - var(--lead, 0s)); }
+.hero-go .hero__draw { opacity: 0; transition: opacity 1300ms linear calc(4100ms - var(--lead, 0s)); }
+@media (max-width: 700px), (max-width: 1023px) and (orientation: portrait) { .hero { --lead: 0.75s; } }
 /* Wider screens: the hero pins for most of a screen while the camera pushes in and the type clears */
 @media (min-width: 701px) and (prefers-reduced-motion: no-preference) {
   .js .hero { block-size: 185svh; --hz: 0.5; }

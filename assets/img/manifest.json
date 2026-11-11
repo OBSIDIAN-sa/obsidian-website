@@ -11,17 +11,17 @@
       "variants": [
         {
           "w": 1200,
-          "h": 675,
+          "h": 649,
           "avif": "hero-1200.avif",
           "webp": "hero-1200.webp",
           "jpg": "hero-1200.jpg"
         },
         {
-          "w": 2000,
-          "h": 1125,
-          "avif": "hero-2000.avif",
-          "webp": "hero-2000.webp",
-          "jpg": "hero-2000.jpg"
+          "w": 1390,
+          "h": 752,
+          "avif": "hero-1390.avif",
+          "webp": "hero-1390.webp",
+          "jpg": "hero-1390.jpg"
         }
       ]
     },
