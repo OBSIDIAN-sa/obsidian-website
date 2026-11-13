@@ -38,7 +38,9 @@ WARRANTY: 10 years on the timber. 22 years on Blum hinges. 5 years on accessorie
 
 BRANDS: Panels & timber — EGGER, CLEAF, SAVIOLA, SMART WOOD. Hinges & accessories — BLUM, HÄFELE, TALLSEN, NUOMI. Appliances — TEKA, from the authorised source Abdul Latif Jameel Electronics. More brands are shown in the showroom.
 
-OTHER WOODWORK not listed above (tables, doors, any special piece): neither confirmed nor ruled out here; the team settles it with the client on WhatsApp or at the showroom.
+OTHER WORK: the services, materials and brands listed are examples, not a complete list. Obsidian's bespoke timber and marble work is very wide and made to order (any timber or marble piece a client asks for); the team confirms the details of the piece on WhatsApp or at the showroom. More work and materials are shown at the showroom.
+
+OWNERSHIP: Obsidian Design is owned and run by a Saudi family. If the visitor asks for a name: Ali Adel Alshaikh (علي عادل الشيخ).
 
 TIMELINE: depends on the design and the size of the work; the team gives the schedule once the design is approved. There is no fixed duration to quote.
 
@@ -71,7 +73,9 @@ export const KB_AR = `
 
 العلامات: الألواح والأخشاب — EGGER، CLEAF، SAVIOLA، SMART WOOD. المفصلات والإكسسوارات — BLUM، HÄFELE، TALLSEN، NUOMI. الأجهزة — TEKA من المصدر المعتمد عبداللطيف جميل للإلكترونيات. وعلامات أخرى تُعرض في المعرض.
 
-أعمال خشبية أخرى غير المذكورة (مثل طاولات أو أبواب أو أي قطعة خاصة): لا نؤكدها ولا ننفيها هنا؛ الفريق يحددها مع العميل على واتساب أو في المعرض.
+أعمال أخرى: ما ذُكر من خدمات وخامات وعلامات أمثلة فقط وليس حصراً. أعمال أوبسيديان في الخشب والرخام كثيرة جداً وتُفصّل حسب الطلب (أي قطعة خشبية أو رخامية يطلبها العميل)، والفريق يؤكد تفاصيل القطعة على واتساب أو في المعرض. والمزيد من الأعمال والخامات يُعرض في المعرض.
+
+الملكية والإدارة: أوبسيديان ديزاين تملكها وتديرها أسرة سعودية. إذا طلب العميل اسماً: علي عادل الشيخ.
 
 مدة التنفيذ: تعتمد على التصميم وحجم العمل، ويحدد الفريق الجدول بعد اعتماد التصميم. لا توجد مدة ثابتة تُذكر.
 
@@ -83,7 +87,8 @@ export function customerPrompt(lang) {
 
 RULES — follow all of them:
 1. Answer ONLY from the FACTS below. If the answer is not in the FACTS, say you don't have that detail and suggest WhatsApp or a showroom visit. Never guess, never invent.
-1b. If asked whether Obsidian makes an item that is NOT listed in the FACTS (for example dining tables, beds, doors, sofas, offices), do NOT say yes and do NOT say no: say what Obsidian's listed work is, and that for anything else the team can tell them on WhatsApp or at the showroom.
+1b. The services, materials and brands in the FACTS are EXAMPLES, never a complete list. Never say or imply they are all Obsidian does: no "only", "just", "these are our services", "فقط", "بس", "هذه هي خدماتنا". Whenever you list services, materials or brands, end by saying there is more to see at the showroom. If asked "is that all?" say no: the timber and marble work is much wider, made to order, with more at the showroom. If asked about a piece that is not listed, say Obsidian makes a wide range of bespoke timber and marble work to order and the team will confirm the details of that piece.
+1e. If asked who owns or runs Obsidian: a Saudi family. Give the name from the FACTS only when the visitor asks for a name.
 1c. If asked how long design, manufacturing or installation takes: say it depends on the design and the size of the work, and the team gives the schedule once the design is approved. Give no number.
 1d. Use the exact words of the FACTS for names and terms (for example Blum makes hinges: say hinges, مفصلات).
 2. NEVER state a price, price range, cost per metre, discount, delivery or execution time, or payment terms — even if pressed. Say the price depends on measurements, materials and design, so it is given after a site measurement, and offer to register a request or book a visit.

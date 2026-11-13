@@ -171,6 +171,7 @@ Bespoke Kitchens · Wardrobes & Dressing Rooms · Interior Solutions · Made to 
   2. `رخام أسود`
   3. `بلوط فاتح`
   4. `زجاج بإطار أسود`
+- سطر ختامي (الخامات ليست حصراً): `وخامات أخرى كثيرة تشوفها وتلمسها عند زيارتك للمعرض.`
 
 **EN**
 - Heading: `Material before form`
@@ -179,6 +180,7 @@ Bespoke Kitchens · Wardrobes & Dressing Rooms · Interior Solutions · Made to 
   2. `Black Marble`
   3. `Light Oak`
   4. `Black-Framed Glass`
+- Closing line: `And many more materials to see and touch when you visit the showroom.`
 
 ---
 
@@ -220,11 +222,14 @@ Bespoke Kitchens · Wardrobes & Dressing Rooms · Interior Solutions · Made to 
 - النقاط: `واجهات بلا مقابض` · `إضاءة مدمجة داخل الرفوف` · `أدراج مبطّنة وأنظمة تعليق`
 
 **البطاقة 3 — حلول داخلية**
-- الوصف: وحدات تلفزيون، مكتبات، ألواح جدارية، ووحدات مداخل — بنفس لغة المطبخ والخزائن.
+- الوصف: وحدات تلفزيون، مكتبات، ألواح جدارية، وحدات مداخل، وغيرها — بنفس لغة المطبخ والخزائن.
 - النقاط: `تنسيق كامل بين الغرف` · `مطابقة العروق والألوان` · `حلول تخزين مخفية`
+
+- سطر ختامي (الخدمات ليست حصراً): `وهذا جزء من أعمالنا. تفصيل الخشب والرخام عندنا أوسع من كذا، والمزيد تشوفه عند زيارتك للمعرض.`
 
 **EN**
 - Heading: `Everything we make, we make well`
+- Closing line: `This is part of what we do. Our bespoke timber and marble work goes well beyond it — you’ll see more when you visit the showroom.`
 
 **Card 1 — Kitchens**
 - From the first measurement to the last handle. Layout planned around how you move in the kitchen, before how it looks.
@@ -235,7 +240,7 @@ Bespoke Kitchens · Wardrobes & Dressing Rooms · Interior Solutions · Made to 
 - `Handleless fronts` · `Lighting built into the shelving` · `Lined drawers and hanging systems`
 
 **Card 3 — Interior Solutions**
-- Media units, libraries, wall panelling and entrance units — in the same language as the kitchen and the wardrobes.
+- Media units, libraries, wall panelling, entrance units and more — in the same language as the kitchen and the wardrobes.
 - `Full coordination room to room` · `Grain and colour matched throughout` · `Concealed storage solutions`
 
 ---
@@ -304,22 +309,22 @@ Bespoke Kitchens · Wardrobes & Dressing Rooms · Interior Solutions · Made to 
 
 | # | السطر |
 |---|---|
-| 1 | الأسود ما هو غياب اللون. هو أعلى درجات الانضباط |
+| 1 | الرخام ما يتكرر. كل لوح له عروقه |
 | 2 | الجزيرة تتوسط الغرفة، والباقي يدور حولها |
-| 3 | اللمعة تكشف كل عيب. فما نسمح بعيب |
+| 3 | الزاوية تكشف كل عيب. فما نسمح بعيب |
 | 4 | الخزانة تختفي في الجدار حتى تحتاجها |
-| 5 | واجهات بلا مقابض. لمسة واحدة تكفي |
+| 5 | الأسود ما هو غياب اللون. هو أعلى درجات الانضباط |
 | 6 | وفي النهاية، التفصيلة الأخيرة هي اللي تفرّق |
 
 **EN**
 
 | # | Line |
 |---|---|
-| 1 | Black isn't the absence of colour. It's the highest form of discipline |
+| 1 | No two slabs of marble are alike. Each has its own veining |
 | 2 | The island sits at the centre. Everything else moves around it |
-| 3 | A polished surface shows every flaw. So we allow none |
+| 3 | A corner shows every flaw. So we allow none |
 | 4 | The wardrobe disappears into the wall until you need it |
-| 5 | Handleless fronts. One touch is enough |
+| 5 | Black isn't the absence of colour. It's the highest form of discipline |
 | 6 | In the end, it's the last detail that decides |
 
 ---
@@ -360,7 +365,7 @@ Bespoke Kitchens · Wardrobes & Dressing Rooms · Interior Solutions · Made to 
   |---|---|---|
   | name | الاسم | نص — مطلوب |
   | phone | رقم الجوال | هاتف — مطلوب |
-  | type | نوع المشروع | اختيار: `مطبخ` / `خزائن وغرف ملابس` / `حلول داخلية` / `أكثر من واحد` |
+  | type | نوع المشروع | اختيار: `مطبخ` / `خزائن وغرف ملابس` / `حلول داخلية` / `أكثر من واحد` / `أعمال خشب أو رخام أخرى` |
   | note | ملاحظات (اختياري) | نص طويل |
 - نص الاختيار الافتراضي في «نوع المشروع»: `اختر نوع المشروع`
 - زر الإرسال: `أرسل`
@@ -376,7 +381,7 @@ Bespoke Kitchens · Wardrobes & Dressing Rooms · Interior Solutions · Made to 
 - Heading: `Register your interest`
 - Paragraph:
   > Leave your details and we'll come back to you shortly — with priority on consultation and design slots.
-- Fields: `Name` / `Mobile number` / `Project type` (`Kitchen` / `Wardrobes & Dressing Rooms` / `Interior Solutions` / `More than one`) / `Notes (optional)`
+- Fields: `Name` / `Mobile number` / `Project type` (`Kitchen` / `Wardrobes & Dressing Rooms` / `Interior Solutions` / `More than one` / `Other timber or marble work`) / `Notes (optional)`
 - Project type placeholder: `Choose a project type`
 - Submit: `Send`
 - Note under Send: `This opens WhatsApp with your details ready to send.`
@@ -388,14 +393,14 @@ Bespoke Kitchens · Wardrobes & Dressing Rooms · Interior Solutions · Made to 
 ## 14. الفوتر
 
 **AR**
-- عمود 1 — **خدماتنا**: مطابخ · خزائن وغرف ملابس · حلول داخلية
+- عمود 1 — **خدماتنا**: مطابخ · خزائن وغرف ملابس · حلول داخلية · والمزيد في المعرض
 - عمود 2 — **تواصل**: واتساب · البريد · الحسابات
 - عمود 3 — **المعرض**: سيهات — المنطقة الشرقية · شارع الخليج، حي النسيم · الموقع على خرائط قوقل
 - الوردمارك العملاق: `OBSIDIAN`
 - سطر الحقوق: `© 2026 أوبسيديان ديزاين. جميع الحقوق محفوظة.`
 
 **EN**
-- Column 1 — **Services**: Kitchens · Wardrobes & Dressing Rooms · Interior Solutions
+- Column 1 — **Services**: Kitchens · Wardrobes & Dressing Rooms · Interior Solutions · And more at the showroom
 - Column 2 — **Contact**: WhatsApp · Email · Social
 - Column 3 — **Showroom**: Saihat — Eastern Province · Al Khaleej Street, Al Naseem District · Find us on Google Maps
 - Copyright: `© 2026 Obsidian Design. All rights reserved.`
