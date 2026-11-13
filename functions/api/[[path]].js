@@ -157,8 +157,10 @@ async function askAI(env, system, messages, maxTokens) {
   try {
     const out = await env.AI.run(env.AI_MODEL || DEFAULT_MODEL, {
       messages: [{ role: 'system', content: system }, ...messages],
-      max_tokens: maxTokens,
+      // the default model thinks before answering; thinking is off so the tokens go to the reply
+      max_tokens: maxTokens + 600,
       temperature: 0.2,
+      chat_template_kwargs: { enable_thinking: false },
     });
     let text = aiText(out).replace(/<think>[\s\S]*?<\/think>/g, '').trim();
     if (!text) lastAiError = 'empty reply: ' + JSON.stringify(out).slice(0, 600);
