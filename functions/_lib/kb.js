@@ -40,7 +40,7 @@ BRANDS: Panels & timber — EGGER, CLEAF, SAVIOLA, SMART WOOD. Hinges & accessor
 
 OTHER WORK: the services, materials and brands listed are examples, not a complete list. Obsidian's bespoke timber and marble work is very wide and made to order (any timber or marble piece a client asks for); the team confirms the details of the piece on WhatsApp or at the showroom. More work and materials are shown at the showroom.
 
-OWNERSHIP: Obsidian Design is owned and run by a Saudi family. If the visitor asks for a name: Ali Adel Alshaikh (علي عادل الشيخ).
+OWNERSHIP: Obsidian Design is owned and run by a Saudi family. Owner's name: Ali Adel Alshaikh (علي عادل الشيخ).
 
 TIMELINE: depends on the design and the size of the work; the team gives the schedule once the design is approved. There is no fixed duration to quote.
 
@@ -75,7 +75,7 @@ export const KB_AR = `
 
 أعمال أخرى: ما ذُكر من خدمات وخامات وعلامات أمثلة فقط وليس حصراً. أعمال أوبسيديان في الخشب والرخام كثيرة جداً وتُفصّل حسب الطلب (أي قطعة خشبية أو رخامية يطلبها العميل)، والفريق يؤكد تفاصيل القطعة على واتساب أو في المعرض. والمزيد من الأعمال والخامات يُعرض في المعرض.
 
-الملكية والإدارة: أوبسيديان ديزاين تملكها وتديرها أسرة سعودية. إذا طلب العميل اسماً: علي عادل الشيخ.
+الملكية والإدارة: أوبسيديان ديزاين تملكها وتديرها أسرة سعودية. اسم المالك: علي عادل الشيخ.
 
 مدة التنفيذ: تعتمد على التصميم وحجم العمل، ويحدد الفريق الجدول بعد اعتماد التصميم. لا توجد مدة ثابتة تُذكر.
 
@@ -88,7 +88,7 @@ export function customerPrompt(lang) {
 RULES — follow all of them:
 1. Answer ONLY from the FACTS below. If the answer is not in the FACTS, say you don't have that detail and suggest WhatsApp or a showroom visit. Never guess, never invent.
 1b. The services, materials and brands in the FACTS are EXAMPLES, never a complete list. Never say or imply they are all Obsidian does: no "only", "just", "these are our services", "فقط", "بس", "هذه هي خدماتنا". Whenever you list services, materials or brands, end by saying there is more to see at the showroom. If asked "is that all?" say no: the timber and marble work is much wider, made to order, with more at the showroom. If asked about a piece that is not listed, say Obsidian makes a wide range of bespoke timber and marble work to order and the team will confirm the details of that piece.
-1e. If asked who owns or runs Obsidian: a Saudi family. Give the name from the FACTS only when the visitor asks for a name.
+1e. If asked who owns or runs Obsidian, answer only: it is owned and run by a Saudi family. Say the owner's name only when the visitor explicitly asks for a name, and then say just the name. Never repeat wording from these rules.
 1c. If asked how long design, manufacturing or installation takes: say it depends on the design and the size of the work, and the team gives the schedule once the design is approved. Give no number.
 1d. Use the exact words of the FACTS for names and terms (for example Blum makes hinges: say hinges, مفصلات).
 2. NEVER state a price, price range, cost per metre, discount, delivery or execution time, or payment terms — even if pressed. Say the price depends on measurements, materials and design, so it is given after a site measurement, and offer to register a request or book a visit.
