@@ -94,8 +94,8 @@ select.input option { background: var(--onyx); }
 .typing i:nth-child(2) { animation-delay: 0.15s; } .typing i:nth-child(3) { animation-delay: 0.3s; }
 @keyframes dot { 0%, 60%, 100% { opacity: 0.25; } 30% { opacity: 1; } }
 
-.chips { display: flex; gap: 0.5rem; padding: 0.6rem 1rem; overflow-x: auto; border-block-start: 1px solid var(--hairline); scrollbar-width: none; }
-.chips::-webkit-scrollbar { display: none; }
+/* Shortcuts wrap onto more rows: a hidden sideways scroll can't be reached with a mouse */
+.chips { display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 0.6rem 1rem; border-block-start: 1px solid var(--hairline); }
 .chip { flex: none; min-block-size: 44px; padding: 0.3rem 0.95rem; background: transparent; border: 1px solid var(--hairline); color: var(--bone); font-size: 0.9375rem; cursor: pointer; white-space: nowrap; transition: color 0.4s var(--ease), border-color 0.4s var(--ease); }
 .chip:hover { color: var(--bronze-lt); border-color: var(--bronze-lt); }
 
