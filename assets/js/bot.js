@@ -308,6 +308,7 @@
 
   function scroll() { el.log.scrollTop = el.log.scrollHeight; }
   function say(text, links) {
+    if (built && !flow) remember('assistant', text);
     var m = h('div', 'bot__msg bot__msg--bot', text);
     (links || []).forEach(function (l) {
       m.appendChild(document.createTextNode('\n'));
@@ -351,6 +352,12 @@
     // the pressed button is gone: keep keyboard focus inside the panel
     if (root.classList.contains('bot-open') && !el.panel.contains(document.activeElement)) (list && list.length && !window.matchMedia('(min-width: 760px)').matches ? el.log : el.input).focus({ preventScroll: true });
     scroll();
+  }
+
+  // What was said outside the fixed flows, fixed replies included: the AI needs it to follow "and his name?"
+  function remember(role, text) {
+    history.push({ role: role, content: String(text).slice(0, 500) });
+    if (history.length > 12) history = history.slice(-12);
   }
 
   /* ------------------------------------------------------------ menus */
@@ -536,6 +543,7 @@
   function onText(text) {
     echo(text);
     if (flow) return onFlowText(text);
+    remember('user', text);
     if (INTENT.owner.test(text)) { say(t(INTENT.owner_name.test(text) ? 'owner_name' : 'owner')); return afterAnswer(); }
     if (INTENT.time.test(text)) { say(t('time')); return afterAnswer('lead'); }
     if (INTENT.price.test(text)) return answerPrice();
@@ -570,21 +578,17 @@
   }
 
   function askAI(text) {
-    history.push({ role: 'user', content: text });
     chips([]);
     typing(true);
     post('chat', { messages: history.slice(-8), lang: lang }).then(function (res) {
       typing(false);
       if (res && res.ok && res.reply) {
-        history.push({ role: 'assistant', content: res.reply });
         say(res.reply);
         return afterAnswer(res.action);
       }
-      history.pop();
       localAnswer(text, res && res.intent);
     }).catch(function () {
       typing(false);
-      history.pop();
       localAnswer(text);
     });
   }
