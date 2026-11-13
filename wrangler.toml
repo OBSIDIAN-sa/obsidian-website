@@ -1,7 +1,7 @@
 # Cloudflare Pages config for the Obsidian Design site + bot API (functions/).
 # Deploy with:  npx wrangler pages deploy
 # (Dashboard drag-and-drop does not deploy the functions/ folder.)
-name = "obsidiandesign"
+name = "obsidian-bot-preview"
 pages_build_output_dir = "."
 compatibility_date = "2026-10-01"
 
@@ -14,8 +14,8 @@ AI_DAILY_CAP = "250"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "obsidian-bot"
-database_id = "a08dc530-a1d1-412b-9914-9c5685e8d72d"
+database_name = "obsidian-bot-preview"
+database_id = "a7af01fc-5497-42be-876d-9fc3c290ce7e"
 
 [ai]
 binding = "AI"
