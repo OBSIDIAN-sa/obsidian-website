@@ -523,7 +523,7 @@
     price: /(سعر|اسعار|أسعار|بكم|كم يكلف|كم تكلف|التكلفة|التكلفه|تكلفة|كم المتر|price|cost|how much|budget)/i,
     time: /(كم ياخذ|كم يأخذ|كم تاخذ|كم تأخذ|كم المدة|مدة التنفيذ|مدة التصنيع|مدة التركيب|متى يجهز|متى يخلص|كم يوم|كم اسبوع|كم أسبوع|كم شهر|how long|lead time|timeline|delivery time)/i,
     owner: /(صاحب المعرض|صاحب المحل|صاحب أوبسيديان|صاحب اوبسيديان|مالك|المالك|مين صاحب|من صاحب|لمين المعرض|من يدير|مين يدير|من يملك|مين يملك|who owns|owner|who runs)/i,
-    owner_name: /(اسم|مين هو|من هو|name|who is)/i,
+    owner_name: /(اسم|name)/i,
     where: /(وين موقع|موقعكم|العنوان|لوكيشن|الدوام|دوامكم|متى تفتح|متى تقفل|ساعات العمل|location|address|opening hours|where are you|when are you open)/i,
   };
   // If the AI can't answer, a keyword still finds the right canned answer
