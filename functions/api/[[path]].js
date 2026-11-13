@@ -161,6 +161,7 @@ async function askAI(env, system, messages, maxTokens) {
       temperature: 0.2,
     });
     let text = aiText(out).replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+    if (!text) lastAiError = 'empty reply: ' + JSON.stringify(out).slice(0, 600);
     return text || null;
   } catch (e) {
     console.log('AI error', e && e.message);
