@@ -68,6 +68,7 @@
       slot_taken: 'هذا الوقت انحجز قبل شوي. اختر وقت ثاني.',
       already_booked: 'عندك موعد محجوز بهذا الرقم. لو تبي تغيّره راسلنا على واتساب.',
       time: 'المدة تعتمد على التصميم وحجم العمل، والفريق يعطيك الجدول بعد اعتماد التصميم. سجّل طلبك أو احجز زيارة ونوضح لك كل شي.',
+      more: 'لا، هذا جزء من أعمالنا. تفصيل الخشب والرخام عندنا أوسع من كذا وحسب الطلب، والمزيد تشوفه عند زيارتك للمعرض.',
       owner: 'أوبسيديان ديزاين تملكها وتديرها أسرة سعودية.',
       owner_name: 'المالك علي عادل الشيخ، وأوبسيديان ديزاين بإدارة أسرة سعودية.',
       thinking_fail: 'ما قدرت أجاوب على هذا السؤال الآن. تقدر تختار من القائمة أو تكلّمنا على الواتساب.',
@@ -133,6 +134,7 @@
       slot_taken: 'That time has just been taken. Please choose another.',
       already_booked: 'There\'s already a visit booked with this number. To change it, message us on WhatsApp.',
       time: 'The timeline depends on the design and the size of the work; the team gives you the schedule once the design is approved. Register your request or book a visit and we\'ll walk you through it.',
+      more: 'No — that is only part of what we do. Our bespoke timber and marble work is much wider and made to order, and there is more to see when you visit the showroom.',
       owner: 'Obsidian Design is owned and run by a Saudi family.',
       owner_name: 'The owner is Ali Adel Alshaikh, and Obsidian Design is run by a Saudi family.',
       thinking_fail: 'I couldn\'t answer that just now. You can choose from the menu or message us on WhatsApp.',
@@ -529,6 +531,7 @@
     human: /(موظف|اكلم احد|أكلم أحد|خدمة العملاء|رقمكم|رقم التواصل|واتساب|واتس|whats\s?app|human|agent|call you|phone number)/i,
     price: /(سعر|اسعار|أسعار|بكم|كم يكلف|كم تكلف|التكلفة|التكلفه|تكلفة|كم المتر|price|cost|how much|budget)/i,
     time: /(كم ياخذ|كم يأخذ|كم تاخذ|كم تأخذ|كم المدة|مدة التنفيذ|مدة التصنيع|مدة التركيب|متى يجهز|متى يخلص|كم يوم|كم اسبوع|كم أسبوع|كم شهر|how long|lead time|timeline|delivery time)/i,
+    more: /^\s*(بس|فقط|بس كذا|بس هذا|هذا كل شي|هذا كل شيء|هذي كل الخدمات|هذي كل خدماتكم|is that all|that'?s all|that'?s it|only that|nothing else)\s*[؟?!.]*\s*$/i,
     owner: /(صاحب المعرض|صاحب المحل|صاحب أوبسيديان|صاحب اوبسيديان|مالك|المالك|مين صاحب|من صاحب|لمين المعرض|من يدير|مين يدير|من يملك|مين يملك|who owns|owner|who runs)/i,
     owner_name: /(اسم|name)/i,
     where: /(وين موقع|موقعكم|العنوان|لوكيشن|الدوام|دوامكم|متى تفتح|متى تقفل|ساعات العمل|location|address|opening hours|where are you|when are you open)/i,
@@ -544,6 +547,7 @@
     echo(text);
     if (flow) return onFlowText(text);
     remember('user', text);
+    if (INTENT.more.test(text)) { say(t('more')); return afterAnswer('book'); }
     if (INTENT.owner.test(text)) { say(t(INTENT.owner_name.test(text) ? 'owner_name' : 'owner')); return afterAnswer(); }
     if (INTENT.time.test(text)) { say(t('time')); return afterAnswer('lead'); }
     if (INTENT.price.test(text)) return answerPrice();
