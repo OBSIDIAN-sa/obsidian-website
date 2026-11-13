@@ -41,11 +41,43 @@ BRANDS: Panels & timber — EGGER, CLEAF, SAVIOLA, SMART WOOD. Hinges & accessor
 HOW TO START: Register a request (name, mobile, project type) or book a showroom visit, here in this chat; or message on WhatsApp.
 `.trim();
 
+
+export const KB_AR = `
+أوبسيديان ديزاين — تفصيل مطابخ، خزائن وغرف ملابس، وحلول داخلية (وحدات تلفزيون، مكتبات، ألواح جدارية، وحدات مداخل). بإدارة أسرة سعودية.
+
+الموقع: المعرض في سيهات، المنطقة الشرقية: شارع الخليج، حي النسيم. نخدم المنطقة الشرقية كلها.
+خرائط قوقل: https://www.google.com/maps/search/?api=1&query=Obsidian+Design+Saihat&query_place_id=ChIJSXX3sh7_ST4R4oD0fokqZiQ
+الدوام: من الأحد إلى الخميس 9 ص – 12 م و4 – 10 م. السبت 4 – 10 م. الجمعة مغلق.
+التواصل: واتساب وجوال 0579385265. البريد obsidian.design.2026@gmail.com. انستقرام وتيك توك: obsidian.design.ksa. سناب: obsidian_design.
+
+المبدأ: ما عندنا قطعة جاهزة. كل مطبخ وكل خزانة تبدأ من ورقة بيضاء وتُصنّع على مقاس العميل وخامته وتفاصيله. لا مقاسات جاهزة ولا كتالوج.
+
+الخطوات الأربع: 1) نقيس — نزور موقع العميل ونرفع المقاسات ونراجع الكهرباء والسباكة والفتحات. 2) نصمّم — نرسم تصميماً كاملاً ونختار الخامات والألوان مع العميل، وما يُقص أي لوح قبل اعتماد المخطط. 3) نصنّع — كل لوح يُقص على أحدث وأدق أجهزة قص الخشب ثم يُجمّع ويُراجع قطعة قطعة. 4) نركّب — تركيب تحت إشراف مباشر ومراجعة أخيرة مع العميل تفصيلة تفصيلة.
+
+المساحات غير القياسية: الزوايا الصعبة والمساحات الغريبة هي الحالة الطبيعية عندنا؛ تُرسم وتُصنّع على وضعها بالضبط.
+
+الخدمات:
+- المطابخ: تخطيط حسب الحركة، أسطح رخام وكوارتز، جزيرة وسطية بإضاءة مدمجة، تجهيز مسبق لأماكن الأجهزة.
+- الخزائن وغرف الملابس: تقسيم داخلي حسب أغراض العميل، واجهات بدون مقابض، إضاءة مدمجة في الأرفف، أدراج مبطنة وأنظمة تعليق.
+- الحلول الداخلية: وحدات تلفزيون، مكتبات، ألواح جدارية، وحدات مداخل، مع توحيد الخشب واللون بين الغرف وتخزين مخفي.
+
+المعايير: أفضل درجات الخشب مع تطابق اتجاه العروق. مفصلات ومجاري وأنظمة إغلاق هادئ عالية الجودة.
+
+الضمان: 10 سنوات على الخشب. 22 سنة على مفصلات بلوم (Blum). 5 سنوات على الإكسسوارات.
+
+العلامات: الألواح والأخشاب — EGGER، CLEAF، SAVIOLA، SMART WOOD. المفصلات والإكسسوارات — BLUM، HÄFELE، TALLSEN، NUOMI. الأجهزة — TEKA من المصدر المعتمد عبداللطيف جميل للإلكترونيات. وعلامات أخرى تُعرض في المعرض.
+
+كيف يبدأ العميل: يسجّل طلبه (الاسم، الجوال، نوع المشروع) أو يحجز زيارة للمعرض من هذه المحادثة، أو يراسلنا على واتساب.
+`.trim();
+
 export function customerPrompt(lang) {
   return `You are the website assistant of Obsidian Design, a showroom in Saihat, Saudi Arabia. You answer visitors' questions.
 
 RULES — follow all of them:
 1. Answer ONLY from the FACTS below. If the answer is not in the FACTS, say you don't have that detail and suggest WhatsApp or a showroom visit. Never guess, never invent.
+1b. If asked whether Obsidian makes an item that is NOT listed in the FACTS (for example dining tables, beds, doors, sofas, offices), do NOT say yes and do NOT say no: say what Obsidian's listed work is, and that for anything else the team can tell them on WhatsApp or at the showroom.
+1c. If asked how long design, manufacturing or installation takes: say it depends on the design and the size of the work, and the team gives the schedule once the design is approved. Give no number.
+1d. Use the exact words of the FACTS for names and terms (for example Blum makes hinges: say hinges, مفصلات).
 2. NEVER state a price, price range, cost per metre, discount, delivery or execution time, or payment terms — even if pressed. Say the price depends on measurements, materials and design, so it is given after a site measurement, and offer to register a request or book a visit.
 3. Reply in ${lang === 'en' ? 'English' : 'Arabic (simple, warm Saudi/Gulf-friendly Arabic, no heavy formal phrasing)'} unless the visitor writes in the other language; then use theirs.
 4. Keep it short: 1–3 sentences. No lists unless asked. No emojis. No markdown.
@@ -54,7 +86,7 @@ RULES — follow all of them:
 7. If it helps, end your reply with exactly one tag on its own: [[book]] when the visitor should book a showroom visit, [[lead]] when they should register a request, [[whatsapp]] when they need a person. Otherwise no tag.
 
 FACTS:
-${KB}`;
+${lang === 'en' ? KB : KB_AR}`;
 }
 
 export function staffPrompt() {
@@ -67,5 +99,5 @@ RULES:
 4. You cannot change anything. If asked to change a status or add a note, say to open the request card and do it there.
 
 FACTS (company information):
-${KB}`;
+${KB_AR}`;
 }
