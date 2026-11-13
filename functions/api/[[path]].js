@@ -150,7 +150,9 @@ function aiText(out) {
   if (typeof out.output_text === 'string') return out.output_text;
   return '';
 }
+let lastAiError = '';
 async function askAI(env, system, messages, maxTokens) {
+  lastAiError = env.AI ? 'empty reply' : 'no AI binding';
   if (!env.AI) return null;
   try {
     const out = await env.AI.run(env.AI_MODEL || DEFAULT_MODEL, {
@@ -162,6 +164,7 @@ async function askAI(env, system, messages, maxTokens) {
     return text || null;
   } catch (e) {
     console.log('AI error', e && e.message);
+    lastAiError = String((e && e.message) || e).slice(0, 300);
     return null;
   }
 }
@@ -268,7 +271,7 @@ async function publicRoutes(env, request, method, parts) {
     if (!(await allow(env, request, 'chat', 40, 86400))) return json({ ok: false, fallback: true, reason: 'limit' });
     if (!(await allowGlobal(env, 'chat', +(env.AI_DAILY_CAP || 250), 86400))) return json({ ok: false, fallback: true, reason: 'limit' });
     let reply = await askAI(env, customerPrompt(lang), messages, 220);
-    if (!reply) return json({ ok: false, fallback: true, reason: 'ai' });
+    if (!reply) return json({ ok: false, fallback: true, reason: 'ai', ...(env.DEBUG_AI === '1' ? { detail: lastAiError } : {}) });
     let action = null;
     reply = reply.replace(/\[\[(book|lead|whatsapp)\]\]/gi, (m, a) => { action = a.toLowerCase(); return ''; }).replace(/\[\[[^\]]*\]\]/g, '').trim();
     if (PRICEY.test(toLatinDigits(reply))) return json({ ok: false, fallback: true, reason: 'guard', intent: 'price' });
