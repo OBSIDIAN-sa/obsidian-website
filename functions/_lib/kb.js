@@ -38,6 +38,10 @@ WARRANTY: 10 years on the timber. 22 years on Blum hinges. 5 years on accessorie
 
 BRANDS: Panels & timber — EGGER, CLEAF, SAVIOLA, SMART WOOD. Hinges & accessories — BLUM, HÄFELE, TALLSEN, NUOMI. Appliances — TEKA, from the authorised source Abdul Latif Jameel Electronics. More brands are shown in the showroom.
 
+OTHER WOODWORK not listed above (tables, doors, any special piece): neither confirmed nor ruled out here; the team settles it with the client on WhatsApp or at the showroom.
+
+TIMELINE: depends on the design and the size of the work; the team gives the schedule once the design is approved. There is no fixed duration to quote.
+
 HOW TO START: Register a request (name, mobile, project type) or book a showroom visit, here in this chat; or message on WhatsApp.
 `.trim();
 
@@ -66,6 +70,10 @@ export const KB_AR = `
 الضمان: 10 سنوات على الخشب. 22 سنة على مفصلات بلوم (Blum). 5 سنوات على الإكسسوارات.
 
 العلامات: الألواح والأخشاب — EGGER، CLEAF، SAVIOLA، SMART WOOD. المفصلات والإكسسوارات — BLUM، HÄFELE، TALLSEN، NUOMI. الأجهزة — TEKA من المصدر المعتمد عبداللطيف جميل للإلكترونيات. وعلامات أخرى تُعرض في المعرض.
+
+أعمال خشبية أخرى غير المذكورة (مثل طاولات أو أبواب أو أي قطعة خاصة): لا نؤكدها ولا ننفيها هنا؛ الفريق يحددها مع العميل على واتساب أو في المعرض.
+
+مدة التنفيذ: تعتمد على التصميم وحجم العمل، ويحدد الفريق الجدول بعد اعتماد التصميم. لا توجد مدة ثابتة تُذكر.
 
 كيف يبدأ العميل: يسجّل طلبه (الاسم، الجوال، نوع المشروع) أو يحجز زيارة للمعرض من هذه المحادثة، أو يراسلنا على واتساب.
 `.trim();

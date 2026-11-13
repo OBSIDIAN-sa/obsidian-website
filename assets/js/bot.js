@@ -67,6 +67,7 @@
       book_ok: 'تم حجز موعدك: {day} — الساعة {time}.\nبنأكد عليك على الواتساب قبل الموعد. ننتظرك في المعرض.',
       slot_taken: 'هذا الوقت انحجز قبل شوي. اختر وقت ثاني.',
       already_booked: 'عندك موعد محجوز بهذا الرقم. لو تبي تغيّره راسلنا على واتساب.',
+      time: 'المدة تعتمد على التصميم وحجم العمل، والفريق يعطيك الجدول بعد اعتماد التصميم. سجّل طلبك أو احجز زيارة ونوضح لك كل شي.',
       thinking_fail: 'ما قدرت أجاوب على هذا السؤال الآن. تقدر تختار من القائمة أو تكلّمنا على الواتساب.',
       am: 'ص', pm: 'م',
       locale: 'ar-SA-u-ca-gregory-nu-latn',
@@ -129,6 +130,7 @@
       book_ok: 'Your visit is booked: {day} — {time}.\nWe\'ll confirm with you on WhatsApp before the visit. We look forward to seeing you.',
       slot_taken: 'That time has just been taken. Please choose another.',
       already_booked: 'There\'s already a visit booked with this number. To change it, message us on WhatsApp.',
+      time: 'The timeline depends on the design and the size of the work; the team gives you the schedule once the design is approved. Register your request or book a visit and we\'ll walk you through it.',
       thinking_fail: 'I couldn\'t answer that just now. You can choose from the menu or message us on WhatsApp.',
       am: 'AM', pm: 'PM',
       locale: 'en-GB',
@@ -515,6 +517,7 @@
     lead: /(سجل طلب|سجّل طلب|اسجل|أسجل|طلب جديد|عرض سعر|تسعيرة|تسعيره|quote|quotation|register)/i,
     human: /(موظف|اكلم احد|أكلم أحد|خدمة العملاء|رقمكم|رقم التواصل|واتساب|واتس|whats\s?app|human|agent|call you|phone number)/i,
     price: /(سعر|اسعار|أسعار|بكم|كم يكلف|كم تكلف|التكلفة|التكلفه|تكلفة|كم المتر|price|cost|how much|budget)/i,
+    time: /(كم ياخذ|كم يأخذ|كم تاخذ|كم تأخذ|كم المدة|مدة التنفيذ|مدة التصنيع|مدة التركيب|متى يجهز|متى يخلص|كم يوم|كم اسبوع|كم أسبوع|كم شهر|how long|lead time|timeline|delivery time)/i,
     where: /(وين موقع|موقعكم|العنوان|لوكيشن|الدوام|دوامكم|متى تفتح|متى تقفل|ساعات العمل|location|address|opening hours|where are you|when are you open)/i,
   };
   // If the AI can't answer, a keyword still finds the right canned answer
@@ -527,6 +530,7 @@
   function onText(text) {
     echo(text);
     if (flow) return onFlowText(text);
+    if (INTENT.time.test(text)) { say(t('time')); return afterAnswer('lead'); }
     if (INTENT.price.test(text)) return answerPrice();
     if (INTENT.book.test(text)) return startBook();
     if (INTENT.lead.test(text)) return startLead();
