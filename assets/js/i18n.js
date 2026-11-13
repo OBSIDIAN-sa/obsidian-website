@@ -78,7 +78,9 @@ window.I18N = {
     svc_2_p3: 'أدراج مبطّنة وأنظمة تعليق',
     svc_2_alt: 'غرفة ملابس بواجهات زجاجية وإضاءة داخل الرفوف', // [NOT IN CONTENT.md]
     svc_3_title: 'حلول داخلية',
-    svc_3_body: 'وحدات تلفزيون، مكتبات، ألواح جدارية، ووحدات مداخل — بنفس لغة المطبخ والخزائن.',
+    svc_3_body: 'وحدات تلفزيون، مكتبات، ألواح جدارية، وحدات مداخل، وغيرها — بنفس لغة المطبخ والخزائن.',
+    services_more: 'وهذا جزء من أعمالنا. تفصيل الخشب والرخام عندنا أوسع من كذا، والمزيد تشوفه عند زيارتك للمعرض.',
+    material_more: 'وخامات أخرى كثيرة تشوفها وتلمسها عند زيارتك للمعرض.',
     svc_3_p1: 'تنسيق كامل بين الغرف',
     svc_3_p2: 'مطابقة العروق والألوان',
     svc_3_p3: 'حلول تخزين مخفية',
@@ -108,11 +110,11 @@ window.I18N = {
     brands_3_note: 'من المصدر المعتمد: عبداللطيف جميل للإلكترونيات',
     brands_more: 'وعلامات أخرى كثيرة نعرضها لك عند زيارتك للمعرض.',
 
-    film_1: 'الأسود ما هو غياب اللون. هو أعلى درجات الانضباط',
+    film_1: 'الرخام ما يتكرر. كل لوح له عروقه',
     film_2: 'الجزيرة تتوسط الغرفة، والباقي يدور حولها',
-    film_3: 'اللمعة تكشف كل عيب. فما نسمح بعيب',
+    film_3: 'الزاوية تكشف كل عيب. فما نسمح بعيب',
     film_4: 'الخزانة تختفي في الجدار حتى تحتاجها',
-    film_5: 'واجهات بلا مقابض. لمسة واحدة تكفي',
+    film_5: 'الأسود ما هو غياب اللون. هو أعلى درجات الانضباط',
     film_6: 'وفي النهاية، التفصيلة الأخيرة هي اللي تفرّق',
 
     faq_heading: 'الأسئلة',
@@ -130,7 +132,7 @@ window.I18N = {
     f_name: 'الاسم',
     f_phone: 'رقم الجوال',
     f_type: 'نوع المشروع',
-    f_type_opts: ['مطبخ', 'خزائن وغرف ملابس', 'حلول داخلية', 'أكثر من واحد'],
+    f_type_opts: ['مطبخ', 'خزائن وغرف ملابس', 'حلول داخلية', 'أكثر من واحد', 'أعمال خشب أو رخام أخرى'],
     f_note: 'ملاحظات (اختياري)',
     f_type_placeholder: 'اختر نوع المشروع',
     f_submit: 'أرسل',
@@ -144,7 +146,7 @@ window.I18N = {
     f_err_phone: 'أدخل رقم جوال صحيح', // [NOT IN CONTENT.md]
 
     footer_services: 'خدماتنا',
-    footer_services_items: ['مطابخ', 'خزائن وغرف ملابس', 'حلول داخلية'],
+    footer_services_items: ['مطابخ', 'خزائن وغرف ملابس', 'حلول داخلية', 'والمزيد في المعرض'],
     footer_contact: 'تواصل',
     footer_whatsapp: 'واتساب',
     footer_email: 'البريد',
@@ -232,7 +234,9 @@ window.I18N = {
     svc_2_p3: 'Lined drawers and hanging systems',
     svc_2_alt: 'A dressing room with glass-fronted wardrobes and lit shelving', // [NOT IN CONTENT.md]
     svc_3_title: 'Interior Solutions',
-    svc_3_body: 'Media units, libraries, wall panelling and entrance units — in the same language as the kitchen and the wardrobes.',
+    svc_3_body: 'Media units, libraries, wall panelling, entrance units and more — in the same language as the kitchen and the wardrobes.',
+    services_more: 'This is part of what we do. Our bespoke timber and marble work goes well beyond it — you’ll see more when you visit the showroom.',
+    material_more: 'And many more materials to see and touch when you visit the showroom.',
     svc_3_p1: 'Full coordination room to room',
     svc_3_p2: 'Grain and colour matched throughout',
     svc_3_p3: 'Concealed storage solutions',
@@ -262,11 +266,11 @@ window.I18N = {
     brands_3_note: 'From the authorised source: Abdul Latif Jameel Electronics',
     brands_more: 'And many more we’ll show you when you visit the showroom.',
 
-    film_1: 'Black isn’t the absence of colour. It’s the highest form of discipline',
+    film_1: 'No two slabs of marble are alike. Each has its own veining',
     film_2: 'The island sits at the centre. Everything else moves around it',
-    film_3: 'A polished surface shows every flaw. So we allow none',
+    film_3: 'A corner shows every flaw. So we allow none',
     film_4: 'The wardrobe disappears into the wall until you need it',
-    film_5: 'Handleless fronts. One touch is enough',
+    film_5: 'Black isn’t the absence of colour. It’s the highest form of discipline',
     film_6: 'In the end, it’s the last detail that decides',
 
     faq_heading: 'FAQ',
@@ -284,7 +288,7 @@ window.I18N = {
     f_name: 'Name',
     f_phone: 'Mobile number',
     f_type: 'Project type',
-    f_type_opts: ['Kitchen', 'Wardrobes & Dressing Rooms', 'Interior Solutions', 'More than one'],
+    f_type_opts: ['Kitchen', 'Wardrobes & Dressing Rooms', 'Interior Solutions', 'More than one', 'Other timber or marble work'],
     f_note: 'Notes (optional)',
     f_type_placeholder: 'Choose a project type',
     f_submit: 'Send',
@@ -298,7 +302,7 @@ window.I18N = {
     f_err_phone: 'Enter a valid mobile number', // [NOT IN CONTENT.md]
 
     footer_services: 'Services',
-    footer_services_items: ['Kitchens', 'Wardrobes & Dressing Rooms', 'Interior Solutions'],
+    footer_services_items: ['Kitchens', 'Wardrobes & Dressing Rooms', 'Interior Solutions', 'And more at the showroom'],
     footer_contact: 'Contact',
     footer_whatsapp: 'WhatsApp',
     footer_email: 'Email',

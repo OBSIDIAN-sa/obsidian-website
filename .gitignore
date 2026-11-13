@@ -3,3 +3,5 @@ _review/
 tools/node_modules/
 raw-images/
 tools/cross-browser-shots/
+.wrangler/
+.dev.vars
