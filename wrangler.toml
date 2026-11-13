@@ -6,8 +6,8 @@ pages_build_output_dir = "."
 compatibility_date = "2026-10-01"
 
 [vars]
-# First date a showroom visit can be booked (YYYY-MM-DD). Empty = from tomorrow.
-BOOK_FROM = "2026-11-28"
+# First date a showroom visit can be booked (YYYY-MM-DD). Empty = from today (slots at least an hour ahead).
+BOOK_FROM = ""
 # Workers AI model for free-text answers, and the daily cap on customer AI replies (protects the free allocation).
 AI_MODEL = "@cf/zai-org/glm-4.7-flash"
 AI_DAILY_CAP = "250"

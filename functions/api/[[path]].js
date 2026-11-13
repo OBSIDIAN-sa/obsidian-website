@@ -112,9 +112,9 @@ async function allowGlobal(env, bucket, limit, windowSec) {
 
 /* ------------------------------------------------------------------ booking */
 function firstBookable(env) {
-  const tomorrow = addDays(todayRiyadh(), 1);
-  const from = /^\d{4}-\d{2}-\d{2}$/.test(env.BOOK_FROM || '') ? env.BOOK_FROM : tomorrow;
-  return from > tomorrow ? from : tomorrow;
+  const today = todayRiyadh();
+  const from = /^\d{4}-\d{2}-\d{2}$/.test(env.BOOK_FROM || '') ? env.BOOK_FROM : today;
+  return from > today ? from : today;
 }
 async function openDays(env) {
   const start = firstBookable(env);
@@ -123,10 +123,14 @@ async function openDays(env) {
     "SELECT date, time FROM appointments WHERE date BETWEEN ? AND ? AND status IN ('pending','confirmed')"
   ).bind(start, end).all();
   const busy = new Set((taken.results || []).map((r) => r.date + ' ' + r.time));
+  const today = todayRiyadh();
+  const nowHour = riyadh().getUTCHours();
   const days = [];
   for (let i = 0; i < BOOK_AHEAD_DAYS; i++) {
     const date = addDays(start, i);
-    const slots = (HOURS[weekday(date)] || []).map(hh).filter((t) => !busy.has(date + ' ' + t));
+    // today: only slots that start at least an hour from now
+    const hours = (HOURS[weekday(date)] || []).filter((h) => date !== today || h > nowHour + 1);
+    const slots = hours.map(hh).filter((t) => !busy.has(date + ' ' + t));
     if (slots.length) days.push({ date, slots });
   }
   return days;
@@ -366,6 +370,49 @@ async function staffRoutes(env, request, method, parts) {
   if (!me) return fail(401, 'login_required');
 
   if (method === 'GET' && route === 'summary') return json({ ok: true, summary: await summary(env) });
+
+  /* ---- attendance: check-in / check-out; an admin can take attendance for anyone ---- */
+  if (parts[0] === 'attendance') {
+    const today = todayRiyadh();
+    const minutes = (r) => (r.out_at ? Math.max(0, Math.round((Date.parse(r.out_at) - Date.parse(r.in_at)) / 60000)) : 0);
+
+    if (method === 'POST' && (parts[1] === 'in' || parts[1] === 'out')) {
+      const b = (await body(request)) || {};
+      let target = me.id;
+      if (b.staff_id !== undefined && +b.staff_id !== me.id) {
+        if (me.role !== 'admin') return fail(403, 'admin_only');
+        const s = await env.DB.prepare('SELECT id FROM staff WHERE id = ? AND active = 1').bind(+b.staff_id).first();
+        if (!s) return fail(422, 'staff');
+        target = s.id;
+      }
+      const open = await env.DB.prepare('SELECT id FROM attendance WHERE staff_id = ? AND date = ? AND out_at IS NULL ORDER BY id DESC LIMIT 1').bind(target, today).first();
+      if (parts[1] === 'in') {
+        if (open) return fail(409, 'already_in');
+        await env.DB.prepare('INSERT INTO attendance (staff_id, date, in_at, in_by) VALUES (?, ?, ?, ?)').bind(target, today, nowIso(), me.id).run();
+      } else {
+        if (!open) return fail(409, 'not_in');
+        await env.DB.prepare('UPDATE attendance SET out_at = ?, out_by = ? WHERE id = ?').bind(nowIso(), me.id, open.id).run();
+      }
+      return json({ ok: true });
+    }
+
+    if (method === 'GET' && parts.length === 1) {
+      const url = new URL(request.url);
+      const ok = (d) => /^\d{4}-\d{2}-\d{2}$/.test(d || '');
+      const from = ok(url.searchParams.get('from')) ? url.searchParams.get('from') : today;
+      const to = ok(url.searchParams.get('to')) ? url.searchParams.get('to') : today;
+      const all = me.role === 'admin' && url.searchParams.get('all') === '1';
+      const rows = await env.DB.prepare(
+        'SELECT a.id, a.staff_id, a.date, a.in_at, a.out_at, a.in_by, a.out_by, s.name FROM attendance a JOIN staff s ON s.id = a.staff_id WHERE a.date BETWEEN ? AND ?' +
+        (all ? '' : ' AND a.staff_id = ?') + ' ORDER BY a.date DESC, a.in_at DESC LIMIT 800'
+      ).bind(...(all ? [from, to] : [from, to, me.id])).all();
+      const records = (rows.results || []).map((r) => ({ ...r, minutes: minutes(r), by_admin: r.in_by !== r.staff_id || (r.out_by != null && r.out_by !== r.staff_id) }));
+      let staff = [];
+      if (all) staff = (await env.DB.prepare('SELECT id, name FROM staff WHERE active = 1 ORDER BY id').all()).results || [];
+      return json({ ok: true, today, from, to, records, staff });
+    }
+  }
+
 
   if (method === 'GET' && route === 'leads') {
     const url = new URL(request.url);

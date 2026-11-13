@@ -27,6 +27,7 @@
     self: 'ما تقدر توقف حسابك أنت.',
     login_required: 'انتهت الجلسة. سجّل دخولك من جديد.',
     not_configured: 'قاعدة البيانات غير مربوطة بعد.',
+    staff: 'الموظف غير موجود أو حسابه موقوف.',
   };
   var errText = function (code) { return ERR[code] || 'صار خطأ. جرّب مرة ثانية.'; };
 
@@ -145,8 +146,10 @@
       ['الملخص', showSummary], ['طلبات جديدة', function () { showLeads('status=new', 'الطلبات الجديدة') }],
       ['الطلبات المفتوحة', function () { showLeads('status=open', 'الطلبات المفتوحة') }], ['طلباتي', function () { showLeads('mine=1', 'الطلبات المسندة لك') }],
       ['مواعيد اليوم', function () { showAppts('today', 'مواعيد اليوم') }], ['مواعيد الأسبوع', function () { showAppts('week', 'مواعيد الأسبوع') }],
-      ['إضافة طلب', addLeadForm], ['الموظفون', showUsers], ['كلمة المرور', passwordForm],
+      ['إضافة طلب', addLeadForm], ['الحضور والانصراف', showMyAttendance],
     ];
+    if (me.role === 'admin') list.push(['التحضير', showRollCall], ['تقرير الحضور', showAttendanceReport]);
+    list.push(['الموظفون', showUsers], ['كلمة المرور', passwordForm]);
     list.forEach(function (it) {
       var b = h('button', 'chip', it[0]); b.type = 'button';
       b.addEventListener('click', function () { if (!busy) { echo(it[0]); it[1](); } });
@@ -363,6 +366,123 @@
     }
     card.appendChild(row);
     return card;
+  }
+
+
+  /* ------------------------------------------------------------ attendance */
+  function fmtClock(iso) {
+    try { return new Intl.DateTimeFormat('ar-SA-u-ca-gregory-nu-latn', { hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Riyadh' }).format(new Date(iso)); }
+    catch (e) { return iso.slice(11, 16); }
+  }
+  function fmtDur(min) { var hrs = Math.floor(min / 60), m = min % 60; return hrs + ':' + (m < 10 ? '0' : '') + m + ' ساعة'; }
+  function monthStart(today) { return today.slice(0, 8) + '01'; }
+  function punch(kind, staffId, after) {
+    var payload = staffId ? { staff_id: staffId } : {};
+    load('POST', 'attendance/' + kind, payload).then(function (res) {
+      if (!res.ok) return say(res.error === 'already_in' ? 'الحضور مسجّل من قبل، وما انسجل انصراف بعده.' : res.error === 'not_in' ? 'ما فيه حضور مسجّل اليوم عشان ينسجل له انصراف.' : errText(res.error));
+      after();
+    }).catch(function () {});
+  }
+  function recordLine(r) {
+    return fmtClock(r.in_at) + ' ← ' + (r.out_at ? fmtClock(r.out_at) + ' (' + fmtDur(r.minutes) + ')' : 'لم يُسجّل انصراف') + (r.by_admin ? ' · سجّله المدير' : '');
+  }
+
+  // My own check-in / check-out and my month so far
+  function showMyAttendance() {
+    load('GET', 'attendance').then(function (t) {
+      if (!t.ok) return oops(t);
+      return api('GET', 'attendance?from=' + monthStart(t.today) + '&to=' + t.today).then(function (m) {
+        var todayRows = t.records;
+        var open = todayRows.filter(function (r) { return !r.out_at; })[0];
+        var card = h('article', 'card');
+        var top = h('div', 'card__top');
+        var badge = h('span', 'badge', open ? 'حاضر' : todayRows.length ? 'منصرف' : 'لم يُسجّل حضور'); badge.dataset.s = open ? 'new' : 'closed';
+        add(top, h('span', 'card__name', 'حضوري اليوم'), h('span', 'card__meta', fmtDay(t.today)), badge);
+        card.appendChild(top);
+        if (todayRows.length) todayRows.slice().reverse().forEach(function (r) { card.appendChild(h('p', 'card__note ltr-num', recordLine(r))); });
+        var row = h('div', 'card__row');
+        var btn = h('button', 'btn', open ? 'تسجيل انصراف' : 'تسجيل حضور'); btn.type = 'button';
+        btn.addEventListener('click', function () {
+          if (busy) return;
+          echo(btn.textContent);
+          punch(open ? 'out' : 'in', null, function () { say(open ? 'تم تسجيل انصرافك.' : 'تم تسجيل حضورك.'); showMyAttendance(); });
+        });
+        row.appendChild(btn);
+        card.appendChild(row);
+        if (m.ok) {
+          var days = {}; var total = 0; var missing = 0;
+          m.records.forEach(function (r) { days[r.date] = 1; total += r.minutes; if (!r.out_at && r.date !== t.today) missing++; });
+          var sub = h('div', 'card__sub');
+          sub.appendChild(h('h3', null, 'هذا الشهر'));
+          sub.appendChild(h('p', 'card__note', 'أيام الحضور: ' + Object.keys(days).length + ' · مجموع الساعات: ' + fmtDur(total) + (missing ? ' · مرات بدون انصراف: ' + missing : '')));
+          card.appendChild(sub);
+        }
+        wide(card);
+      });
+    }).catch(function () {});
+  }
+
+  // Admin: take attendance for everyone today
+  function showRollCall() {
+    load('GET', 'attendance?all=1').then(function (res) {
+      if (!res.ok) return oops(res);
+      say('تحضير اليوم — ' + fmtDay(res.today) + ':');
+      var box = h('div', 'cards');
+      res.staff.forEach(function (s) {
+        var rows = res.records.filter(function (r) { return r.staff_id === s.id; });
+        var open = rows.filter(function (r) { return !r.out_at; })[0];
+        var card = h('article', 'card');
+        var top = h('div', 'card__top');
+        var badge = h('span', 'badge', open ? 'حاضر' : rows.length ? 'منصرف' : 'غائب'); badge.dataset.s = open ? 'new' : 'closed';
+        add(top, h('span', 'card__name', s.name), badge);
+        card.appendChild(top);
+        rows.slice().reverse().forEach(function (r) { card.appendChild(h('p', 'card__note', recordLine(r))); });
+        var row = h('div', 'card__row');
+        var btn = h('button', 'btn btn--sm', open ? 'تسجيل انصراف' : 'تسجيل حضور'); btn.type = 'button';
+        btn.addEventListener('click', function () {
+          if (busy) return;
+          echo(btn.textContent + ': ' + s.name);
+          punch(open ? 'out' : 'in', s.id, showRollCall);
+        });
+        row.appendChild(btn);
+        card.appendChild(row);
+        box.appendChild(card);
+      });
+      wide(box);
+    }).catch(function () {});
+  }
+
+  // Admin: month report, per member
+  function showAttendanceReport() {
+    load('GET', 'attendance').then(function (t) {
+      if (!t.ok) return oops(t);
+      return api('GET', 'attendance?all=1&from=' + monthStart(t.today) + '&to=' + t.today).then(function (res) {
+        if (!res.ok) return oops(res);
+        say('تقرير الحضور من ' + fmtDay(res.from) + ' إلى ' + fmtDay(res.to) + ':');
+        var box = h('div', 'cards');
+        res.staff.forEach(function (s) {
+          var rows = res.records.filter(function (r) { return r.staff_id === s.id; });
+          var days = {}; var total = 0; var missing = 0;
+          rows.forEach(function (r) { (days[r.date] = days[r.date] || []).push(r); total += r.minutes; if (!r.out_at && r.date !== res.today) missing++; });
+          var card = h('article', 'card');
+          var top = h('div', 'card__top');
+          add(top, h('span', 'card__name', s.name), h('span', 'badge', fmtDur(total)));
+          card.appendChild(top);
+          card.appendChild(h('p', 'card__meta', 'أيام الحضور: ' + Object.keys(days).length + (missing ? ' · مرات بدون انصراف: ' + missing : '')));
+          var keys = Object.keys(days).sort().reverse();
+          if (keys.length) {
+            var sub = h('div', 'card__sub');
+            keys.forEach(function (d) {
+              var mins = days[d].reduce(function (a, r) { return a + r.minutes; }, 0);
+              sub.appendChild(h('p', 'card__note', fmtDay(d) + ': ' + days[d].slice().reverse().map(function (r) { return fmtClock(r.in_at) + '–' + (r.out_at ? fmtClock(r.out_at) : '؟'); }).join('، ') + ' · ' + fmtDur(mins)));
+            });
+            card.appendChild(sub);
+          }
+          box.appendChild(card);
+        });
+        wide(box);
+      });
+    }).catch(function () {});
   }
 
   /* ------------------------------------------------------------ users & password */

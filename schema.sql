@@ -66,3 +66,16 @@ CREATE TABLE IF NOT EXISTS rate (
   n        INTEGER NOT NULL,
   reset_at INTEGER NOT NULL                     -- epoch seconds
 );
+
+-- Staff attendance: one row per check-in; out_at is empty until check-out. A day can hold several rows (split shifts).
+CREATE TABLE IF NOT EXISTS attendance (
+  id        INTEGER PRIMARY KEY AUTOINCREMENT,
+  staff_id  INTEGER NOT NULL REFERENCES staff(id),
+  date      TEXT NOT NULL,                      -- YYYY-MM-DD, Riyadh time, of the check-in
+  in_at     TEXT NOT NULL,                      -- ISO time
+  out_at    TEXT,
+  in_by     INTEGER REFERENCES staff(id),       -- who recorded it (the member, or an admin taking attendance)
+  out_by    INTEGER REFERENCES staff(id)
+);
+CREATE INDEX IF NOT EXISTS att_staff_date ON attendance(staff_id, date);
+CREATE INDEX IF NOT EXISTS att_date ON attendance(date);
