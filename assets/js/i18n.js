@@ -84,7 +84,7 @@ window.I18N = {
     svc_3_p1: 'تنسيق كامل بين الغرف',
     svc_3_p2: 'مطابقة العروق والألوان',
     svc_3_p3: 'حلول تخزين مخفية',
-    svc_3_alt: 'جدار خشب داكن بألواح كاملة يخفي الثلاجة والخزائن بجانب جزيرة رخام', // [NOT IN CONTENT.md]
+    svc_3_alt: 'وحدة تلفزيون من خشب الجوز الداكن على كامل الجدار بأرفف مضيئة وقاعدة رخام أسود في صالة معيشة', // [NOT IN CONTENT.md]
 
     why_heading: 'ليش أوبسيديان',
     why_1_title: 'ما نبيع جاهز',
@@ -240,7 +240,7 @@ window.I18N = {
     svc_3_p1: 'Full coordination room to room',
     svc_3_p2: 'Grain and colour matched throughout',
     svc_3_p3: 'Concealed storage solutions',
-    svc_3_alt: 'A full-height dark timber wall concealing the fridge and storage beside a marble island', // [NOT IN CONTENT.md]
+    svc_3_alt: 'A full-wall dark walnut media unit with lit shelving and a black marble plinth in a living room', // [NOT IN CONTENT.md]
 
     why_heading: 'Why Obsidian',
     why_1_title: 'Nothing pre-made',
