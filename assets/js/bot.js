@@ -535,7 +535,7 @@
   };
   // If the AI can't answer, a keyword still finds the right canned answer
   var FALLBACK = [
-    [/(ضمان|warranty|guarantee)/i, 2], [/(خام|علام|ماركة|ماركات|خشب|بلوم|brand|material|timber|blum|egger)/i, 3],
+    [/(ضمان|warranty|guarantee)/i, 2], [/(رخام|كوارتز|جرانيت|marble|quartz|granite)/i, 7], [/(خامات|خامة|الخام|علام|ماركة|ماركات|خشب|بلوم|brand|material|timber|blum|egger)/i, 3],
     [/(زاوي|غير قياس|ضيق|awkward|corner|non-standard)/i, 5], [/(تصنع|تصنيع|مكائن|أجهزة القص|made|manufactur|machine)/i, 6],
     [/(خدمات|تسوون|مطبخ|مطابخ|خزان|دولاب|تلفزيون|kitchen|wardrobe|service|media unit)/i, 7], [/(كيف|تبد|خطوات|العملية|process|start|steps|how do)/i, 0],
   ];
