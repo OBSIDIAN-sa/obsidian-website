@@ -24,7 +24,7 @@
     password: 'كلمة المرور 8 أحرف على الأقل.',
     admin_only: 'هذا الإجراء للمدير فقط.',
     slot_taken: 'هذا الوقت محجوز لعميل آخر.',
-    self: 'ما تقدر توقف حسابك أنت.',
+    self: 'ما تقدر تسحب الصلاحية من حسابك أنت.',
     login_required: 'انتهت الجلسة. سجّل دخولك من جديد.',
     not_configured: 'قاعدة البيانات غير مربوطة بعد.',
     staff: 'الموظف غير موجود أو حسابه موقوف.',
@@ -1011,7 +1011,7 @@
     var job = select(JOBS, 'employee');
     var err = h('p', 'err'); err.setAttribute('role', 'alert');
     var btn = h('button', 'btn btn--solid', 'إضافة'); btn.type = 'submit';
-    add(f, field('الاسم', name), field('اسم المستخدم', user, 'أحرف إنجليزية صغيرة وأرقام.'), field('كلمة المرور', pass, '8 أحرف على الأقل. يقدر يغيّرها بعد الدخول.'), field('التصنيف', job), field('الصلاحية', role, 'التصنيف مسمى وظيفي. الصلاحية هي اللي تحدد وش يشوف.'), err, btn);
+    add(f, field('الاسم', name), field('اسم المستخدم', user, 'أحرف إنجليزية صغيرة وأرقام.'), field('كلمة المرور', pass, '8 أحرف على الأقل. يقدر يغيّرها بعد الدخول.'), field('التصنيف', job), field('الصلاحية', role, 'رئيس الإدارة والإدارة لهم صلاحيات المدير دائماً. باقي التصنيفات حسب هذا الاختيار.'), err, btn);
     f.addEventListener('submit', function (e) {
       e.preventDefault();
       if (btn.disabled) return;
