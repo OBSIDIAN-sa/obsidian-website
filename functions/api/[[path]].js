@@ -337,6 +337,7 @@ async function ensureSchema(env) {
     env.DB.prepare('CREATE TABLE IF NOT EXISTS activity (id INTEGER PRIMARY KEY AUTOINCREMENT, staff_id INTEGER, staff_name TEXT, action TEXT NOT NULL, created_at TEXT NOT NULL)'),
     env.DB.prepare('CREATE INDEX IF NOT EXISTS activity_staff ON activity(staff_id, id)'),
     env.DB.prepare('CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)'),
+    env.DB.prepare('CREATE TABLE IF NOT EXISTS absences (id INTEGER PRIMARY KEY AUTOINCREMENT, staff_id INTEGER NOT NULL, date TEXT NOT NULL, note TEXT, created_by INTEGER, created_at TEXT NOT NULL, UNIQUE(staff_id, date))'),
   ]);
   // distance from the showroom (metres) at check-in and check-out, when a location is required
   for (const col of ['in_dist', 'out_dist']) { try { await env.DB.prepare('ALTER TABLE attendance ADD COLUMN ' + col + ' INTEGER').run(); } catch (e) {} }
@@ -364,6 +365,7 @@ function describeAction(method, parts, b) {
   if (a === 'password') return 'غيّر كلمة مروره';
   if (a === 'ask') return 'سأل المساعد';
   if (a === 'attendance') {
+    if (id === 'absent') return method === 'DELETE' ? 'ألغى تسجيل غياب' : 'سجّل غياب موظف';
     if (method === 'DELETE') return 'حذف سجل حضور' + n;
     if (id === 'place') return 'غيّر موقع تسجيل الحضور';
     return (id === 'in' ? 'سجّل حضور' : 'سجّل انصراف') + (b && b.staff_id !== undefined ? ' لموظف آخر' : '');
@@ -465,6 +467,8 @@ async function staffRoutesInner(env, request, method, parts) {
   if (!me) return fail(401, 'login_required');
 
   const admin = me.role === 'admin';
+  // Deleting, managing members, the activity log, the attendance place and marking others present or absent belong to the head of management alone
+  const chief = isChief(me);
 
   // The full picture is for the manager; a member gets only what concerns them
   if (method === 'GET' && route === 'summary') {
@@ -494,7 +498,7 @@ async function staffRoutesInner(env, request, method, parts) {
     if (method === 'DELETE' && /^\d+$/.test(parts[1] || '')) {
       const n = await env.DB.prepare('SELECT created_by FROM announcements WHERE id = ?').bind(+parts[1]).first();
       if (!n) return fail(404, 'not_found');
-      if (!admin && n.created_by !== me.id) return fail(403, 'admin_only');
+      if (!chief && n.created_by !== me.id) return fail(403, 'chief_only');
       await env.DB.prepare('DELETE FROM announcements WHERE id = ?').bind(+parts[1]).run();
       return json({ ok: true });
     }
@@ -541,7 +545,7 @@ async function staffRoutesInner(env, request, method, parts) {
       }
       if (method === 'DELETE') {
         // a member can remove only a task they wrote for themselves
-        if (!admin && t.created_by !== me.id) return fail(403, 'admin_only');
+        if (!chief && t.created_by !== me.id) return fail(403, 'chief_only');
         await env.DB.prepare('DELETE FROM tasks WHERE id = ?').bind(t.id).run();
         return json({ ok: true });
       }
@@ -592,7 +596,7 @@ async function staffRoutesInner(env, request, method, parts) {
       if (method === 'DELETE' && parts[2] === 'notes' && /^\d+$/.test(parts[3] || '')) {
         const n = await env.DB.prepare('SELECT staff_id FROM customer_notes WHERE id = ? AND customer_id = ?').bind(+parts[3], id).first();
         if (!n) return fail(404, 'not_found');
-        if (!admin && n.staff_id !== me.id) return fail(403, 'admin_only');
+        if (!chief && n.staff_id !== me.id) return fail(403, 'chief_only');
         await env.DB.prepare('DELETE FROM customer_notes WHERE id = ?').bind(+parts[3]).run();
         return json({ ok: true });
       }
@@ -618,7 +622,7 @@ async function staffRoutesInner(env, request, method, parts) {
         return json({ ok: true });
       }
       if (method === 'DELETE') {
-        if (!admin) return fail(403, 'admin_only');
+        if (!chief) return fail(403, 'chief_only');
         await env.DB.prepare('DELETE FROM customer_notes WHERE customer_id = ?').bind(id).run();
         await env.DB.prepare('DELETE FROM customers WHERE id = ?').bind(id).run();
         return json({ ok: true });
@@ -628,7 +632,7 @@ async function staffRoutesInner(env, request, method, parts) {
 
   /* ---- attendance: check-in / check-out; an admin can take attendance for anyone ---- */
   if (parts[0] === 'activity') {
-    if (!admin) return fail(403, 'admin_only');
+    if (!chief) return fail(403, 'chief_only');
     if (method === 'GET') {
       const url = new URL(request.url);
       const sid = url.searchParams.get('staff');
@@ -651,7 +655,7 @@ async function staffRoutesInner(env, request, method, parts) {
 
     // Where check-in is allowed: the showroom's point and a radius in metres. Empty = anywhere.
     if (parts[1] === 'place') {
-      if (!admin) return fail(403, 'admin_only');
+      if (!chief) return fail(403, 'chief_only');
       if (method === 'GET') return json({ ok: true, place: await attendancePlace(env) });
       if (method === 'PUT') {
         const b = await body(request);
@@ -665,8 +669,29 @@ async function staffRoutesInner(env, request, method, parts) {
         return json({ ok: true, place });
       }
     }
+    // Marking a member absent for a day (today or earlier). Not allowed on a day that has attendance.
+    if (parts[1] === 'absent') {
+      if (!chief) return fail(403, 'chief_only');
+      if (method === 'POST') {
+        const b = await body(request);
+        if (!b) return fail(400, 'bad_request');
+        const date = validDate(b.date) ? b.date : today;
+        if (date > today) return fail(422, 'date');
+        const s = await env.DB.prepare('SELECT id FROM staff WHERE id = ?').bind(+b.staff_id || 0).first();
+        if (!s) return fail(422, 'staff');
+        const has = await env.DB.prepare('SELECT id FROM attendance WHERE staff_id = ? AND date = ? LIMIT 1').bind(s.id, date).first();
+        if (has) return fail(409, 'has_attendance');
+        await env.DB.prepare('INSERT INTO absences (staff_id, date, note, created_by, created_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(staff_id, date) DO UPDATE SET note = excluded.note')
+          .bind(s.id, date, clean(b.note, 120), me.id, nowIso()).run();
+        return json({ ok: true });
+      }
+      if (method === 'DELETE' && /^\d+$/.test(parts[2] || '')) {
+        await env.DB.prepare('DELETE FROM absences WHERE id = ?').bind(+parts[2]).run();
+        return json({ ok: true });
+      }
+    }
     if (method === 'DELETE' && /^\d+$/.test(parts[1] || '')) {
-      if (!admin) return fail(403, 'admin_only');
+      if (!chief) return fail(403, 'chief_only');
       await env.DB.prepare('DELETE FROM attendance WHERE id = ?').bind(+parts[1]).run();
       return json({ ok: true });
     }
@@ -675,7 +700,7 @@ async function staffRoutesInner(env, request, method, parts) {
       const b = (await body(request)) || {};
       let target = me.id;
       if (b.staff_id !== undefined && +b.staff_id !== me.id) {
-        if (me.role !== 'admin') return fail(403, 'admin_only');
+        if (!chief) return fail(403, 'chief_only');
         const s = await env.DB.prepare('SELECT id FROM staff WHERE id = ? AND active = 1').bind(+b.staff_id).first();
         if (!s) return fail(422, 'staff');
         target = s.id;
@@ -697,6 +722,7 @@ async function staffRoutesInner(env, request, method, parts) {
       const open = await env.DB.prepare('SELECT id FROM attendance WHERE staff_id = ? AND date = ? AND out_at IS NULL ORDER BY id DESC LIMIT 1').bind(target, today).first();
       if (parts[1] === 'in') {
         if (open) return fail(409, 'already_in');
+        await env.DB.prepare('DELETE FROM absences WHERE staff_id = ? AND date = ?').bind(target, today).run();
         await env.DB.prepare('INSERT INTO attendance (staff_id, date, in_at, in_by, in_dist) VALUES (?, ?, ?, ?, ?)').bind(target, today, nowIso(), me.id, dist).run();
       } else {
         if (!open) return fail(409, 'not_in');
@@ -718,7 +744,8 @@ async function staffRoutesInner(env, request, method, parts) {
       const records = (rows.results || []).map((r) => ({ ...r, minutes: minutes(r), by_admin: r.in_by !== r.staff_id || (r.out_by != null && r.out_by !== r.staff_id) }));
       let staff = [];
       if (all) staff = (await env.DB.prepare("SELECT id, name, job, CASE WHEN job IN ('chief','management') THEN 'admin' ELSE role END AS role FROM staff WHERE active = 1 ORDER BY id").all()).results || [];
-      return json({ ok: true, today, from, to, records, staff, location_required: !!(await attendancePlace(env)) });
+      const abs = await env.DB.prepare('SELECT id, staff_id, date, note FROM absences WHERE date BETWEEN ? AND ?' + (all ? '' : ' AND staff_id = ?') + ' ORDER BY date DESC LIMIT 800').bind(...(all ? [from, to] : [from, to, me.id])).all();
+      return json({ ok: true, today, from, to, records, staff, absences: abs.results || [], location_required: !!(await attendancePlace(env)) });
     }
   }
 
@@ -789,13 +816,13 @@ async function staffRoutesInner(env, request, method, parts) {
     if (method === 'DELETE' && parts[2] === 'notes' && /^\d+$/.test(parts[3] || '')) {
       const n = await env.DB.prepare('SELECT staff_id FROM lead_notes WHERE id = ? AND lead_id = ?').bind(+parts[3], id).first();
       if (!n) return fail(404, 'not_found');
-      if (!admin && n.staff_id !== me.id) return fail(403, 'admin_only');
+      if (!chief && n.staff_id !== me.id) return fail(403, 'chief_only');
       await env.DB.prepare('DELETE FROM lead_notes WHERE id = ?').bind(+parts[3]).run();
       return json({ ok: true, lead: await leadCard(env, id) });
     }
     // Deleting a request removes it for everyone, with its notes and its appointments
     if (method === 'DELETE' && parts.length === 2) {
-      if (!admin) return fail(403, 'admin_only');
+      if (!chief) return fail(403, 'chief_only');
       await env.DB.batch([
         env.DB.prepare('DELETE FROM lead_notes WHERE lead_id = ?').bind(id),
         env.DB.prepare('DELETE FROM appointments WHERE lead_id = ?').bind(id),
@@ -831,7 +858,7 @@ async function staffRoutesInner(env, request, method, parts) {
   }
 
   if (method === 'DELETE' && parts[0] === 'appointments' && /^\d+$/.test(parts[1] || '')) {
-    if (!admin) return fail(403, 'admin_only');
+    if (!chief) return fail(403, 'chief_only');
     await env.DB.prepare('DELETE FROM appointments WHERE id = ?').bind(+parts[1]).run();
     return json({ ok: true });
   }
@@ -865,7 +892,7 @@ async function staffRoutesInner(env, request, method, parts) {
   }
 
   if (route === 'users' || parts[0] === 'users') {
-    if (me.role !== 'admin') return fail(403, 'admin_only');
+    if (!chief) return fail(403, 'chief_only');
     if (method === 'POST' && route === 'users') {
       const b = await body(request);
       if (!b) return fail(400, 'bad_request');
@@ -894,6 +921,7 @@ async function staffRoutesInner(env, request, method, parts) {
       await env.DB.batch([
         env.DB.prepare('DELETE FROM sessions WHERE staff_id = ?').bind(id),
         env.DB.prepare('DELETE FROM attendance WHERE staff_id = ?').bind(id),
+        env.DB.prepare('DELETE FROM absences WHERE staff_id = ?').bind(id),
         env.DB.prepare('UPDATE attendance SET in_by = NULL WHERE in_by = ?').bind(id),
         env.DB.prepare('UPDATE attendance SET out_by = NULL WHERE out_by = ?').bind(id),
         env.DB.prepare('DELETE FROM tasks WHERE assigned_to = ?').bind(id),

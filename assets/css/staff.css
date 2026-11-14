@@ -256,7 +256,7 @@ a.row--cust:hover { background: var(--ink); }
   .tab { padding-inline: 0.75rem; }
   .row--roll { grid-template-columns: minmax(0, 1fr) auto; }
   .row--roll .row__meta { grid-column: 1 / -1; grid-row: 2; }
-  .row--roll .btn { grid-column: 1 / -1; }
+  .row--roll .row__act { grid-column: 1 / -1; }
   .stats--4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .row--cust { grid-template-columns: minmax(0, 1fr) auto; }
   .row--cust .row__type { display: none; }
@@ -294,6 +294,8 @@ a.row--cust:hover { background: var(--ink); }
 .member > .form, .member > .empty { margin-block-start: 0.9rem; padding: 1rem; background: var(--ink); }
 .member .input { background: var(--onyx); }
 .bullets { display: grid; gap: 0.4rem; padding-inline-start: 1.1rem; list-style: disc; color: var(--bone); }
+.row--roll .row__act { flex-wrap: nowrap; }
+.absline { margin-block-start: 0.6rem; color: var(--rose); }
 .print { display: none; }
 @media print {
   @page { size: A4; margin: 14mm; }
