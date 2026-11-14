@@ -25,6 +25,7 @@
     admin_only: 'هذا الإجراء للمدير فقط.',
     slot_taken: 'هذا الوقت محجوز لعميل آخر.',
     self: 'ما تقدر تسحب الصلاحية من حسابك أنت.',
+    chief_only: 'حساب رئيس الإدارة ما يعدّله إلا رئيس الإدارة.',
     login_required: 'انتهت الجلسة. سجّل دخولك من جديد.',
     not_configured: 'قاعدة البيانات غير مربوطة بعد.',
     staff: 'الموظف غير موجود أو حسابه موقوف.',
@@ -140,6 +141,7 @@
   var JOBS = { chief: 'رئيس الإدارة', management: 'إدارة', showroom_manager: 'مدير معرض', designer: 'مصمم', employee: 'موظف' };
   function jobOf(u) { return u.job && JOBS[u.job] ? u.job : (u.role === 'admin' ? 'chief' : 'employee'); }
   function jobName(u) { return JOBS[jobOf(u)]; }
+  function isChief(u) { return jobOf(u) === 'chief'; }
   function isAdmin() { return me && me.role === 'admin'; }
   var ICON = {
     home: 'M4 11l8-7 8 7v9h-5v-6H9v6H4z',
@@ -975,12 +977,14 @@
         var badge = h('span', 'badge', u.active ? 'فعّال' : 'موقوف'); badge.dataset.s = u.active ? 'confirmed' : 'closed';
         var who = h('div', 'row__who'); add(who, h('span', 'row__name', u.name), h('span', 'row__type ltr', u.username));
         add(r, who, h('span', 'row__meta', jobName(u) + (u.role === 'admin' ? ' · صلاحية مدير' : '')), badge);
-        if (admin) {
-          var js = select(JOBS, jobOf(u)); js.setAttribute('aria-label', 'تصنيف ' + u.name);
+        var locked = isChief(u) && !isChief(me);
+        if (admin && !locked) {
+          var jobs = {}; Object.keys(JOBS).forEach(function (k) { if (k !== 'chief' || isChief(me)) jobs[k] = JOBS[k]; });
+          var js = select(jobs, jobOf(u)); js.setAttribute('aria-label', 'تصنيف ' + u.name);
           js.addEventListener('change', function () { api('PATCH', 'users/' + u.id, { job: js.value }).then(function (res) { if (!res.ok) return oops(res); toast('تم تحديث التصنيف.'); if (u.id === me.id) me.job = js.value; go('#team'); }).catch(noop); });
           r.appendChild(add(h('div', 'row__act'), js));
         }
-        if (admin && u.id !== me.id) {
+        if (admin && u.id !== me.id && !locked) {
           var act = h('div', 'row__act');
           var tog = h('button', 'btn btn--sm', u.active ? 'إيقاف الحساب' : 'تفعيل الحساب'); tog.type = 'button';
           tog.addEventListener('click', function () {
@@ -1008,7 +1012,8 @@
     var user = input('text', { dir: 'ltr', autocapitalize: 'none', spellcheck: false, autocomplete: 'off', required: true });
     var pass = input('password', { dir: 'ltr', autocomplete: 'new-password', required: true });
     var role = select({ staff: 'موظف (يشوف ما يخصه)', admin: 'مدير (يشوف كل شي)' }, 'staff');
-    var job = select(JOBS, 'employee');
+    var jobsNew = {}; Object.keys(JOBS).forEach(function (k) { if (k !== 'chief' || isChief(me)) jobsNew[k] = JOBS[k]; });
+    var job = select(jobsNew, 'employee');
     var err = h('p', 'err'); err.setAttribute('role', 'alert');
     var btn = h('button', 'btn btn--solid', 'إضافة'); btn.type = 'submit';
     add(f, field('الاسم', name), field('اسم المستخدم', user, 'أحرف إنجليزية صغيرة وأرقام.'), field('كلمة المرور', pass, '8 أحرف على الأقل. يقدر يغيّرها بعد الدخول.'), field('التصنيف', job), field('الصلاحية', role, 'رئيس الإدارة والإدارة لهم صلاحيات المدير دائماً. باقي التصنيفات حسب هذا الاختيار.'), err, btn);

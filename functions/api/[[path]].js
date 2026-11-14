@@ -338,6 +338,8 @@ async function ensureSchema(env) {
   schemaReady = true;
 }
 const JOBS = ['chief', 'management', 'showroom_manager', 'designer', 'employee'];
+// The head of management: classified so, or a manager account from before classifications existed
+const isChief = (u) => !!u && (u.job === 'chief' || (!u.job && u.role === 'admin'));
 const TASK_STATUS = ['todo', 'doing', 'done'];
 const NOTE_KINDS = ['general', 'task', 'vip'];
 const validDate = (d) => /^\d{4}-\d{2}-\d{2}$/.test(d || '');
@@ -724,7 +726,7 @@ async function staffRoutes(env, request, method, parts) {
       const salt = randomHex(16);
       try {
         await env.DB.prepare('INSERT INTO staff (username, name, role, job, pass_hash, pass_salt, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
-          .bind(username, name, b.role === 'admin' ? 'admin' : 'staff', JOBS.includes(b.job) ? b.job : 'employee', await hashPassword(b.password, salt), salt, nowIso()).run();
+          .bind(username, name, b.role === 'admin' ? 'admin' : 'staff', JOBS.includes(b.job) && (b.job !== 'chief' || isChief(me)) ? b.job : 'employee', await hashPassword(b.password, salt), salt, nowIso()).run();
       } catch (e) {
         return fail(409, 'username_taken');
       }
@@ -734,6 +736,10 @@ async function staffRoutes(env, request, method, parts) {
       const id = +parts[1];
       const b = await body(request);
       if (!b) return fail(400, 'bad_request');
+      // Only the head of management can change a head-of-management account, or make someone one
+      const target = await env.DB.prepare('SELECT id, role, job FROM staff WHERE id = ?').bind(id).first();
+      if (!target) return fail(404, 'not_found');
+      if (!isChief(me) && (isChief(target) || b.job === 'chief')) return fail(403, 'chief_only');
       if (b.job !== undefined) {
         if (!JOBS.includes(b.job)) return fail(422, 'job');
         if (id === me.id && b.job !== 'chief' && b.job !== 'management') {
