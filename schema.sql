@@ -99,3 +99,9 @@ CREATE TABLE IF NOT EXISTS announcements (
 CREATE TABLE IF NOT EXISTS customer_notes (id INTEGER PRIMARY KEY AUTOINCREMENT, customer_id INTEGER NOT NULL, staff_id INTEGER, body TEXT NOT NULL, created_at TEXT NOT NULL);
 CREATE INDEX IF NOT EXISTS cnotes_customer ON customer_notes(customer_id);
 -- staff.job (classification: chief | management | showroom_manager | designer | employee) is added by the API with ALTER TABLE on first use; chief and management carry the manager's permissions
+
+-- Activity log: one line per change a member makes (the API creates it on first use)
+CREATE TABLE IF NOT EXISTS activity (id INTEGER PRIMARY KEY AUTOINCREMENT, staff_id INTEGER, staff_name TEXT, action TEXT NOT NULL, created_at TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS activity_staff ON activity(staff_id, id);
+-- Settings: attendance_place = {"lat":..,"lng":..,"radius":..}. attendance.in_dist / out_dist are added by the API with ALTER TABLE.
+CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);

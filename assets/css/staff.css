@@ -263,6 +263,8 @@ a.row--cust:hover { background: var(--ink); }
   .row--cust .star { grid-column: 1 / -1; }
   .row--task { grid-template-columns: minmax(0, 1fr) auto; }
   .row--task .row__act { grid-column: 1 / -1; }
+  .row--act { grid-template-columns: minmax(0, 1fr) auto; }
+  .row--act .act { grid-column: 1 / -1; }
   .row--day { grid-template-columns: minmax(0, 1fr) auto; }
   .row--day .row__meta { grid-column: 1 / -1; grid-row: 2; }
   .fold { display: block; }
@@ -283,6 +285,15 @@ a.row--cust:hover { background: var(--ink); }
 [data-armed] { font-weight: 700; }
 .btn--danger[data-armed] { background: var(--rose); color: #fff; }
 .notes small .link { min-block-size: 0; padding-block: 0.25rem; margin-inline-start: 0.5rem; }
+.row--plain { grid-template-columns: minmax(0, 1fr) auto auto auto; }
+.row--act { grid-template-columns: 9rem minmax(0, 1fr) auto auto; }
+.act { overflow-wrap: anywhere; }
+.rec { display: inline-flex; align-items: center; flex-wrap: wrap; }
+.rec .link, .row--act .link, .row--plain .link { min-block-size: 32px; padding-block: 0; }
+.member { padding: 0.75rem 0.25rem; border-block-start: 1px solid var(--hairline); }
+.member > .form, .member > .empty { margin-block-start: 0.9rem; padding: 1rem; background: var(--ink); }
+.member .input { background: var(--onyx); }
+.bullets { display: grid; gap: 0.4rem; padding-inline-start: 1.1rem; list-style: disc; color: var(--bone); }
 .print { display: none; }
 @media print {
   @page { size: A4; margin: 14mm; }

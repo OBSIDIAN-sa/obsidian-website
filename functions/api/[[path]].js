@@ -333,6 +333,13 @@ async function ensureSchema(env) {
     env.DB.prepare('CREATE TABLE IF NOT EXISTS customer_notes (id INTEGER PRIMARY KEY AUTOINCREMENT, customer_id INTEGER NOT NULL, staff_id INTEGER, body TEXT NOT NULL, created_at TEXT NOT NULL)'),
     env.DB.prepare('CREATE INDEX IF NOT EXISTS cnotes_customer ON customer_notes(customer_id)'),
   ]);
+  await env.DB.batch([
+    env.DB.prepare('CREATE TABLE IF NOT EXISTS activity (id INTEGER PRIMARY KEY AUTOINCREMENT, staff_id INTEGER, staff_name TEXT, action TEXT NOT NULL, created_at TEXT NOT NULL)'),
+    env.DB.prepare('CREATE INDEX IF NOT EXISTS activity_staff ON activity(staff_id, id)'),
+    env.DB.prepare('CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)'),
+  ]);
+  // distance from the showroom (metres) at check-in and check-out, when a location is required
+  for (const col of ['in_dist', 'out_dist']) { try { await env.DB.prepare('ALTER TABLE attendance ADD COLUMN ' + col + ' INTEGER').run(); } catch (e) {} }
   // job = the member's classification. 'chief' and 'management' carry the manager's permissions; the rest follow role. Fails harmlessly once the column exists.
   try { await env.DB.prepare('ALTER TABLE staff ADD COLUMN job TEXT').run(); } catch (e) {}
   schemaReady = true;
@@ -344,9 +351,67 @@ const TASK_STATUS = ['todo', 'doing', 'done'];
 const NOTE_KINDS = ['general', 'task', 'vip'];
 const validDate = (d) => /^\d{4}-\d{2}-\d{2}$/.test(d || '');
 
+async function logActivity(env, who, action) {
+  try {
+    await env.DB.prepare('INSERT INTO activity (staff_id, staff_name, action, created_at) VALUES (?, ?, ?, ?)').bind(who.id, who.name, String(action).slice(0, 200), nowIso()).run();
+  } catch (e) {}
+}
+// One plain Arabic line per change a member makes. GET requests are not logged.
+function describeAction(method, parts, b) {
+  const [a, id, sub] = parts; const n = id && /^\d+$/.test(id) ? ' #' + id : '';
+  const t = (x) => (x ? ': ' + clean(x, 60) : '');
+  if (a === 'logout') return 'سجّل خروج';
+  if (a === 'password') return 'غيّر كلمة مروره';
+  if (a === 'ask') return 'سأل المساعد';
+  if (a === 'attendance') {
+    if (method === 'DELETE') return 'حذف سجل حضور' + n;
+    if (id === 'place') return 'غيّر موقع تسجيل الحضور';
+    return (id === 'in' ? 'سجّل حضور' : 'سجّل انصراف') + (b && b.staff_id !== undefined ? ' لموظف آخر' : '');
+  }
+  if (a === 'leads') {
+    if (sub === 'notes') return (method === 'DELETE' ? 'حذف ملاحظة من الطلب' : 'كتب ملاحظة على الطلب') + n;
+    if (method === 'POST') return 'أضاف طلب' + t(b && b.name);
+    if (method === 'DELETE') return 'حذف الطلب' + n;
+    return (b && b.status ? 'غيّر حالة الطلب' : 'غيّر مسؤول الطلب') + n;
+  }
+  if (a === 'customers') {
+    if (sub === 'notes') return (method === 'DELETE' ? 'حذف ملاحظة من ملف العميل' : 'كتب ملاحظة على العميل') + n;
+    if (method === 'POST') return 'سجّل عميل' + t(b && b.name);
+    if (method === 'DELETE') return 'حذف العميل' + n;
+    return 'عدّل بيانات العميل' + n;
+  }
+  if (a === 'tasks') return method === 'POST' ? 'أضاف مهمة' + t(b && b.title) : method === 'DELETE' ? 'حذف المهمة' + n : 'غيّر حالة المهمة' + n;
+  if (a === 'announcements') return method === 'POST' ? 'نشر ملاحظة للفريق' : 'حذف ملاحظة من لوحة الفريق';
+  if (a === 'appointments') return (method === 'DELETE' ? 'حذف الموعد' : 'غيّر حالة الموعد') + n;
+  if (a === 'users') return method === 'POST' ? 'أضاف موظف' + t(b && b.name) : method === 'DELETE' ? 'حذف الموظف' + n : 'عدّل حساب الموظف' + n;
+  if (a === 'activity') return 'مسح سجل النشاط';
+  return method + ' ' + parts.join('/');
+}
+// metres between two points
+function distance(lat1, lng1, lat2, lng2) {
+  const r = Math.PI / 180, dLat = (lat2 - lat1) * r, dLng = (lng2 - lng1) * r;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * r) * Math.cos(lat2 * r) * Math.sin(dLng / 2) ** 2;
+  return Math.round(6371000 * 2 * Math.asin(Math.sqrt(h)));
+}
+async function attendancePlace(env) {
+  const row = await env.DB.prepare("SELECT value FROM settings WHERE key = 'attendance_place'").first();
+  try { const v = row && JSON.parse(row.value); return v && typeof v.lat === 'number' && typeof v.lng === 'number' ? v : null; } catch (e) { return null; }
+}
+
 async function staffRoutes(env, request, method, parts) {
-  const route = parts.join('/');
   await ensureSchema(env);
+  if (method === 'GET' || parts[0] === 'login' || parts[0] === 'setup') return staffRoutesInner(env, request, method, parts);
+  // every successful change is written to the activity log under the member who made it
+  const who = await currentStaff(env, request);
+  let b = null;
+  try { b = await request.clone().json(); } catch (e) {}
+  const res = await staffRoutesInner(env, request, method, parts);
+  if (who && res.status < 300) await logActivity(env, who, describeAction(method, parts, b));
+  return res;
+}
+
+async function staffRoutesInner(env, request, method, parts) {
+  const route = parts.join('/');
 
   /* ---- no session needed ---- */
   if (method === 'GET' && route === 'me') {
@@ -383,6 +448,7 @@ async function staffRoutes(env, request, method, parts) {
     // hash even when the user doesn't exist, so timing doesn't reveal usernames
     const hash = await hashPassword(String(b.password || ''), row ? row.pass_salt : 'no-such-user-salt');
     if (!row || !safeEqual(hash, row.pass_hash)) return fail(401, 'credentials');
+    await logActivity(env, row, 'سجّل دخول');
     return json({ ok: true, user: { id: row.id, username: row.username, name: row.name, role: row.job === 'chief' || row.job === 'management' ? 'admin' : row.role } }, 200, {
       'Set-Cookie': await startSession(env, request, row.id),
     });
@@ -561,9 +627,49 @@ async function staffRoutes(env, request, method, parts) {
   }
 
   /* ---- attendance: check-in / check-out; an admin can take attendance for anyone ---- */
+  if (parts[0] === 'activity') {
+    if (!admin) return fail(403, 'admin_only');
+    if (method === 'GET') {
+      const url = new URL(request.url);
+      const sid = url.searchParams.get('staff');
+      const one = /^\d+$/.test(sid || '');
+      const rows = await env.DB.prepare('SELECT id, staff_id, staff_name, action, created_at FROM activity' + (one ? ' WHERE staff_id = ?' : '') + ' ORDER BY id DESC LIMIT 300').bind(...(one ? [+sid] : [])).all();
+      const last = await env.DB.prepare('SELECT staff_id, MAX(created_at) AS at, COUNT(*) AS n FROM activity GROUP BY staff_id').all();
+      return json({ ok: true, activity: rows.results || [], last: last.results || [] });
+    }
+    if (method === 'DELETE') {
+      if (!isChief(me)) return fail(403, 'chief_only');
+      if (/^\d+$/.test(parts[1] || '')) await env.DB.prepare('DELETE FROM activity WHERE id = ?').bind(+parts[1]).run();
+      else await env.DB.prepare('DELETE FROM activity').run();
+      return json({ ok: true });
+    }
+  }
+
   if (parts[0] === 'attendance') {
     const today = todayRiyadh();
     const minutes = (r) => (r.out_at ? Math.max(0, Math.round((Date.parse(r.out_at) - Date.parse(r.in_at)) / 60000)) : 0);
+
+    // Where check-in is allowed: the showroom's point and a radius in metres. Empty = anywhere.
+    if (parts[1] === 'place') {
+      if (!admin) return fail(403, 'admin_only');
+      if (method === 'GET') return json({ ok: true, place: await attendancePlace(env) });
+      if (method === 'PUT') {
+        const b = await body(request);
+        if (!b) return fail(400, 'bad_request');
+        if (b.clear) { await env.DB.prepare("DELETE FROM settings WHERE key = 'attendance_place'").run(); return json({ ok: true, place: null }); }
+        const lat = Number(b.lat), lng = Number(b.lng), radius = Math.round(Number(b.radius));
+        if (!(lat >= -90 && lat <= 90) || !(lng >= -180 && lng <= 180) || (lat === 0 && lng === 0)) return fail(422, 'place');
+        if (!(radius >= 30 && radius <= 2000)) return fail(422, 'radius');
+        const place = { lat, lng, radius };
+        await env.DB.prepare("INSERT INTO settings (key, value) VALUES ('attendance_place', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").bind(JSON.stringify(place)).run();
+        return json({ ok: true, place });
+      }
+    }
+    if (method === 'DELETE' && /^\d+$/.test(parts[1] || '')) {
+      if (!admin) return fail(403, 'admin_only');
+      await env.DB.prepare('DELETE FROM attendance WHERE id = ?').bind(+parts[1]).run();
+      return json({ ok: true });
+    }
 
     if (method === 'POST' && (parts[1] === 'in' || parts[1] === 'out')) {
       const b = (await body(request)) || {};
@@ -574,13 +680,27 @@ async function staffRoutes(env, request, method, parts) {
         if (!s) return fail(422, 'staff');
         target = s.id;
       }
+      // A member recording for themselves must be at the showroom. A manager recording for someone else is not checked.
+      let dist = null;
+      const place = target === me.id ? await attendancePlace(env) : null;
+      if (place) {
+        const lat = Number(b.lat), lng = Number(b.lng), acc = Math.max(0, Number(b.accuracy) || 0);
+        if (b.lat == null || b.lng == null || !(lat >= -90 && lat <= 90) || !(lng >= -180 && lng <= 180)) return fail(422, 'location_required');
+        if (acc > 1000) return fail(422, 'location_weak');
+        dist = distance(place.lat, place.lng, lat, lng);
+        // allow for the phone's own stated error, up to 100 m
+        if (dist - Math.min(acc, 100) > place.radius) {
+          await logActivity(env, me, 'حاول يسجّل ' + (parts[1] === 'in' ? 'حضور' : 'انصراف') + ' من خارج المعرض (حوالي ' + dist + ' متر)');
+          return json({ ok: false, error: 'too_far', distance: dist }, 403);
+        }
+      }
       const open = await env.DB.prepare('SELECT id FROM attendance WHERE staff_id = ? AND date = ? AND out_at IS NULL ORDER BY id DESC LIMIT 1').bind(target, today).first();
       if (parts[1] === 'in') {
         if (open) return fail(409, 'already_in');
-        await env.DB.prepare('INSERT INTO attendance (staff_id, date, in_at, in_by) VALUES (?, ?, ?, ?)').bind(target, today, nowIso(), me.id).run();
+        await env.DB.prepare('INSERT INTO attendance (staff_id, date, in_at, in_by, in_dist) VALUES (?, ?, ?, ?, ?)').bind(target, today, nowIso(), me.id, dist).run();
       } else {
         if (!open) return fail(409, 'not_in');
-        await env.DB.prepare('UPDATE attendance SET out_at = ?, out_by = ? WHERE id = ?').bind(nowIso(), me.id, open.id).run();
+        await env.DB.prepare('UPDATE attendance SET out_at = ?, out_by = ?, out_dist = ? WHERE id = ?').bind(nowIso(), me.id, dist, open.id).run();
       }
       return json({ ok: true });
     }
@@ -592,13 +712,13 @@ async function staffRoutes(env, request, method, parts) {
       const to = ok(url.searchParams.get('to')) ? url.searchParams.get('to') : today;
       const all = me.role === 'admin' && url.searchParams.get('all') === '1';
       const rows = await env.DB.prepare(
-        'SELECT a.id, a.staff_id, a.date, a.in_at, a.out_at, a.in_by, a.out_by, s.name FROM attendance a JOIN staff s ON s.id = a.staff_id WHERE a.date BETWEEN ? AND ?' +
+        'SELECT a.id, a.staff_id, a.date, a.in_at, a.out_at, a.in_by, a.out_by, a.in_dist, a.out_dist, s.name FROM attendance a JOIN staff s ON s.id = a.staff_id WHERE a.date BETWEEN ? AND ?' +
         (all ? '' : ' AND a.staff_id = ?') + ' ORDER BY a.date DESC, a.in_at DESC LIMIT 800'
       ).bind(...(all ? [from, to] : [from, to, me.id])).all();
       const records = (rows.results || []).map((r) => ({ ...r, minutes: minutes(r), by_admin: r.in_by !== r.staff_id || (r.out_by != null && r.out_by !== r.staff_id) }));
       let staff = [];
       if (all) staff = (await env.DB.prepare("SELECT id, name, job, CASE WHEN job IN ('chief','management') THEN 'admin' ELSE role END AS role FROM staff WHERE active = 1 ORDER BY id").all()).results || [];
-      return json({ ok: true, today, from, to, records, staff });
+      return json({ ok: true, today, from, to, records, staff, location_required: !!(await attendancePlace(env)) });
     }
   }
 
@@ -740,7 +860,7 @@ async function staffRoutes(env, request, method, parts) {
   }
 
   if (method === 'GET' && route === 'users') {
-    const rows = await env.DB.prepare(admin ? "SELECT id, username, name, CASE WHEN job IN ('chief','management') THEN 'admin' ELSE role END AS role, job, active FROM staff ORDER BY id" : 'SELECT id, name, job, active FROM staff WHERE active = 1 ORDER BY id').all();
+    const rows = await env.DB.prepare(admin ? "SELECT id, username, name, CASE WHEN job IN ('chief','management') THEN 'admin' ELSE role END AS role, role AS base_role, job, active, created_at FROM staff ORDER BY id" : 'SELECT id, name, job, active FROM staff WHERE active = 1 ORDER BY id').all();
     return json({ ok: true, users: rows.results || [] });
   }
 
@@ -802,6 +922,23 @@ async function staffRoutes(env, request, method, parts) {
           if (!mine || mine.role !== 'admin') return fail(422, 'self');
         }
         await env.DB.prepare('UPDATE staff SET job = ? WHERE id = ?').bind(b.job, id).run();
+      }
+      if (b.name !== undefined) {
+        const name = clean(b.name, 60);
+        if (name.length < 2) return fail(422, 'name');
+        await env.DB.prepare('UPDATE staff SET name = ? WHERE id = ?').bind(name, id).run();
+      }
+      if (b.username !== undefined) {
+        const username = clean(b.username, 30).toLowerCase();
+        if (!validUsername(username)) return fail(422, 'username');
+        try { await env.DB.prepare('UPDATE staff SET username = ? WHERE id = ?').bind(username, id).run(); } catch (e) { return fail(409, 'username_taken'); }
+      }
+      if (b.role !== undefined) {
+        if (b.role !== 'admin' && b.role !== 'staff') return fail(422, 'role');
+        // a manager cannot take the manager permission away from their own account
+        const now = await env.DB.prepare('SELECT job FROM staff WHERE id = ?').bind(id).first();
+        if (id === me.id && b.role !== 'admin' && now.job !== 'chief' && now.job !== 'management') return fail(422, 'self');
+        await env.DB.prepare('UPDATE staff SET role = ? WHERE id = ?').bind(b.role, id).run();
       }
       if (b.active !== undefined) {
         if (id === me.id) return fail(422, 'self');
