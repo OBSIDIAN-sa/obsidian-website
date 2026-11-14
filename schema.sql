@@ -105,3 +105,6 @@ CREATE TABLE IF NOT EXISTS activity (id INTEGER PRIMARY KEY AUTOINCREMENT, staff
 CREATE INDEX IF NOT EXISTS activity_staff ON activity(staff_id, id);
 -- Settings: attendance_place = {"lat":..,"lng":..,"radius":..}. attendance.in_dist / out_dist are added by the API with ALTER TABLE.
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+
+-- Days a member was marked absent by the head of management
+CREATE TABLE IF NOT EXISTS absences (id INTEGER PRIMARY KEY AUTOINCREMENT, staff_id INTEGER NOT NULL, date TEXT NOT NULL, note TEXT, created_by INTEGER, created_at TEXT NOT NULL, UNIQUE(staff_id, date));
