@@ -280,6 +280,9 @@ a.row--cust:hover { background: var(--ink); }
 .row--user select.input { max-inline-size: 12rem; }
 
 /* ---- printable attendance sheet: hidden on screen, the only thing on paper ---- */
+[data-armed] { font-weight: 700; }
+.btn--danger[data-armed] { background: var(--rose); color: #fff; }
+.notes small .link { min-block-size: 0; padding-block: 0.25rem; margin-inline-start: 0.5rem; }
 .print { display: none; }
 @media print {
   @page { size: A4; margin: 14mm; }

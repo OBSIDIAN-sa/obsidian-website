@@ -295,7 +295,7 @@ async function leadCard(env, id) {
   ).bind(id).first();
   if (!lead) return null;
   const notes = await env.DB.prepare(
-    'SELECT n.id, n.body, n.created_at, s.name AS staff_name FROM lead_notes n LEFT JOIN staff s ON s.id = n.staff_id WHERE n.lead_id = ? ORDER BY n.id DESC LIMIT 30'
+    'SELECT n.id, n.body, n.created_at, n.staff_id, s.name AS staff_name FROM lead_notes n LEFT JOIN staff s ON s.id = n.staff_id WHERE n.lead_id = ? ORDER BY n.id DESC LIMIT 30'
   ).bind(id).all();
   const appts = await env.DB.prepare('SELECT id, date, time, status, note FROM appointments WHERE lead_id = ? ORDER BY date DESC, time DESC LIMIT 10').bind(id).all();
   return { ...lead, notes: notes.results || [], appointments: appts.results || [] };
@@ -520,8 +520,15 @@ async function staffRoutes(env, request, method, parts) {
       if (method === 'GET') {
         const leads = await env.DB.prepare('SELECT id, created_at, type, status FROM leads WHERE phone = ? ORDER BY id DESC LIMIT 20').bind(c.phone).all();
         const appts = await env.DB.prepare('SELECT id, date, time, status FROM appointments WHERE phone = ? ORDER BY date DESC, time DESC LIMIT 10').bind(c.phone).all();
-        const notes = await env.DB.prepare('SELECT n.id, n.body, n.created_at, s.name AS staff_name FROM customer_notes n LEFT JOIN staff s ON s.id = n.staff_id WHERE n.customer_id = ? ORDER BY n.id DESC LIMIT 50').bind(id).all();
+        const notes = await env.DB.prepare('SELECT n.id, n.body, n.created_at, n.staff_id, s.name AS staff_name FROM customer_notes n LEFT JOIN staff s ON s.id = n.staff_id WHERE n.customer_id = ? ORDER BY n.id DESC LIMIT 50').bind(id).all();
         return json({ ok: true, customer: c, leads: leads.results || [], appointments: appts.results || [], notes: notes.results || [] });
+      }
+      if (method === 'DELETE' && parts[2] === 'notes' && /^\d+$/.test(parts[3] || '')) {
+        const n = await env.DB.prepare('SELECT staff_id FROM customer_notes WHERE id = ? AND customer_id = ?').bind(+parts[3], id).first();
+        if (!n) return fail(404, 'not_found');
+        if (!admin && n.staff_id !== me.id) return fail(403, 'admin_only');
+        await env.DB.prepare('DELETE FROM customer_notes WHERE id = ?').bind(+parts[3]).run();
+        return json({ ok: true });
       }
       if (method === 'POST' && parts[2] === 'notes') {
         const b = await body(request);
@@ -659,6 +666,24 @@ async function staffRoutes(env, request, method, parts) {
       if (!r.meta.changes) return fail(404, 'not_found');
       return json({ ok: true, lead: await leadCard(env, id) });
     }
+    if (method === 'DELETE' && parts[2] === 'notes' && /^\d+$/.test(parts[3] || '')) {
+      const n = await env.DB.prepare('SELECT staff_id FROM lead_notes WHERE id = ? AND lead_id = ?').bind(+parts[3], id).first();
+      if (!n) return fail(404, 'not_found');
+      if (!admin && n.staff_id !== me.id) return fail(403, 'admin_only');
+      await env.DB.prepare('DELETE FROM lead_notes WHERE id = ?').bind(+parts[3]).run();
+      return json({ ok: true, lead: await leadCard(env, id) });
+    }
+    // Deleting a request removes it for everyone, with its notes and its appointments
+    if (method === 'DELETE' && parts.length === 2) {
+      if (!admin) return fail(403, 'admin_only');
+      await env.DB.batch([
+        env.DB.prepare('DELETE FROM lead_notes WHERE lead_id = ?').bind(id),
+        env.DB.prepare('DELETE FROM appointments WHERE lead_id = ?').bind(id),
+        env.DB.prepare('UPDATE customers SET lead_id = NULL WHERE lead_id = ?').bind(id),
+        env.DB.prepare('DELETE FROM leads WHERE id = ?').bind(id),
+      ]);
+      return json({ ok: true });
+    }
     if (method === 'POST' && parts[2] === 'notes') {
       const b = await body(request);
       const text = clean(b && b.body, 800);
@@ -683,6 +708,12 @@ async function staffRoutes(env, request, method, parts) {
     sql += range === 'past' ? ' ORDER BY a.date DESC, a.time DESC LIMIT 40' : ' ORDER BY a.date, a.time LIMIT 60';
     const rows = await env.DB.prepare(sql).bind(...args).all();
     return json({ ok: true, appointments: rows.results || [], today });
+  }
+
+  if (method === 'DELETE' && parts[0] === 'appointments' && /^\d+$/.test(parts[1] || '')) {
+    if (!admin) return fail(403, 'admin_only');
+    await env.DB.prepare('DELETE FROM appointments WHERE id = ?').bind(+parts[1]).run();
+    return json({ ok: true });
   }
 
   if (method === 'PATCH' && parts[0] === 'appointments' && /^\d+$/.test(parts[1] || '')) {
@@ -730,6 +761,30 @@ async function staffRoutes(env, request, method, parts) {
       } catch (e) {
         return fail(409, 'username_taken');
       }
+      return json({ ok: true });
+    }
+    // Deleting a member removes the account for good, with their attendance, tasks and team notes.
+    // What they wrote on requests and customers stays, without a name.
+    if (method === 'DELETE' && /^\d+$/.test(parts[1] || '')) {
+      const id = +parts[1];
+      if (id === me.id) return fail(422, 'self');
+      const target = await env.DB.prepare('SELECT id, role, job FROM staff WHERE id = ?').bind(id).first();
+      if (!target) return fail(404, 'not_found');
+      if (isChief(target) && !isChief(me)) return fail(403, 'chief_only');
+      await env.DB.batch([
+        env.DB.prepare('DELETE FROM sessions WHERE staff_id = ?').bind(id),
+        env.DB.prepare('DELETE FROM attendance WHERE staff_id = ?').bind(id),
+        env.DB.prepare('UPDATE attendance SET in_by = NULL WHERE in_by = ?').bind(id),
+        env.DB.prepare('UPDATE attendance SET out_by = NULL WHERE out_by = ?').bind(id),
+        env.DB.prepare('DELETE FROM tasks WHERE assigned_to = ?').bind(id),
+        env.DB.prepare('UPDATE tasks SET created_by = assigned_to WHERE created_by = ?').bind(id),
+        env.DB.prepare('DELETE FROM announcements WHERE created_by = ?').bind(id),
+        env.DB.prepare('UPDATE leads SET assigned_to = NULL WHERE assigned_to = ?').bind(id),
+        env.DB.prepare('UPDATE lead_notes SET staff_id = NULL WHERE staff_id = ?').bind(id),
+        env.DB.prepare('UPDATE customer_notes SET staff_id = NULL WHERE staff_id = ?').bind(id),
+        env.DB.prepare('UPDATE customers SET created_by = NULL WHERE created_by = ?').bind(id),
+        env.DB.prepare('DELETE FROM staff WHERE id = ?').bind(id),
+      ]);
       return json({ ok: true });
     }
     if (method === 'PATCH' && /^\d+$/.test(parts[1] || '')) {

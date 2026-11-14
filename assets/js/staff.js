@@ -169,6 +169,17 @@
   function oops(res) { toast(errText(res && res.error)); }
   function setTitle(text) { ui.title.textContent = text; document.title = text + ' · فريق أوبسيديان'; }
   function empty(text) { return h('p', 'empty', text); }
+  // Delete control: the first press asks, the second deletes
+  function delBtn(label, cls, run) {
+    var b = h('button', cls, label); b.type = 'button';
+    var armed = false, timer;
+    b.addEventListener('click', function () {
+      if (!armed) { armed = true; b.textContent = 'تأكيد الحذف؟'; b.dataset.armed = '1'; timer = setTimeout(function () { armed = false; b.textContent = label; delete b.dataset.armed; }, 5000); return; }
+      clearTimeout(timer); b.disabled = true; run();
+    });
+    return b;
+  }
+  function del(path, done, after) { api('DELETE', path).then(function (r) { if (!r.ok) return oops(r); toast(done); after(); }).catch(noop); }
   function hlink(cls, text, href) { var a = h('a', cls, text); a.href = href; return a; }
   function panel(title, moreLabel, moreHref) {
     var p = h('section', 'panel');
@@ -329,9 +340,7 @@
         var head = h('div', 'memo__head');
         add(head, h('span', 'tag', n.kind !== 'general' ? NOTE_KIND[n.kind] : n.author_role === 'admin' ? 'من الإدارة' : 'ملاحظة'), h('span', 'row__meta', (n.author || '') + ' · ' + fmtDate(n.created_at)));
         if (isAdmin() || n.created_by === me.id) {
-          var del = h('button', 'link', 'حذف'); del.type = 'button';
-          del.addEventListener('click', function () { api('DELETE', 'announcements/' + n.id).then(function (r) { if (!r.ok) return oops(r); toast('تم حذف الملاحظة.'); go('#home'); }).catch(noop); });
-          head.appendChild(del);
+          head.appendChild(delBtn('حذف', 'link', function () { del('announcements/' + n.id, 'تم حذف الملاحظة.', function () { go('#home'); }); }));
         }
         add(m, head, h('p', 'memo__body', n.body));
         box.appendChild(m);
@@ -519,7 +528,11 @@
       function renderNotes(notes) {
         ul.textContent = '';
         if (!notes.length) ul.appendChild(h('li', 'empty', 'لا توجد ملاحظات بعد.'));
-        notes.forEach(function (n) { var li = h('li', null, n.body); li.appendChild(h('small', null, (n.staff_name || '—') + ' · ' + fmtDate(n.created_at))); ul.appendChild(li); });
+        notes.forEach(function (n) {
+          var li = h('li', null, n.body); var sm = h('small', null, (n.staff_name || '—') + ' · ' + fmtDate(n.created_at));
+          if (isAdmin() || n.staff_id === me.id) sm.appendChild(delBtn('حذف', 'link', function () { del('leads/' + l.id + '/notes/' + n.id, 'تم حذف الملاحظة.', function () { go('#lead/' + l.id); }); }));
+          li.appendChild(sm); ul.appendChild(li);
+        });
       }
       renderNotes(l.notes || []);
       var nf = h('form', 'form'); nf.noValidate = true;
@@ -538,6 +551,11 @@
       add(nf, ni, nb);
       add(pn, ul, nf);
       a2.appendChild(pn);
+      if (isAdmin()) {
+        var pd = panel('حذف الطلب');
+        a2.appendChild(add(pd, h('p', 'panel__hint', 'ينحذف الطلب عند الجميع، مع ملاحظاته ومواعيده.'),
+          delBtn('حذف الطلب', 'btn btn--sm btn--danger', function () { del('leads/' + l.id, 'تم حذف الطلب.', function () { go('#leads/open'); }); })));
+      }
       ui.body.appendChild(add(cols, a1, a2));
     }).catch(noop);
   };
@@ -648,7 +666,11 @@
       var pn = panel('ملاحظات الفريق على العميل');
       var ul = h('ul', 'notes');
       if (!res.notes.length) ul.appendChild(h('li', 'empty', 'لا توجد ملاحظات بعد.'));
-      res.notes.forEach(function (n) { var li = h('li', null, n.body); li.appendChild(h('small', null, (n.staff_name || '—') + ' · ' + fmtDate(n.created_at))); ul.appendChild(li); });
+      res.notes.forEach(function (n) {
+        var li = h('li', null, n.body); var sm = h('small', null, (n.staff_name || '—') + ' · ' + fmtDate(n.created_at));
+        if (isAdmin() || n.staff_id === me.id) sm.appendChild(delBtn('حذف', 'link', function () { del('customers/' + c.id + '/notes/' + n.id, 'تم حذف الملاحظة.', function () { go('#customer/' + c.id); }); }));
+        li.appendChild(sm); ul.appendChild(li);
+      });
       var nf = h('form', 'form'); nf.noValidate = true;
       var ni = input('textarea', { maxLength: 800, placeholder: 'اكتب ملاحظة على العميل، يشوفها الكل…' }); ni.setAttribute('aria-label', 'ملاحظة جديدة على العميل');
       var nb = h('button', 'btn btn--sm', 'حفظ الملاحظة'); nb.type = 'submit';
@@ -672,13 +694,8 @@
       a2.appendChild(pa);
       if (isAdmin()) {
         var pd = panel('حذف العميل');
-        var del = h('button', 'btn btn--sm btn--danger', 'حذف'); del.type = 'button';
-        var sure = false;
-        del.addEventListener('click', function () {
-          if (!sure) { sure = true; del.textContent = 'اضغط مرة ثانية للتأكيد'; return; }
-          api('DELETE', 'customers/' + c.id).then(function (r) { if (!r.ok) return oops(r); toast('تم حذف العميل.'); go('#customers/all'); }).catch(noop);
-        });
-        a2.appendChild(add(pd, h('p', 'panel__hint', 'يحذف ملف العميل فقط. طلباته ومواعيده تبقى.'), del));
+        a2.appendChild(add(pd, h('p', 'panel__hint', 'يحذف ملف العميل وملاحظاته عند الجميع. طلباته ومواعيده تبقى.'),
+          delBtn('حذف العميل', 'btn btn--sm btn--danger', function () { del('customers/' + c.id, 'تم حذف العميل.', function () { go('#customers/all'); }); })));
       }
       ui.body.appendChild(add(cols, a1, a2));
     }).catch(noop);
@@ -699,9 +716,7 @@
     else if (x.due && x.due === today && x.status !== 'done') { due.dataset.today = '1'; due.textContent = 'اليوم'; }
     var act = h('div', 'row__act'); act.appendChild(st);
     if (isAdmin() || x.created_by === me.id) {
-      var del = h('button', 'link', 'حذف'); del.type = 'button';
-      del.addEventListener('click', function () { api('DELETE', 'tasks/' + x.id).then(function (res) { if (!res.ok) return oops(res); toast('تم حذف المهمة.'); after(); }).catch(noop); });
-      act.appendChild(del);
+      act.appendChild(delBtn('حذف', 'link', function () { del('tasks/' + x.id, 'تم حذف المهمة.', after); }));
     }
     return add(r, who, due, act);
   }
@@ -762,7 +777,8 @@
       }).catch(noop);
     });
     var act = h('div', 'row__act');
-    add(act, st, a.lead_id ? hlink('btn btn--sm', 'الطلب #' + a.lead_id, '#lead/' + a.lead_id) : null);
+    add(act, st, a.lead_id ? hlink('btn btn--sm', 'الطلب #' + a.lead_id, '#lead/' + a.lead_id) : null,
+      isAdmin() ? delBtn('حذف', 'link', function () { del('appointments/' + a.id, 'تم حذف الموعد.', function () { route(); }); }) : null);
     return add(r, h('span', 'row__time', fmtTime(a.time)), who, ph, act);
   }
 
@@ -995,11 +1011,12 @@
           set.addEventListener('click', function () {
             api('PATCH', 'users/' + u.id, { password: np.value }).then(function (res) { if (!res.ok) return oops(res); np.value = ''; toast('تم تغيير كلمة مرور ' + u.name + '.'); }).catch(noop);
           });
-          r.appendChild(add(act, np, set, tog));
+          r.appendChild(add(act, np, set, tog, delBtn('حذف الموظف', 'btn btn--sm btn--danger', function () { del('users/' + u.id, 'تم حذف ' + u.name + '.', function () { go('#team'); }); })));
         }
         rows.appendChild(r);
       });
       a1.appendChild(add(p, rows));
+      if (admin) p.appendChild(h('p', 'panel__hint', 'الإيقاف يمنع الدخول ويحفظ السجل. الحذف يشيل الحساب نهائياً مع حضوره ومهامه وملاحظاته في لوحة الفريق.'));
       if (admin) a2.appendChild(userForm());
       ui.body.appendChild(admin ? add(cols, a1, a2) : a1);
     }).catch(noop);
