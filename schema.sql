@@ -98,4 +98,4 @@ CREATE TABLE IF NOT EXISTS announcements (
 -- Notes any member writes on a customer, visible to the whole team
 CREATE TABLE IF NOT EXISTS customer_notes (id INTEGER PRIMARY KEY AUTOINCREMENT, customer_id INTEGER NOT NULL, staff_id INTEGER, body TEXT NOT NULL, created_at TEXT NOT NULL);
 CREATE INDEX IF NOT EXISTS cnotes_customer ON customer_notes(customer_id);
--- staff.job (classification: chief | management | showroom_manager | designer | employee) is added by the API with ALTER TABLE on first use
+-- staff.job (classification: chief | management | showroom_manager | designer | employee) is added by the API with ALTER TABLE on first use; chief and management carry the manager's permissions

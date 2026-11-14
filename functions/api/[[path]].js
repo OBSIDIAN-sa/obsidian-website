@@ -191,7 +191,7 @@ async function currentStaff(env, request) {
   const token = cookie(request, 'obs_staff');
   if (!token || !/^[0-9a-f]{64}$/.test(token)) return null;
   const row = await env.DB.prepare(
-    'SELECT s.id, s.username, s.name, s.role, s.job FROM sessions x JOIN staff s ON s.id = x.staff_id WHERE x.token_hash = ? AND x.expires_at > ? AND s.active = 1'
+    "SELECT s.id, s.username, s.name, CASE WHEN s.job IN ('chief','management') THEN 'admin' ELSE s.role END AS role, s.job FROM sessions x JOIN staff s ON s.id = x.staff_id WHERE x.token_hash = ? AND x.expires_at > ? AND s.active = 1"
   ).bind(await sha256(token), epoch()).first();
   return row || null;
 }
@@ -333,7 +333,7 @@ async function ensureSchema(env) {
     env.DB.prepare('CREATE TABLE IF NOT EXISTS customer_notes (id INTEGER PRIMARY KEY AUTOINCREMENT, customer_id INTEGER NOT NULL, staff_id INTEGER, body TEXT NOT NULL, created_at TEXT NOT NULL)'),
     env.DB.prepare('CREATE INDEX IF NOT EXISTS cnotes_customer ON customer_notes(customer_id)'),
   ]);
-  // job = the member's classification (a label; permissions stay with role). Fails harmlessly once the column exists.
+  // job = the member's classification. 'chief' and 'management' carry the manager's permissions; the rest follow role. Fails harmlessly once the column exists.
   try { await env.DB.prepare('ALTER TABLE staff ADD COLUMN job TEXT').run(); } catch (e) {}
   schemaReady = true;
 }
@@ -381,7 +381,7 @@ async function staffRoutes(env, request, method, parts) {
     // hash even when the user doesn't exist, so timing doesn't reveal usernames
     const hash = await hashPassword(String(b.password || ''), row ? row.pass_salt : 'no-such-user-salt');
     if (!row || !safeEqual(hash, row.pass_hash)) return fail(401, 'credentials');
-    return json({ ok: true, user: { id: row.id, username: row.username, name: row.name, role: row.role } }, 200, {
+    return json({ ok: true, user: { id: row.id, username: row.username, name: row.name, role: row.job === 'chief' || row.job === 'management' ? 'admin' : row.role } }, 200, {
       'Set-Cookie': await startSession(env, request, row.id),
     });
   }
@@ -412,7 +412,7 @@ async function staffRoutes(env, request, method, parts) {
   /* ---- manager notes shown to the whole team ---- */
   if (parts[0] === 'announcements') {
     if (method === 'GET' && parts.length === 1) {
-      const rows = await env.DB.prepare('SELECT a.id, a.kind, a.body, a.created_at, a.created_by, s.name AS author, s.role AS author_role FROM announcements a LEFT JOIN staff s ON s.id = a.created_by ORDER BY a.id DESC LIMIT 30').all();
+      const rows = await env.DB.prepare("SELECT a.id, a.kind, a.body, a.created_at, a.created_by, s.name AS author, CASE WHEN s.job IN ('chief','management') THEN 'admin' ELSE s.role END AS author_role FROM announcements a LEFT JOIN staff s ON s.id = a.created_by ORDER BY a.id DESC LIMIT 30").all();
       return json({ ok: true, announcements: rows.results || [] });
     }
     if (method === 'POST' && parts.length === 1) {
@@ -588,7 +588,7 @@ async function staffRoutes(env, request, method, parts) {
       ).bind(...(all ? [from, to] : [from, to, me.id])).all();
       const records = (rows.results || []).map((r) => ({ ...r, minutes: minutes(r), by_admin: r.in_by !== r.staff_id || (r.out_by != null && r.out_by !== r.staff_id) }));
       let staff = [];
-      if (all) staff = (await env.DB.prepare('SELECT id, name, job, role FROM staff WHERE active = 1 ORDER BY id').all()).results || [];
+      if (all) staff = (await env.DB.prepare("SELECT id, name, job, CASE WHEN job IN ('chief','management') THEN 'admin' ELSE role END AS role FROM staff WHERE active = 1 ORDER BY id").all()).results || [];
       return json({ ok: true, today, from, to, records, staff });
     }
   }
@@ -707,7 +707,7 @@ async function staffRoutes(env, request, method, parts) {
   }
 
   if (method === 'GET' && route === 'users') {
-    const rows = await env.DB.prepare(admin ? 'SELECT id, username, name, role, job, active FROM staff ORDER BY id' : 'SELECT id, name, job, active FROM staff WHERE active = 1 ORDER BY id').all();
+    const rows = await env.DB.prepare(admin ? "SELECT id, username, name, CASE WHEN job IN ('chief','management') THEN 'admin' ELSE role END AS role, job, active FROM staff ORDER BY id" : 'SELECT id, name, job, active FROM staff WHERE active = 1 ORDER BY id').all();
     return json({ ok: true, users: rows.results || [] });
   }
 
@@ -736,6 +736,10 @@ async function staffRoutes(env, request, method, parts) {
       if (!b) return fail(400, 'bad_request');
       if (b.job !== undefined) {
         if (!JOBS.includes(b.job)) return fail(422, 'job');
+        if (id === me.id && b.job !== 'chief' && b.job !== 'management') {
+          const mine = await env.DB.prepare('SELECT role FROM staff WHERE id = ?').bind(id).first();
+          if (!mine || mine.role !== 'admin') return fail(422, 'self');
+        }
         await env.DB.prepare('UPDATE staff SET job = ? WHERE id = ?').bind(b.job, id).run();
       }
       if (b.active !== undefined) {
