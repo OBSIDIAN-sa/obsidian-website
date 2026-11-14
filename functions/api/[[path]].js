@@ -191,7 +191,7 @@ async function currentStaff(env, request) {
   const token = cookie(request, 'obs_staff');
   if (!token || !/^[0-9a-f]{64}$/.test(token)) return null;
   const row = await env.DB.prepare(
-    'SELECT s.id, s.username, s.name, s.role FROM sessions x JOIN staff s ON s.id = x.staff_id WHERE x.token_hash = ? AND x.expires_at > ? AND s.active = 1'
+    'SELECT s.id, s.username, s.name, s.role, s.job FROM sessions x JOIN staff s ON s.id = x.staff_id WHERE x.token_hash = ? AND x.expires_at > ? AND s.active = 1'
   ).bind(await sha256(token), epoch()).first();
   return row || null;
 }
@@ -330,15 +330,21 @@ async function ensureSchema(env) {
     env.DB.prepare('CREATE INDEX IF NOT EXISTS tasks_assigned ON tasks(assigned_to, status)'),
     env.DB.prepare(`CREATE TABLE IF NOT EXISTS announcements (
       id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL DEFAULT 'general', body TEXT NOT NULL, created_by INTEGER NOT NULL, created_at TEXT NOT NULL)`),
+    env.DB.prepare('CREATE TABLE IF NOT EXISTS customer_notes (id INTEGER PRIMARY KEY AUTOINCREMENT, customer_id INTEGER NOT NULL, staff_id INTEGER, body TEXT NOT NULL, created_at TEXT NOT NULL)'),
+    env.DB.prepare('CREATE INDEX IF NOT EXISTS cnotes_customer ON customer_notes(customer_id)'),
   ]);
+  // job = the member's classification (a label; permissions stay with role). Fails harmlessly once the column exists.
+  try { await env.DB.prepare('ALTER TABLE staff ADD COLUMN job TEXT').run(); } catch (e) {}
   schemaReady = true;
 }
+const JOBS = ['chief', 'management', 'showroom_manager', 'designer', 'employee'];
 const TASK_STATUS = ['todo', 'doing', 'done'];
 const NOTE_KINDS = ['general', 'task', 'vip'];
 const validDate = (d) => /^\d{4}-\d{2}-\d{2}$/.test(d || '');
 
 async function staffRoutes(env, request, method, parts) {
   const route = parts.join('/');
+  await ensureSchema(env);
 
   /* ---- no session needed ---- */
   if (method === 'GET' && route === 'me') {
@@ -390,7 +396,6 @@ async function staffRoutes(env, request, method, parts) {
   const me = await currentStaff(env, request);
   if (!me) return fail(401, 'login_required');
 
-  await ensureSchema(env);
   const admin = me.role === 'admin';
 
   // The full picture is for the manager; a member gets only what concerns them
@@ -407,19 +412,21 @@ async function staffRoutes(env, request, method, parts) {
   /* ---- manager notes shown to the whole team ---- */
   if (parts[0] === 'announcements') {
     if (method === 'GET' && parts.length === 1) {
-      const rows = await env.DB.prepare('SELECT a.id, a.kind, a.body, a.created_at, s.name AS author FROM announcements a LEFT JOIN staff s ON s.id = a.created_by ORDER BY a.id DESC LIMIT 20').all();
+      const rows = await env.DB.prepare('SELECT a.id, a.kind, a.body, a.created_at, a.created_by, s.name AS author, s.role AS author_role FROM announcements a LEFT JOIN staff s ON s.id = a.created_by ORDER BY a.id DESC LIMIT 30').all();
       return json({ ok: true, announcements: rows.results || [] });
     }
-    if (!admin) return fail(403, 'admin_only');
     if (method === 'POST' && parts.length === 1) {
       const b = await body(request);
       const text = clean(b && b.body, 600);
       if (!text) return fail(422, 'body');
       await env.DB.prepare('INSERT INTO announcements (kind, body, created_by, created_at) VALUES (?, ?, ?, ?)')
-        .bind(NOTE_KINDS.includes(b.kind) ? b.kind : 'general', text, me.id, nowIso()).run();
+        .bind(admin && NOTE_KINDS.includes(b.kind) ? b.kind : 'general', text, me.id, nowIso()).run();
       return json({ ok: true });
     }
     if (method === 'DELETE' && /^\d+$/.test(parts[1] || '')) {
+      const n = await env.DB.prepare('SELECT created_by FROM announcements WHERE id = ?').bind(+parts[1]).first();
+      if (!n) return fail(404, 'not_found');
+      if (!admin && n.created_by !== me.id) return fail(403, 'admin_only');
       await env.DB.prepare('DELETE FROM announcements WHERE id = ?').bind(+parts[1]).run();
       return json({ ok: true });
     }
@@ -511,7 +518,15 @@ async function staffRoutes(env, request, method, parts) {
       if (method === 'GET') {
         const leads = await env.DB.prepare('SELECT id, created_at, type, status FROM leads WHERE phone = ? ORDER BY id DESC LIMIT 20').bind(c.phone).all();
         const appts = await env.DB.prepare('SELECT id, date, time, status FROM appointments WHERE phone = ? ORDER BY date DESC, time DESC LIMIT 10').bind(c.phone).all();
-        return json({ ok: true, customer: c, leads: leads.results || [], appointments: appts.results || [] });
+        const notes = await env.DB.prepare('SELECT n.id, n.body, n.created_at, s.name AS staff_name FROM customer_notes n LEFT JOIN staff s ON s.id = n.staff_id WHERE n.customer_id = ? ORDER BY n.id DESC LIMIT 50').bind(id).all();
+        return json({ ok: true, customer: c, leads: leads.results || [], appointments: appts.results || [], notes: notes.results || [] });
+      }
+      if (method === 'POST' && parts[2] === 'notes') {
+        const b = await body(request);
+        const text = clean(b && b.body, 800);
+        if (!text) return fail(422, 'body');
+        await env.DB.prepare('INSERT INTO customer_notes (customer_id, staff_id, body, created_at) VALUES (?, ?, ?, ?)').bind(id, me.id, text, nowIso()).run();
+        return json({ ok: true });
       }
       if (method === 'PATCH') {
         const b = await body(request);
@@ -529,6 +544,7 @@ async function staffRoutes(env, request, method, parts) {
       }
       if (method === 'DELETE') {
         if (!admin) return fail(403, 'admin_only');
+        await env.DB.prepare('DELETE FROM customer_notes WHERE customer_id = ?').bind(id).run();
         await env.DB.prepare('DELETE FROM customers WHERE id = ?').bind(id).run();
         return json({ ok: true });
       }
@@ -572,7 +588,7 @@ async function staffRoutes(env, request, method, parts) {
       ).bind(...(all ? [from, to] : [from, to, me.id])).all();
       const records = (rows.results || []).map((r) => ({ ...r, minutes: minutes(r), by_admin: r.in_by !== r.staff_id || (r.out_by != null && r.out_by !== r.staff_id) }));
       let staff = [];
-      if (all) staff = (await env.DB.prepare('SELECT id, name FROM staff WHERE active = 1 ORDER BY id').all()).results || [];
+      if (all) staff = (await env.DB.prepare('SELECT id, name, job, role FROM staff WHERE active = 1 ORDER BY id').all()).results || [];
       return json({ ok: true, today, from, to, records, staff });
     }
   }
@@ -691,7 +707,7 @@ async function staffRoutes(env, request, method, parts) {
   }
 
   if (method === 'GET' && route === 'users') {
-    const rows = await env.DB.prepare(admin ? 'SELECT id, username, name, role, active FROM staff ORDER BY id' : 'SELECT id, name, active FROM staff WHERE active = 1 ORDER BY id').all();
+    const rows = await env.DB.prepare(admin ? 'SELECT id, username, name, role, job, active FROM staff ORDER BY id' : 'SELECT id, name, job, active FROM staff WHERE active = 1 ORDER BY id').all();
     return json({ ok: true, users: rows.results || [] });
   }
 
@@ -707,8 +723,8 @@ async function staffRoutes(env, request, method, parts) {
       if (!validPassword(b.password)) return fail(422, 'password');
       const salt = randomHex(16);
       try {
-        await env.DB.prepare('INSERT INTO staff (username, name, role, pass_hash, pass_salt, created_at) VALUES (?, ?, ?, ?, ?, ?)')
-          .bind(username, name, b.role === 'admin' ? 'admin' : 'staff', await hashPassword(b.password, salt), salt, nowIso()).run();
+        await env.DB.prepare('INSERT INTO staff (username, name, role, job, pass_hash, pass_salt, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+          .bind(username, name, b.role === 'admin' ? 'admin' : 'staff', JOBS.includes(b.job) ? b.job : 'employee', await hashPassword(b.password, salt), salt, nowIso()).run();
       } catch (e) {
         return fail(409, 'username_taken');
       }
@@ -718,6 +734,10 @@ async function staffRoutes(env, request, method, parts) {
       const id = +parts[1];
       const b = await body(request);
       if (!b) return fail(400, 'bad_request');
+      if (b.job !== undefined) {
+        if (!JOBS.includes(b.job)) return fail(422, 'job');
+        await env.DB.prepare('UPDATE staff SET job = ? WHERE id = ?').bind(b.job, id).run();
+      }
       if (b.active !== undefined) {
         if (id === me.id) return fail(422, 'self');
         await env.DB.prepare('UPDATE staff SET active = ? WHERE id = ?').bind(b.active ? 1 : 0, id).run();
