@@ -272,4 +272,35 @@ a.row--cust:hover { background: var(--ink); }
   .form__two, .facts { grid-template-columns: minmax(0, 1fr); }
   .stat b { font-size: 1.5rem; }
 }
+.memo[data-from='admin'][data-kind='general'] { background: var(--purple-bg); border-inline-start-color: var(--purple); }
+.memo[data-from='admin'][data-kind='general'] .tag { color: var(--purple); }
+.monthpick { display: inline-flex; align-items: center; gap: 0.6rem; margin-inline-end: auto; }
+.monthpick .input { inline-size: 11rem; min-block-size: 44px; background: var(--onyx); }
+.fold__act { margin-block-start: 0.9rem; }
+.row--user select.input { max-inline-size: 12rem; }
+
+/* ---- printable attendance sheet: hidden on screen, the only thing on paper ---- */
+.print { display: none; }
+@media print {
+  @page { size: A4; margin: 14mm; }
+  body { background: #fff; color: #000; }
+  .app { display: none !important; }
+  .print { display: block; font-size: 10.5pt; line-height: 1.5; }
+  .sheet { break-after: page; }
+  .sheet:last-child { break-after: auto; }
+  .sheet__head { display: flex; align-items: center; gap: 12pt; padding-block-end: 8pt; border-block-end: 1.5pt solid #000; }
+  .sheet__head img { inline-size: 44pt; block-size: 44pt; }
+  .sheet__head h1 { font-size: 15pt; font-weight: 700; }
+  .sheet__info { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2pt 16pt; margin-block: 8pt; }
+  .sheet__info div { display: flex; gap: 6pt; }
+  .sheet__info dt { font-weight: 700; } .sheet__info dt::after { content: ':'; }
+  .sheet__table { inline-size: 100%; border-collapse: collapse; }
+  .sheet__table th, .sheet__table td { border: 0.5pt solid #000; padding: 1.5pt 5pt; text-align: start; font-size: 9.5pt; line-height: 1.35; }
+  .sheet__table th { background: #eee; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .sheet__table .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .sheet__total { margin-block: 8pt; font-weight: 700; }
+  .sheet__sign { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20pt; margin-block-start: 22pt; }
+  .sheet__sign div { border-block-start: 0.5pt solid #000; padding-block-start: 4pt; text-align: center; }
+  .sheet__foot { margin-block-start: 10pt; font-size: 8pt; color: #444; }
+}
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: 0.01ms !important; animation: none !important; } }

@@ -94,3 +94,8 @@ CREATE INDEX IF NOT EXISTS tasks_assigned ON tasks(assigned_to, status);
 -- Manager notes shown to everyone: kind is general | task | vip
 CREATE TABLE IF NOT EXISTS announcements (
   id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL DEFAULT 'general', body TEXT NOT NULL, created_by INTEGER NOT NULL, created_at TEXT NOT NULL);
+
+-- Notes any member writes on a customer, visible to the whole team
+CREATE TABLE IF NOT EXISTS customer_notes (id INTEGER PRIMARY KEY AUTOINCREMENT, customer_id INTEGER NOT NULL, staff_id INTEGER, body TEXT NOT NULL, created_at TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS cnotes_customer ON customer_notes(customer_id);
+-- staff.job (classification: chief | management | showroom_manager | designer | employee) is added by the API with ALTER TABLE on first use
