@@ -79,3 +79,18 @@ CREATE TABLE IF NOT EXISTS attendance (
 );
 CREATE INDEX IF NOT EXISTS att_staff_date ON attendance(staff_id, date);
 CREATE INDEX IF NOT EXISTS att_date ON attendance(date);
+
+-- Customers register: shared by the whole team (the API also creates these three tables on first use)
+CREATE TABLE IF NOT EXISTS customers (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, phone TEXT NOT NULL UNIQUE, city TEXT, address TEXT, type TEXT, note TEXT,
+  vip INTEGER NOT NULL DEFAULT 0, lead_id INTEGER, created_by INTEGER, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+
+-- Tasks: status is todo | doing | done
+CREATE TABLE IF NOT EXISTS tasks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, note TEXT, assigned_to INTEGER NOT NULL, created_by INTEGER NOT NULL,
+  due TEXT, status TEXT NOT NULL DEFAULT 'todo', created_at TEXT NOT NULL, done_at TEXT);
+CREATE INDEX IF NOT EXISTS tasks_assigned ON tasks(assigned_to, status);
+
+-- Manager notes shown to everyone: kind is general | task | vip
+CREATE TABLE IF NOT EXISTS announcements (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL DEFAULT 'general', body TEXT NOT NULL, created_by INTEGER NOT NULL, created_at TEXT NOT NULL);
