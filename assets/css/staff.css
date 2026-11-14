@@ -263,6 +263,8 @@ a.row--cust:hover { background: var(--ink); }
   .row--cust .star { grid-column: 1 / -1; }
   .row--task { grid-template-columns: minmax(0, 1fr) auto; }
   .row--task .row__act { grid-column: 1 / -1; }
+  .rowline > .link, .rowline__gap { inline-size: auto; min-inline-size: 3rem; }
+  .rowline:has(.row--head) { display: none; }
   .row--act { grid-template-columns: minmax(0, 1fr) auto; }
   .row--act .act { grid-column: 1 / -1; }
   .row--day { grid-template-columns: minmax(0, 1fr) auto; }
@@ -296,6 +298,10 @@ a.row--cust:hover { background: var(--ink); }
 .bullets { display: grid; gap: 0.4rem; padding-inline-start: 1.1rem; list-style: disc; color: var(--bone); }
 .row--roll .row__act { flex-wrap: nowrap; }
 .absline { margin-block-start: 0.6rem; color: var(--rose); }
+.rowline { display: flex; align-items: center; gap: 0.5rem; border-block-end: 1px solid var(--hairline); }
+.rowline:last-child { border-block-end: 0; }
+.rowline > .row { flex: 1; border-block-end: 0; }
+.rowline > .link, .rowline__gap { flex: none; inline-size: 6.5rem; text-align: center; }
 .print { display: none; }
 @media print {
   @page { size: A4; margin: 14mm; }

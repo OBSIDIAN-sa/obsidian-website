@@ -188,6 +188,8 @@
     });
     return b;
   }
+  // A list row with its own delete control beside it (head of management only)
+  function rowLine(row, btn) { var w = h('div', 'rowline'); add(w, row, btn || h('span', 'rowline__gap')); return w; }
   function del(path, done, after) { api('DELETE', path).then(function (r) { if (!r.ok) return oops(r); toast(done); after(); }).catch(noop); }
   function hlink(cls, text, href) { var a = h('a', cls, text); a.href = href; return a; }
   function panel(title, moreLabel, moreHref) {
@@ -420,8 +422,12 @@
       else {
         var head = h('div', 'row row--lead row--head'); head.setAttribute('aria-hidden', 'true');
         add(head, h('span', null, 'الرقم'), h('span', null, 'العميل'), h('span', null, 'النوع'), h('span', null, 'التاريخ والمسؤول'), h('span', null, 'الحالة'));
-        var rows = h('div', 'rows'); rows.appendChild(head);
-        leads.forEach(function (l) { rows.appendChild(leadRow(l)); });
+        var rows = h('div', 'rows');
+        var chief = iAmChief();
+        rows.appendChild(chief ? rowLine(head) : head);
+        leads.forEach(function (l) {
+          rows.appendChild(chief ? rowLine(leadRow(l), delBtn('حذف', 'link', function () { del('leads/' + l.id, 'تم حذف الطلب #' + l.id + '.', route); })) : leadRow(l));
+        });
         p.appendChild(rows);
       }
       ui.body.appendChild(p);
@@ -636,8 +642,12 @@
       else {
         var head = h('div', 'row row--cust row--head'); head.setAttribute('aria-hidden', 'true');
         add(head, h('span', null, 'العميل'), h('span', null, 'الجوال'), h('span', null, 'المدينة'), h('span', null, 'النوع'), h('span'));
-        var rows = h('div', 'rows'); rows.appendChild(head);
-        list.forEach(function (c) { rows.appendChild(customerRow(c)); });
+        var rows = h('div', 'rows');
+        var chief = iAmChief();
+        rows.appendChild(chief ? rowLine(head) : head);
+        list.forEach(function (c) {
+          rows.appendChild(chief ? rowLine(customerRow(c), delBtn('حذف', 'link', function () { del('customers/' + c.id, 'تم حذف العميل.', route); })) : customerRow(c));
+        });
         p.appendChild(rows);
       }
       ui.body.appendChild(p);
