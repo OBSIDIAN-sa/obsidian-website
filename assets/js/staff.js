@@ -1,4 +1,4 @@
-/* OBSIDIAN DESIGN — staff console. Talks to /api/staff/*. Every customer-supplied string is written with
+/* OBSIDIAN DESIGN — staff dashboard. Talks to /api/staff/*. Every customer-supplied string is written with
    textContent, never as HTML. */
 (function () {
   'use strict';
@@ -127,247 +127,370 @@
     (setup ? key : user).focus();
   }
 
-  /* ------------------------------------------------------------ console */
-  function consoleView() {
+  /* ------------------------------------------------------------ dashboard shell */
+  var seq = 0;            // every navigation gets a number; late answers from an older page are dropped
+  var PAGES = {};
+  var NAV = [['home', 'الرئيسية'], ['leads', 'الطلبات'], ['appts', 'المواعيد'], ['att', 'الحضور'], ['team', 'الفريق'], ['account', 'حسابي']];
+  var ICON = {
+    home: 'M4 11l8-7 8 7v9h-5v-6H9v6H4z',
+    leads: 'M5 4h14v16H5zM8 9h8M8 13h8M8 17h5',
+    appts: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4',
+    att: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2',
+    team: 'M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM3 20c0-3 2.5-5 6-5s6 2 6 5M17 11a2.5 2.5 0 1 0 0-5M17 15c2.5.3 4 2 4 5',
+    account: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM5 21c0-4 3-6 7-6s7 2 7 6',
+  };
+  function icon(name) {
+    var s = h('span', 'ico');
+    s.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.25"><path d="' + ICON[name] + '"/></svg>';
+    return s;
+  }
+  function noop() {}
+  function live(t) { return t === seq; }
+  function go(hash) { if (location.hash === hash) route(); else location.hash = hash; }
+  function logout() { api('POST', 'logout', {}).then(function () { me = null; location.hash = ''; gate(false); }).catch(noop); }
+  function toast(text) {
+    ui.toast.textContent = text; ui.toast.classList.add('is-on');
+    clearTimeout(ui.tt); ui.tt = setTimeout(function () { ui.toast.classList.remove('is-on'); }, 3500);
+  }
+  function oops(res) { toast(errText(res && res.error)); }
+  function setTitle(text) { ui.title.textContent = text; document.title = text + ' · فريق أوبسيديان'; }
+  function empty(text) { return h('p', 'empty', text); }
+  function hlink(cls, text, href) { var a = h('a', cls, text); a.href = href; return a; }
+  function panel(title, moreLabel, moreHref) {
+    var p = h('section', 'panel');
+    var head = h('div', 'panel__head');
+    add(head, h('h2', null, title), moreLabel ? hlink('panel__more', moreLabel, moreHref) : null);
+    p.appendChild(head);
+    return p;
+  }
+  function tabs(items, active, base) {
+    var n = h('nav', 'tabs'); n.setAttribute('aria-label', 'تصفية');
+    items.forEach(function (it) {
+      var a = hlink('tab', it[1], '#' + base + '/' + it[0]);
+      if (it[0] === active) a.setAttribute('aria-current', 'page');
+      n.appendChild(a);
+    });
+    return n;
+  }
+  // GET for the current page: shows a loading line, drops the answer if the user already moved on
+  function fetchPage(t, paths) {
+    var l = h('p', 'loading', 'جارٍ التحميل…'); ui.body.appendChild(l);
+    return Promise.all(paths.map(function (p) { return api('GET', p); })).then(function (all) {
+      if (!live(t)) throw new Error('stale');
+      l.remove();
+      if (!all[0].ok) { ui.body.appendChild(empty(errText(all[0].error))); throw new Error('failed'); }
+      return all;
+    });
+  }
+
+  function shell() {
     app.textContent = '';
-    var c = h('div', 'console');
-    var bar = h('header', 'bar');
-    var logo = h('img'); logo.src = '../assets/img/logo-160.png'; logo.alt = ''; logo.width = 36; logo.height = 36;
-    var title = h('div', 'bar__title');
-    add(title, h('b', null, 'مساعد الفريق'), h('span', null, me.name + (me.role === 'admin' ? ' · مدير' : '')));
-    var out = h('button', 'btn btn--sm btn--quiet', 'خروج'); out.type = 'button';
-    out.addEventListener('click', function () { api('POST', 'logout', {}).then(function () { me = null; gate(false); }); });
-    add(bar, logo, title, out);
+    var s = h('div', 'shell');
 
-    ui.log = h('div', 'log'); ui.log.setAttribute('role', 'log'); ui.log.setAttribute('aria-live', 'polite'); ui.log.tabIndex = 0;
-
-    var chips = h('nav', 'chips'); chips.setAttribute('aria-label', 'اختصارات');
-    var list = [
-      ['الملخص', showSummary], ['طلبات جديدة', function () { showLeads('status=new', 'الطلبات الجديدة') }],
-      ['الطلبات المفتوحة', function () { showLeads('status=open', 'الطلبات المفتوحة') }], ['طلباتي', function () { showLeads('mine=1', 'الطلبات المسندة لك') }],
-      ['مواعيد اليوم', function () { showAppts('today', 'مواعيد اليوم') }], ['مواعيد الأسبوع', function () { showAppts('week', 'مواعيد الأسبوع') }],
-      ['إضافة طلب', addLeadForm], ['الحضور والانصراف', showMyAttendance],
-    ];
-    if (me.role === 'admin') list.push(['التحضير', showRollCall], ['تقرير الحضور', showAttendanceReport]);
-    list.push(['الموظفون', showUsers], ['كلمة المرور', passwordForm]);
-    list.forEach(function (it) {
-      var b = h('button', 'chip', it[0]); b.type = 'button';
-      b.addEventListener('click', function () { if (!busy) { echo(it[0]); it[1](); } });
-      chips.appendChild(b);
+    var side = h('aside', 'side');
+    var brand = h('div', 'side__brand');
+    var logo = h('img'); logo.src = '../assets/img/logo-160.png'; logo.alt = ''; logo.width = 40; logo.height = 40;
+    var bt = h('div'); add(bt, h('b', null, 'أوبسيديان ديزاين'), h('span', null, 'بوابة الفريق'));
+    add(brand, logo, bt);
+    var nav = h('nav', 'nav'); nav.setAttribute('aria-label', 'الأقسام');
+    ui.nav = {};
+    NAV.forEach(function (it) {
+      var a = hlink('nav__item', null, '#' + it[0]);
+      add(a, icon(it[0]), h('span', null, it[1]));
+      ui.nav[it[0]] = a; nav.appendChild(a);
     });
+    var foot = h('div', 'side__foot');
+    var who = h('div', 'side__who'); add(who, h('b', null, me.name), h('span', null, me.role === 'admin' ? 'مدير' : 'موظف'));
+    var out = h('button', 'btn btn--sm', 'خروج'); out.type = 'button'; out.addEventListener('click', logout);
+    add(foot, who, out);
+    add(side, brand, nav, foot);
 
-    var ask = h('form', 'ask'); ask.noValidate = true;
-    ui.input = h('input'); ui.input.type = 'text'; ui.input.maxLength = 500; ui.input.autocomplete = 'off';
-    ui.input.placeholder = 'اسأل، أو ابحث باسم أو جوال أو رقم طلب…';
-    ui.input.setAttribute('aria-label', ui.input.placeholder);
-    var send = h('button'); send.type = 'submit'; send.setAttribute('aria-label', 'إرسال');
-    send.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="square"><path d="M4 12h15M13 6l6 6-6 6"/></svg>';
-    add(ask, ui.input, send);
-    ask.addEventListener('submit', function (e) {
+    var main = h('div', 'main');
+    var top = h('header', 'top');
+    ui.title = h('h1', 'top__title');
+    var sf = h('form', 'search'); sf.noValidate = true; sf.setAttribute('role', 'search');
+    var si = h('input'); si.type = 'search'; si.maxLength = 80; si.autocomplete = 'off';
+    si.placeholder = 'بحث: اسم، جوال، أو رقم طلب';
+    si.setAttribute('aria-label', si.placeholder);
+    var sb = h('button', null, 'بحث'); sb.type = 'submit';
+    sf.addEventListener('submit', function (e) {
       e.preventDefault();
-      var v = ui.input.value.trim();
-      if (!v || busy) return;
-      ui.input.value = '';
-      echo(v);
-      onText(v);
+      var q = toLatinDigits(si.value).trim(); if (!q) return;
+      si.value = '';
+      if (/^#\s*\d{1,6}$/.test(q) || /^\d{1,3}$/.test(q)) return go('#lead/' + q.replace(/\D/g, ''));
+      go('#leads/q/' + encodeURIComponent(q));
     });
+    add(sf, si, sb);
+    add(top, ui.title, sf);
+    ui.body = h('div', 'body');
+    ui.toast = h('div', 'toast'); ui.toast.setAttribute('role', 'status');
+    add(main, top, ui.body);
 
-    add(app, add(c, bar, ui.log, chips, ask));
+    add(app, add(s, side, main), ui.toast);
     app.setAttribute('aria-busy', 'false');
-    say('هلا ' + me.name.split(' ')[0] + '. هذا وضع اليوم:');
-    showSummary();
-    ui.input.focus();
+    route();
   }
 
-  function scroll(node) { if (node && node.scrollIntoView) node.scrollIntoView({ block: 'start' }); else ui.log.scrollTop = ui.log.scrollHeight; }
-  function say(text) { var m = h('div', 'msg msg--bot', text); ui.log.appendChild(m); ui.log.scrollTop = ui.log.scrollHeight; return m; }
-  function echo(text) { ui.log.appendChild(h('div', 'msg msg--user', text)); ui.log.scrollTop = ui.log.scrollHeight; }
-  function wide(node) { var m = h('div', 'msg msg--wide'); m.appendChild(node); ui.log.appendChild(m); scroll(m); return m; }
-  function typing(on) {
-    busy = on;
-    if (ui.typing) { ui.typing.remove(); ui.typing = null; }
-    if (on) { ui.typing = add(h('div', 'typing'), h('i'), h('i'), h('i')); ui.log.appendChild(ui.typing); ui.log.scrollTop = ui.log.scrollHeight; }
+  function route() {
+    if (!me || !ui.body) return;
+    var hash = location.hash || '#home';
+    var parts = hash.replace(/^#/, '').split('/');
+    var page = PAGES[parts[0]] ? parts[0] : 'home';
+    var t = ++seq;
+    var section = page === 'lead' ? 'leads' : page;
+    NAV.forEach(function (it) {
+      if (it[0] === section) ui.nav[it[0]].setAttribute('aria-current', 'page'); else ui.nav[it[0]].removeAttribute('aria-current');
+    });
+    ui.from = ui.here; ui.here = hash;
+    ui.body.textContent = '';
+    window.scrollTo(0, 0);
+    PAGES[page](parts.slice(1), t);
   }
-  function load(method, path, payload) {
-    typing(true);
-    return api(method, path, payload).then(function (res) { typing(false); return res; }, function (e) { typing(false); throw e; });
-  }
-  function oops(res) { say(errText(res && res.error)); }
+  window.addEventListener('hashchange', route);
 
-  /* ------------------------------------------------------------ summary */
-  function showSummary() {
-    load('GET', 'summary').then(function (res) {
-      if (!res.ok) return oops(res);
-      var s = res.summary;
+  /* ------------------------------------------------------------ home */
+  PAGES.home = function (_, t) {
+    setTitle('الرئيسية');
+    fetchPage(t, ['summary', 'attendance', 'appointments?range=today', 'leads?status=new']).then(function (all) {
+      var s = all[0].summary, att = all[1], ap = all[2], nl = all[3];
+      ui.body.appendChild(h('p', 'hello', 'هلا ' + me.name.split(' ')[0] + (att.ok ? ' — ' + fmtDay(att.today) : '')));
+
       var grid = h('div', 'stats');
-      function stat(n, label, act) {
-        var b = h('button', 'stat'); b.type = 'button';
-        add(b, h('b', null, String(n)), h('span', null, label));
-        b.addEventListener('click', function () { if (!busy) { echo(label); act(); } });
-        grid.appendChild(b);
-      }
-      stat(s.counts.new, 'طلبات جديدة', function () { showLeads('status=new', 'الطلبات الجديدة'); });
-      stat(s.total - s.counts.won - s.counts.closed, 'طلبات مفتوحة', function () { showLeads('status=open', 'الطلبات المفتوحة'); });
-      stat(s.today_appointments, 'مواعيد اليوم', function () { showAppts('today', 'مواعيد اليوم'); });
-      stat(s.upcoming_appointments, 'مواعيد قادمة', function () { showAppts('upcoming', 'المواعيد القادمة'); });
-      stat(s.pending_appointments, 'بانتظار التأكيد', function () { showAppts('upcoming', 'المواعيد القادمة'); });
-      stat(s.week, 'طلبات آخر 7 أيام', function () { showLeads('', 'آخر الطلبات'); });
-      wide(grid);
-    }).catch(function () {});
+      function stat(n, label, href) { var a = hlink('stat', null, href); add(a, h('b', null, String(n)), h('span', null, label)); grid.appendChild(a); }
+      stat(s.counts.new, 'طلبات جديدة', '#leads/new');
+      stat(s.total - s.counts.won - s.counts.closed, 'طلبات مفتوحة', '#leads/open');
+      stat(s.today_appointments, 'مواعيد اليوم', '#appts/today');
+      stat(s.upcoming_appointments, 'مواعيد قادمة', '#appts/upcoming');
+      stat(s.pending_appointments, 'بانتظار التأكيد', '#appts/upcoming');
+      stat(s.week, 'طلبات آخر 7 أيام', '#leads/all');
+      ui.body.appendChild(grid);
+
+      var cols = h('div', 'cols cols--home');
+      var a1 = h('div', 'col'), a2 = h('div', 'col');
+
+      var pa = panel('مواعيد اليوم', 'كل المواعيد', '#appts/week');
+      if (ap.ok && ap.appointments.length) { var ra = h('div', 'rows'); ap.appointments.forEach(function (a) { ra.appendChild(apptRow(a)); }); pa.appendChild(ra); }
+      else pa.appendChild(empty('لا توجد مواعيد اليوم.'));
+
+      var pl = panel('طلبات جديدة تنتظر التواصل', 'كل الطلبات', '#leads/open');
+      if (nl.ok && nl.leads.length) { var rl = h('div', 'rows'); nl.leads.slice(0, 6).forEach(function (l) { rl.appendChild(leadRow(l)); }); pl.appendChild(rl); }
+      else pl.appendChild(empty('لا توجد طلبات جديدة.'));
+      add(a1, pa, pl);
+
+      if (att.ok) a2.appendChild(punchPanel(att, function () { go('#home'); }));
+      a2.appendChild(askPanel());
+      ui.body.appendChild(add(cols, a1, a2));
+    }).catch(noop);
+  };
+
+  function askPanel() {
+    var p = panel('اسأل المساعد');
+    p.appendChild(h('p', 'panel__hint', 'سؤال عن الطلبات والمواعيد، مثل: كم طلب مطبخ هذا الأسبوع؟'));
+    var f = h('form', 'inline'); f.noValidate = true;
+    var q = input('text', { maxLength: 500, autocomplete: 'off', placeholder: 'اكتب سؤالك…' }); q.setAttribute('aria-label', 'سؤال للمساعد');
+    var b = h('button', 'btn btn--sm', 'اسأل'); b.type = 'submit';
+    var ans = h('p', 'answer'); ans.setAttribute('aria-live', 'polite');
+    f.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var v = q.value.trim(); if (!v || b.disabled) return;
+      b.disabled = true; ans.textContent = 'لحظة…';
+      api('POST', 'ask', { question: v }).then(function (res) {
+        b.disabled = false;
+        ans.textContent = res.ok && res.reply ? res.reply : 'المساعد غير متاح الآن (ممكن خلص حد اليوم). استخدم البحث فوق أو صفحة الطلبات.';
+      }).catch(function () { b.disabled = false; ans.textContent = ''; });
+    });
+    add(f, q, b);
+    return add(p, f, ans);
   }
 
   /* ------------------------------------------------------------ leads */
-  function showLeads(query, title) {
-    return load('GET', 'leads' + (query ? '?' + query : '')).then(function (res) {
-      if (!res.ok) return oops(res);
-      if (!res.leads.length) { say(title + ': لا يوجد.'); return 0; }
-      say(title + ' (' + res.leads.length + '):');
-      var box = h('div', 'cards');
-      res.leads.forEach(function (l) { box.appendChild(leadCard(l, false)); });
-      wide(box);
-      return res.leads.length;
-    }).catch(function () { return 0; });
-  }
-
-  function leadCard(l, full) {
-    var card = h('article', 'card');
-    var top = h('div', 'card__top');
+  function leadRow(l) {
+    var a = hlink('row row--lead', null, '#lead/' + l.id);
     var badge = h('span', 'badge', LEAD_STATUS[l.status] || l.status); badge.dataset.s = l.status;
-    add(top, h('span', 'card__id', '#' + l.id), h('span', 'card__name', l.name), h('span', 'card__meta', l.type || 'بدون نوع'), badge);
-    card.appendChild(top);
-    card.appendChild(h('p', 'card__meta', fmtDate(l.created_at) + (l.source === 'staff' ? ' · أضافه الفريق' : ' · من الموقع') + (l.assigned_name ? ' · مسند إلى ' + l.assigned_name : '')));
-    card.appendChild(phoneRow(l.phone, 'مرحباً ' + l.name + '، معك أوبسيديان ديزاين بخصوص طلبك.'));
-    if (l.note) card.appendChild(h('p', 'card__note', l.note));
-
-    var row = h('div', 'card__row');
-    var st = select(LEAD_STATUS, l.status); st.setAttribute('aria-label', 'حالة الطلب #' + l.id);
-    st.addEventListener('change', function () {
-      api('PATCH', 'leads/' + l.id, { status: st.value }).then(function (res) {
-        if (!res.ok) { st.value = l.status; return oops(res); }
-        l.status = st.value; badge.textContent = LEAD_STATUS[st.value]; badge.dataset.s = st.value;
-      }).catch(function () {});
-    });
-    row.appendChild(st);
-    if (!full) {
-      var more = h('button', 'btn btn--sm', 'التفاصيل والملاحظات'); more.type = 'button';
-      more.addEventListener('click', function () { if (!busy) openLead(l.id); });
-      row.appendChild(more);
-    }
-    card.appendChild(row);
-    if (!full) return card;
-
-    // assignment
-    var opts = { '': 'غير مسند' };
-    users.filter(function (u) { return u.active; }).forEach(function (u) { opts[u.id] = u.name; });
-    var as = select(opts, l.assigned_to == null ? '' : String(l.assigned_to)); as.setAttribute('aria-label', 'إسناد الطلب');
-    as.addEventListener('change', function () {
-      api('PATCH', 'leads/' + l.id, { assigned_to: as.value === '' ? null : +as.value }).then(function (res) { if (!res.ok) oops(res); }).catch(function () {});
-    });
-    row.appendChild(as);
-
-    if (l.appointments && l.appointments.length) {
-      var sa = h('div', 'card__sub'); sa.appendChild(h('h3', null, 'المواعيد'));
-      l.appointments.forEach(function (a) { sa.appendChild(h('p', 'card__note', fmtDay(a.date) + ' — ' + fmtTime(a.time) + ' · ' + (APPT_STATUS[a.status] || a.status))); });
-      card.appendChild(sa);
-    }
-    var sn = h('div', 'card__sub'); sn.appendChild(h('h3', null, 'الملاحظات'));
-    var ul = h('ul', 'notes');
-    function renderNotes(notes) {
-      ul.textContent = '';
-      if (!notes.length) ul.appendChild(h('li', 'card__meta', 'لا توجد ملاحظات بعد.'));
-      notes.forEach(function (n) { var li = h('li', null, n.body); li.appendChild(h('small', null, (n.staff_name || '—') + ' · ' + fmtDate(n.created_at))); ul.appendChild(li); });
-    }
-    renderNotes(l.notes || []);
-    var nf = h('form', 'card__row'); nf.noValidate = true;
-    var ni = input('text', { maxLength: 800, placeholder: 'اكتب ملاحظة…' }); ni.setAttribute('aria-label', 'ملاحظة جديدة');
-    var nb = h('button', 'btn btn--sm', 'حفظ'); nb.type = 'submit';
-    nf.addEventListener('submit', function (e) {
-      e.preventDefault();
-      var v = ni.value.trim(); if (!v) return;
-      nb.disabled = true;
-      api('POST', 'leads/' + l.id + '/notes', { body: v }).then(function (res) {
-        nb.disabled = false;
-        if (!res.ok) return oops(res);
-        ni.value = ''; renderNotes(res.lead.notes);
-      }).catch(function () { nb.disabled = false; });
-    });
-    add(nf, ni, nb);
-    add(sn, ul, nf);
-    card.appendChild(sn);
-    return card;
+    add(a, h('span', 'row__id', '#' + l.id), h('span', 'row__name', l.name), h('span', 'row__type', l.type || 'بدون نوع'),
+      h('span', 'row__meta', fmtDate(l.created_at) + (l.assigned_name ? ' · ' + l.assigned_name : '')), badge);
+    return a;
   }
 
-  function openLead(id) {
-    return load('GET', 'leads/' + id).then(function (res) {
-      if (!res.ok) { say('ما لقيت طلب بالرقم #' + id + '.'); return; }
-      wide(leadCard(res.lead, true));
-    }).catch(function () {});
-  }
+  PAGES.leads = function (args, t) {
+    var tab = args[0] || 'new';
+    var q = '';
+    if (tab === 'q') { try { q = decodeURIComponent(args.slice(1).join('/')); } catch (e) { q = ''; } }
+    setTitle('الطلبات');
+    var bar = h('div', 'toolbar');
+    var addBtn = hlink('btn btn--sm btn--solid', 'إضافة طلب', '#leads/add');
+    add(bar, tabs([['new', 'جديدة'], ['open', 'مفتوحة'], ['mine', 'طلباتي'], ['all', 'الكل']], tab, 'leads'), addBtn);
+    ui.body.appendChild(bar);
+    if (tab === 'add') return ui.body.appendChild(leadForm());
+    var path = { new: 'leads?status=new', open: 'leads?status=open', mine: 'leads?mine=1', all: 'leads' }[tab];
+    if (tab === 'q') path = 'leads?q=' + encodeURIComponent(q);
+    if (!path) path = 'leads?status=new';
+    fetchPage(t, [path]).then(function (all) {
+      var leads = all[0].leads;
+      var title = tab === 'q' ? 'نتائج البحث عن «' + q + '»' : { new: 'الطلبات الجديدة', open: 'الطلبات المفتوحة', mine: 'الطلبات المسندة لك', all: 'كل الطلبات' }[tab] || 'الطلبات الجديدة';
+      var p = panel(title + ' (' + leads.length + ')');
+      if (!leads.length) p.appendChild(empty(tab === 'q' ? 'ما فيه طلب يطابق البحث.' : 'لا يوجد.'));
+      else {
+        var head = h('div', 'row row--lead row--head'); head.setAttribute('aria-hidden', 'true');
+        add(head, h('span', null, 'الرقم'), h('span', null, 'العميل'), h('span', null, 'النوع'), h('span', null, 'التاريخ والمسؤول'), h('span', null, 'الحالة'));
+        var rows = h('div', 'rows'); rows.appendChild(head);
+        leads.forEach(function (l) { rows.appendChild(leadRow(l)); });
+        p.appendChild(rows);
+      }
+      ui.body.appendChild(p);
+    }).catch(noop);
+  };
 
-  function addLeadForm() {
-    var f = h('form', 'card formcard'); f.noValidate = true;
+  function leadForm() {
+    var p = panel('طلب جديد (عميل حضر أو اتصل)');
+    var f = h('form', 'form'); f.noValidate = true;
     var name = input('text', { required: true });
     var phone = input('tel', { dir: 'ltr', inputMode: 'tel', required: true });
     var typeOpts = { '': 'اختر نوع المشروع' }; TYPES.forEach(function (x) { typeOpts[x] = x; });
     var type = select(typeOpts, '');
     var note = input('textarea', { maxLength: 600 });
     var err = h('p', 'err'); err.setAttribute('role', 'alert');
-    var btn = h('button', 'btn', 'حفظ الطلب'); btn.type = 'submit';
-    add(f, h('h2', null, 'طلب جديد (عميل حضر أو اتصل)'), field('الاسم', name), field('رقم الجوال', phone), field('نوع المشروع', type), field('ملاحظات', note), err, btn);
+    var btn = h('button', 'btn btn--solid', 'حفظ الطلب'); btn.type = 'submit';
+    var two = h('div', 'form__two'); add(two, field('الاسم', name), field('رقم الجوال', phone));
+    add(f, two, field('نوع المشروع', type), field('ملاحظات', note), err, btn);
     f.addEventListener('submit', function (e) {
       e.preventDefault();
+      if (btn.disabled) return;
       err.textContent = ''; btn.disabled = true;
       api('POST', 'leads', { name: name.value.trim(), phone: phone.value.trim(), type: type.value, note: note.value.trim() }).then(function (res) {
         btn.disabled = false;
         if (!res.ok) { err.textContent = errText(res.error); return; }
-        f.parentNode.remove();
-        say('تم حفظ الطلب #' + res.lead.id + '.');
-        wide(leadCard(res.lead, true));
+        toast('تم حفظ الطلب #' + res.lead.id + '.');
+        go('#lead/' + res.lead.id);
       }).catch(function () { btn.disabled = false; });
     });
-    wide(f); name.focus();
+    p.appendChild(f);
+    setTimeout(function () { name.focus(); }, 0);
+    return p;
   }
 
-  /* ------------------------------------------------------------ appointments */
-  function showAppts(range, title) {
-    load('GET', 'appointments?range=' + range).then(function (res) {
-      if (!res.ok) return oops(res);
-      if (!res.appointments.length) return say(title + ': لا يوجد.');
-      say(title + ' (' + res.appointments.length + '):');
-      var box = h('div', 'cards');
-      var lastDay = '';
-      res.appointments.forEach(function (a) {
-        if (a.date !== lastDay) { lastDay = a.date; box.appendChild(h('p', 'day', (a.date === res.today ? 'اليوم — ' : '') + fmtDay(a.date))); }
-        box.appendChild(apptCard(a));
+  PAGES.lead = function (args, t) {
+    var id = +args[0] || 0;
+    setTitle('الطلب #' + id);
+    var back = ui.from && /^#(leads|appts|home)/.test(ui.from) ? ui.from : '#leads/open';
+    ui.body.appendChild(hlink('back', 'رجوع', back));
+    var l0 = h('p', 'loading', 'جارٍ التحميل…'); ui.body.appendChild(l0);
+    api('GET', 'leads/' + id).then(function (res) {
+      if (!live(t)) return;
+      l0.remove();
+      if (!res.ok) return ui.body.appendChild(empty('ما لقيت طلب بالرقم #' + id + '.'));
+      var l = res.lead;
+      var cols = h('div', 'cols');
+      var a1 = h('div', 'col'), a2 = h('div', 'col');
+
+      var p = h('section', 'panel');
+      var top = h('div', 'lead__top');
+      var badge = h('span', 'badge', LEAD_STATUS[l.status] || l.status); badge.dataset.s = l.status;
+      add(top, h('h2', 'lead__name', l.name), badge);
+      var facts = h('dl', 'facts');
+      function fact(k, v) { var d = h('div'); add(d, h('dt', null, k), typeof v === 'string' ? h('dd', null, v) : add(h('dd'), v)); facts.appendChild(d); }
+      var ph = h('span', 'phones'); var tel = h('a', 'ltr', l.phone); tel.href = 'tel:' + l.phone;
+      add(ph, tel, link('واتساب', wa(l.phone, 'مرحباً ' + l.name + '، معك أوبسيديان ديزاين بخصوص طلبك.')));
+      fact('الجوال', ph);
+      fact('نوع المشروع', l.type || 'بدون نوع');
+      fact('تاريخ الطلب', fmtDate(l.created_at));
+      fact('المصدر', l.source === 'staff' ? 'أضافه الفريق' : 'من الموقع');
+      add(p, top, facts);
+      if (l.note) { p.appendChild(h('h3', 'sub', 'ملاحظة العميل')); p.appendChild(h('p', 'note', l.note)); }
+
+      var ctl = h('div', 'form__two');
+      var st = select(LEAD_STATUS, l.status);
+      st.addEventListener('change', function () {
+        api('PATCH', 'leads/' + l.id, { status: st.value }).then(function (r) {
+          if (!r.ok) { st.value = l.status; return oops(r); }
+          l.status = st.value; badge.textContent = LEAD_STATUS[st.value]; badge.dataset.s = st.value; toast('تم تحديث الحالة.');
+        }).catch(noop);
       });
-      wide(box);
-    }).catch(function () {});
-  }
-  function apptCard(a) {
-    var card = h('article', 'card');
-    var top = h('div', 'card__top');
-    var badge = h('span', 'badge', APPT_STATUS[a.status] || a.status); badge.dataset.s = a.status;
-    add(top, h('span', 'card__id', fmtTime(a.time)), h('span', 'card__name', a.name), h('span', 'card__meta', a.lead_type || ''), badge);
-    card.appendChild(top);
-    card.appendChild(phoneRow(a.phone, 'مرحباً ' + a.name + '، نأكد موعد زيارتك لمعرض أوبسيديان ديزاين يوم ' + fmtDay(a.date) + ' الساعة ' + fmtTime(a.time) + '. ننتظرك.'));
-    var row = h('div', 'card__row');
-    var st = select(APPT_STATUS, a.status); st.setAttribute('aria-label', 'حالة الموعد');
+      var opts = { '': 'غير مسند' };
+      users.filter(function (u) { return u.active || u.id === l.assigned_to; }).forEach(function (u) { opts[u.id] = u.name; });
+      var as = select(opts, l.assigned_to == null ? '' : String(l.assigned_to));
+      as.addEventListener('change', function () {
+        api('PATCH', 'leads/' + l.id, { assigned_to: as.value === '' ? null : +as.value }).then(function (r) { if (!r.ok) return oops(r); toast('تم تحديث المسؤول.'); }).catch(noop);
+      });
+      add(ctl, field('الحالة', st), field('المسؤول', as));
+      p.appendChild(ctl);
+      a1.appendChild(p);
+
+      var pa = panel('مواعيد العميل');
+      if (l.appointments && l.appointments.length) {
+        var ra = h('div', 'rows');
+        l.appointments.forEach(function (a) {
+          var r = h('div', 'row row--plain'); var b = h('span', 'badge', APPT_STATUS[a.status] || a.status); b.dataset.s = a.status;
+          add(r, h('span', 'row__name', fmtDay(a.date)), h('span', 'row__id', fmtTime(a.time)), b); ra.appendChild(r);
+        });
+        pa.appendChild(ra);
+      } else pa.appendChild(empty('لا يوجد موعد محجوز.'));
+      a1.appendChild(pa);
+
+      var pn = panel('ملاحظات الفريق');
+      var ul = h('ul', 'notes');
+      function renderNotes(notes) {
+        ul.textContent = '';
+        if (!notes.length) ul.appendChild(h('li', 'empty', 'لا توجد ملاحظات بعد.'));
+        notes.forEach(function (n) { var li = h('li', null, n.body); li.appendChild(h('small', null, (n.staff_name || '—') + ' · ' + fmtDate(n.created_at))); ul.appendChild(li); });
+      }
+      renderNotes(l.notes || []);
+      var nf = h('form', 'form'); nf.noValidate = true;
+      var ni = input('textarea', { maxLength: 800, placeholder: 'اكتب ملاحظة…' }); ni.setAttribute('aria-label', 'ملاحظة جديدة');
+      var nb = h('button', 'btn btn--sm', 'حفظ الملاحظة'); nb.type = 'submit';
+      nf.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var v = ni.value.trim(); if (!v || nb.disabled) return;
+        nb.disabled = true;
+        api('POST', 'leads/' + l.id + '/notes', { body: v }).then(function (r) {
+          nb.disabled = false;
+          if (!r.ok) return oops(r);
+          ni.value = ''; renderNotes(r.lead.notes);
+        }).catch(function () { nb.disabled = false; });
+      });
+      add(nf, ni, nb);
+      add(pn, ul, nf);
+      a2.appendChild(pn);
+      ui.body.appendChild(add(cols, a1, a2));
+    }).catch(noop);
+  };
+
+  /* ------------------------------------------------------------ appointments */
+  function apptRow(a) {
+    var r = h('div', 'row row--appt');
+    var who = h('div', 'row__who');
+    add(who, h('span', 'row__name', a.name), a.lead_type ? h('span', 'row__type', a.lead_type) : null);
+    var ph = h('span', 'phones'); var tel = h('a', 'ltr', a.phone); tel.href = 'tel:' + a.phone;
+    add(ph, tel, link('واتساب', wa(a.phone, 'مرحباً ' + a.name + '، نأكد موعد زيارتك لمعرض أوبسيديان ديزاين يوم ' + fmtDay(a.date) + ' الساعة ' + fmtTime(a.time) + '. ننتظرك.')));
+    var st = select(APPT_STATUS, a.status); st.setAttribute('aria-label', 'حالة موعد ' + a.name); st.dataset.s = a.status;
     st.addEventListener('change', function () {
       api('PATCH', 'appointments/' + a.id, { status: st.value }).then(function (res) {
         if (!res.ok) { st.value = a.status; return oops(res); }
-        a.status = st.value; badge.textContent = APPT_STATUS[st.value]; badge.dataset.s = st.value;
-      }).catch(function () {});
+        a.status = st.value; st.dataset.s = st.value; toast('تم تحديث الموعد.');
+      }).catch(noop);
     });
-    row.appendChild(st);
-    if (a.lead_id) {
-      var b = h('button', 'btn btn--sm', 'الطلب #' + a.lead_id); b.type = 'button';
-      b.addEventListener('click', function () { if (!busy) openLead(a.lead_id); });
-      row.appendChild(b);
-    }
-    card.appendChild(row);
-    return card;
+    var act = h('div', 'row__act');
+    add(act, st, a.lead_id ? hlink('btn btn--sm', 'الطلب #' + a.lead_id, '#lead/' + a.lead_id) : null);
+    return add(r, h('span', 'row__time', fmtTime(a.time)), who, ph, act);
   }
 
+  PAGES.appts = function (args, t) {
+    var names = { today: 'مواعيد اليوم', week: 'مواعيد الأسبوع', upcoming: 'المواعيد القادمة', past: 'المواعيد السابقة' };
+    var tab = names[args[0]] ? args[0] : 'today';
+    setTitle('المواعيد');
+    ui.body.appendChild(add(h('div', 'toolbar'), tabs([['today', 'اليوم'], ['week', 'الأسبوع'], ['upcoming', 'القادمة'], ['past', 'السابقة']], tab, 'appts')));
+    fetchPage(t, ['appointments?range=' + tab]).then(function (all) {
+      var res = all[0];
+      if (!res.appointments.length) { var p0 = panel(names[tab] + ' (0)'); p0.appendChild(empty('لا يوجد.')); return ui.body.appendChild(p0); }
+      var days = {}; var order = [];
+      res.appointments.forEach(function (a) { if (!days[a.date]) { days[a.date] = []; order.push(a.date); } days[a.date].push(a); });
+      order.forEach(function (d) {
+        var p = panel((d === res.today ? 'اليوم — ' : '') + fmtDay(d) + ' (' + days[d].length + ')');
+        var rows = h('div', 'rows'); days[d].forEach(function (a) { rows.appendChild(apptRow(a)); });
+        ui.body.appendChild(add(p, rows));
+      });
+    }).catch(noop);
+  };
 
   /* ------------------------------------------------------------ attendance */
   function fmtClock(iso) {
@@ -377,204 +500,208 @@
   function fmtDur(min) { var hrs = Math.floor(min / 60), m = min % 60; return hrs + ':' + (m < 10 ? '0' : '') + m + ' ساعة'; }
   function monthStart(today) { return today.slice(0, 8) + '01'; }
   function punch(kind, staffId, after) {
-    var payload = staffId ? { staff_id: staffId } : {};
-    load('POST', 'attendance/' + kind, payload).then(function (res) {
-      if (!res.ok) return say(res.error === 'already_in' ? 'الحضور مسجّل من قبل، وما انسجل انصراف بعده.' : res.error === 'not_in' ? 'ما فيه حضور مسجّل اليوم عشان ينسجل له انصراف.' : errText(res.error));
+    api('POST', 'attendance/' + kind, staffId ? { staff_id: staffId } : {}).then(function (res) {
+      if (!res.ok) return toast(res.error === 'already_in' ? 'الحضور مسجّل من قبل، وما انسجل انصراف بعده.' : res.error === 'not_in' ? 'ما فيه حضور مسجّل اليوم عشان ينسجل له انصراف.' : errText(res.error));
+      toast(kind === 'in' ? 'تم تسجيل الحضور.' : 'تم تسجيل الانصراف.');
       after();
-    }).catch(function () {});
+    }).catch(noop);
   }
   function recordLine(r) {
     return fmtClock(r.in_at) + ' ← ' + (r.out_at ? fmtClock(r.out_at) + ' (' + fmtDur(r.minutes) + ')' : 'لم يُسجّل انصراف') + (r.by_admin ? ' · سجّله المدير' : '');
   }
-
-  // My own check-in / check-out and my month so far
-  function showMyAttendance() {
-    load('GET', 'attendance').then(function (t) {
-      if (!t.ok) return oops(t);
-      return api('GET', 'attendance?from=' + monthStart(t.today) + '&to=' + t.today).then(function (m) {
-        var todayRows = t.records;
-        var open = todayRows.filter(function (r) { return !r.out_at; })[0];
-        var card = h('article', 'card');
-        var top = h('div', 'card__top');
-        var badge = h('span', 'badge', open ? 'حاضر' : todayRows.length ? 'منصرف' : 'لم يُسجّل حضور'); badge.dataset.s = open ? 'new' : 'closed';
-        add(top, h('span', 'card__name', 'حضوري اليوم'), h('span', 'card__meta', fmtDay(t.today)), badge);
-        card.appendChild(top);
-        if (todayRows.length) todayRows.slice().reverse().forEach(function (r) { card.appendChild(h('p', 'card__note ltr-num', recordLine(r))); });
-        var row = h('div', 'card__row');
-        var btn = h('button', 'btn', open ? 'تسجيل انصراف' : 'تسجيل حضور'); btn.type = 'button';
-        btn.addEventListener('click', function () {
-          if (busy) return;
-          echo(btn.textContent);
-          punch(open ? 'out' : 'in', null, function () { say(open ? 'تم تسجيل انصرافك.' : 'تم تسجيل حضورك.'); showMyAttendance(); });
-        });
-        row.appendChild(btn);
-        card.appendChild(row);
-        if (m.ok) {
-          var days = {}; var total = 0; var missing = 0;
-          m.records.forEach(function (r) { days[r.date] = 1; total += r.minutes; if (!r.out_at && r.date !== t.today) missing++; });
-          var sub = h('div', 'card__sub');
-          sub.appendChild(h('h3', null, 'هذا الشهر'));
-          sub.appendChild(h('p', 'card__note', 'أيام الحضور: ' + Object.keys(days).length + ' · مجموع الساعات: ' + fmtDur(total) + (missing ? ' · مرات بدون انصراف: ' + missing : '')));
-          card.appendChild(sub);
-        }
-        wide(card);
-      });
-    }).catch(function () {});
+  function state(rows, absent) {
+    var open = rows.filter(function (r) { return !r.out_at; })[0];
+    var b = h('span', 'badge', open ? 'حاضر' : rows.length ? 'منصرف' : absent); b.dataset.s = open ? 'new' : 'closed';
+    return { open: open, badge: b };
+  }
+  // My own check-in / check-out for today. `t` is the answer of GET attendance (today, own records)
+  function punchPanel(t, after) {
+    var p = h('section', 'panel punch');
+    var s = state(t.records, 'لم يُسجّل حضور');
+    var head = h('div', 'panel__head'); add(head, h('h2', null, 'حضوري اليوم'), s.badge);
+    p.appendChild(head);
+    if (t.records.length) { var ul = h('ul', 'times'); t.records.slice().reverse().forEach(function (r) { ul.appendChild(h('li', null, recordLine(r))); }); p.appendChild(ul); }
+    else p.appendChild(empty('ما سجّلت حضورك اليوم.'));
+    var btn = h('button', 'btn btn--solid', s.open ? 'تسجيل انصراف' : 'تسجيل حضور'); btn.type = 'button';
+    btn.addEventListener('click', function () { if (btn.disabled) return; btn.disabled = true; punch(s.open ? 'out' : 'in', null, after); setTimeout(function () { btn.disabled = false; }, 4000); });
+    p.appendChild(btn);
+    return p;
+  }
+  function tally(rows, today) {
+    var days = {}, total = 0, missing = 0;
+    rows.forEach(function (r) { (days[r.date] = days[r.date] || []).push(r); total += r.minutes; if (!r.out_at && r.date !== today) missing++; });
+    return { days: days, keys: Object.keys(days).sort().reverse(), total: total, missing: missing };
+  }
+  function dayRows(tl) {
+    var rows = h('div', 'rows');
+    tl.keys.forEach(function (d) {
+      var mins = tl.days[d].reduce(function (a, r) { return a + r.minutes; }, 0);
+      var r = h('div', 'row row--day');
+      add(r, h('span', 'row__name', fmtDay(d)),
+        h('span', 'row__meta', tl.days[d].slice().reverse().map(function (x) { return fmtClock(x.in_at) + ' – ' + (x.out_at ? fmtClock(x.out_at) : '؟'); }).join('، ')),
+        h('span', 'row__id', fmtDur(mins)));
+      rows.appendChild(r);
+    });
+    return rows;
+  }
+  function miniStats(list) {
+    var g = h('div', 'stats stats--3');
+    list.forEach(function (it) { var d = h('div', 'stat'); add(d, h('b', null, String(it[0])), h('span', null, it[1])); g.appendChild(d); });
+    return g;
   }
 
-  // Admin: take attendance for everyone today
-  function showRollCall() {
-    load('GET', 'attendance?all=1').then(function (res) {
-      if (!res.ok) return oops(res);
-      say('تحضير اليوم — ' + fmtDay(res.today) + ':');
-      var box = h('div', 'cards');
+  PAGES.att = function (args, t) {
+    var admin = me.role === 'admin';
+    var tab = admin && (args[0] === 'roll' || args[0] === 'report') ? args[0] : 'me';
+    setTitle('الحضور والانصراف');
+    if (admin) ui.body.appendChild(add(h('div', 'toolbar'), tabs([['me', 'حضوري'], ['roll', 'تحضير اليوم'], ['report', 'تقرير الشهر']], tab, 'att')));
+
+    if (tab === 'roll') return fetchPage(t, ['attendance?all=1']).then(function (all) {
+      var res = all[0];
+      var p = panel('تحضير اليوم — ' + fmtDay(res.today));
+      var rows = h('div', 'rows');
       res.staff.forEach(function (s) {
-        var rows = res.records.filter(function (r) { return r.staff_id === s.id; });
-        var open = rows.filter(function (r) { return !r.out_at; })[0];
-        var card = h('article', 'card');
-        var top = h('div', 'card__top');
-        var badge = h('span', 'badge', open ? 'حاضر' : rows.length ? 'منصرف' : 'غائب'); badge.dataset.s = open ? 'new' : 'closed';
-        add(top, h('span', 'card__name', s.name), badge);
-        card.appendChild(top);
-        rows.slice().reverse().forEach(function (r) { card.appendChild(h('p', 'card__note', recordLine(r))); });
-        var row = h('div', 'card__row');
-        var btn = h('button', 'btn btn--sm', open ? 'تسجيل انصراف' : 'تسجيل حضور'); btn.type = 'button';
-        btn.addEventListener('click', function () {
-          if (busy) return;
-          echo(btn.textContent + ': ' + s.name);
-          punch(open ? 'out' : 'in', s.id, showRollCall);
-        });
-        row.appendChild(btn);
-        card.appendChild(row);
-        box.appendChild(card);
+        var mine = res.records.filter(function (r) { return r.staff_id === s.id; });
+        var st = state(mine, 'غائب');
+        var r = h('div', 'row row--roll');
+        var btn = h('button', 'btn btn--sm', st.open ? 'تسجيل انصراف' : 'تسجيل حضور'); btn.type = 'button';
+        btn.addEventListener('click', function () { if (btn.disabled) return; btn.disabled = true; punch(st.open ? 'out' : 'in', s.id, function () { go('#att/roll'); }); setTimeout(function () { btn.disabled = false; }, 4000); });
+        add(r, h('span', 'row__name', s.name), h('span', 'row__meta', mine.length ? mine.slice().reverse().map(recordLine).join('، ') : '—'), st.badge, btn);
+        rows.appendChild(r);
       });
-      wide(box);
-    }).catch(function () {});
-  }
+      ui.body.appendChild(add(p, rows));
+    }).catch(noop);
 
-  // Admin: month report, per member
-  function showAttendanceReport() {
-    load('GET', 'attendance').then(function (t) {
-      if (!t.ok) return oops(t);
-      return api('GET', 'attendance?all=1&from=' + monthStart(t.today) + '&to=' + t.today).then(function (res) {
-        if (!res.ok) return oops(res);
-        say('تقرير الحضور من ' + fmtDay(res.from) + ' إلى ' + fmtDay(res.to) + ':');
-        var box = h('div', 'cards');
-        res.staff.forEach(function (s) {
-          var rows = res.records.filter(function (r) { return r.staff_id === s.id; });
-          var days = {}; var total = 0; var missing = 0;
-          rows.forEach(function (r) { (days[r.date] = days[r.date] || []).push(r); total += r.minutes; if (!r.out_at && r.date !== res.today) missing++; });
-          var card = h('article', 'card');
-          var top = h('div', 'card__top');
-          add(top, h('span', 'card__name', s.name), h('span', 'badge', fmtDur(total)));
-          card.appendChild(top);
-          card.appendChild(h('p', 'card__meta', 'أيام الحضور: ' + Object.keys(days).length + (missing ? ' · مرات بدون انصراف: ' + missing : '')));
-          var keys = Object.keys(days).sort().reverse();
-          if (keys.length) {
-            var sub = h('div', 'card__sub');
-            keys.forEach(function (d) {
-              var mins = days[d].reduce(function (a, r) { return a + r.minutes; }, 0);
-              sub.appendChild(h('p', 'card__note', fmtDay(d) + ': ' + days[d].slice().reverse().map(function (r) { return fmtClock(r.in_at) + '–' + (r.out_at ? fmtClock(r.out_at) : '؟'); }).join('، ') + ' · ' + fmtDur(mins)));
-            });
-            card.appendChild(sub);
-          }
-          box.appendChild(card);
-        });
-        wide(box);
+    fetchPage(t, ['attendance']).then(function (all) {
+      var today = all[0];
+      var path = 'attendance?' + (tab === 'report' ? 'all=1&' : '') + 'from=' + monthStart(today.today) + '&to=' + today.today;
+      return fetchPage(t, [path]).then(function (m) {
+        var res = m[0];
+        if (tab === 'report') {
+          ui.body.appendChild(h('p', 'hello', 'من ' + fmtDay(res.from) + ' إلى ' + fmtDay(res.to)));
+          res.staff.forEach(function (s) {
+            var tl = tally(res.records.filter(function (r) { return r.staff_id === s.id; }), res.today);
+            var d = h('details', 'panel fold');
+            var sum = h('summary');
+            add(sum, h('span', 'row__name', s.name), h('span', 'row__meta', 'أيام الحضور: ' + tl.keys.length + (tl.missing ? ' · بدون انصراف: ' + tl.missing : '')), h('span', 'badge', fmtDur(tl.total)));
+            d.appendChild(sum);
+            d.appendChild(tl.keys.length ? dayRows(tl) : empty('لا يوجد حضور مسجّل هذا الشهر.'));
+            ui.body.appendChild(d);
+          });
+          return;
+        }
+        var tl = tally(res.records, res.today);
+        var cols = h('div', 'cols');
+        var a1 = h('div', 'col'), a2 = h('div', 'col');
+        var pm = panel('هذا الشهر');
+        pm.appendChild(miniStats([[tl.keys.length, 'أيام الحضور'], [fmtDur(tl.total).replace(' ساعة', ''), 'مجموع الساعات'], [tl.missing, 'مرات بدون انصراف']]));
+        pm.appendChild(tl.keys.length ? dayRows(tl) : empty('لا يوجد حضور مسجّل هذا الشهر.'));
+        a1.appendChild(pm);
+        a2.appendChild(punchPanel(today, function () { go('#att/me'); }));
+        ui.body.appendChild(add(cols, a1, a2));
       });
-    }).catch(function () {});
-  }
+    }).catch(noop);
+  };
 
-  /* ------------------------------------------------------------ users & password */
+  /* ------------------------------------------------------------ team & account */
   function loadUsers() { return api('GET', 'users').then(function (res) { if (res.ok) users = res.users; return users; }); }
-  function showUsers() {
-    typing(true);
+
+  PAGES.team = function (_, t) {
+    var admin = me.role === 'admin';
+    setTitle('الفريق');
+    var l0 = h('p', 'loading', 'جارٍ التحميل…'); ui.body.appendChild(l0);
     loadUsers().then(function () {
-      typing(false);
-      var box = h('div', 'cards');
+      if (!live(t)) return;
+      l0.remove();
+      var cols = h('div', 'cols');
+      var a1 = h('div', 'col'), a2 = h('div', 'col');
+      var p = panel('أعضاء الفريق (' + users.length + ')');
+      var rows = h('div', 'rows');
       users.forEach(function (u) {
-        var card = h('article', 'card');
-        var top = h('div', 'card__top');
+        var r = h('div', 'row row--user');
         var badge = h('span', 'badge', u.active ? 'فعّال' : 'موقوف'); badge.dataset.s = u.active ? 'confirmed' : 'closed';
-        add(top, h('span', 'card__name', u.name), h('span', 'card__meta ltr', u.username), h('span', 'card__meta', u.role === 'admin' ? 'مدير' : 'موظف'), badge);
-        card.appendChild(top);
-        if (me.role === 'admin' && u.id !== me.id) {
-          var row = h('div', 'card__row');
+        var who = h('div', 'row__who'); add(who, h('span', 'row__name', u.name), h('span', 'row__type ltr', u.username));
+        add(r, who, h('span', 'row__meta', u.role === 'admin' ? 'مدير' : 'موظف'), badge);
+        if (admin && u.id !== me.id) {
+          var act = h('div', 'row__act');
           var tog = h('button', 'btn btn--sm', u.active ? 'إيقاف الحساب' : 'تفعيل الحساب'); tog.type = 'button';
           tog.addEventListener('click', function () {
-            api('PATCH', 'users/' + u.id, { active: !u.active }).then(function (res) { if (!res.ok) return oops(res); echo(tog.textContent + ': ' + u.name); showUsers(); }).catch(function () {});
+            api('PATCH', 'users/' + u.id, { active: !u.active }).then(function (res) { if (!res.ok) return oops(res); toast(u.active ? 'تم إيقاف حساب ' + u.name + '.' : 'تم تفعيل حساب ' + u.name + '.'); go('#team'); }).catch(noop);
           });
           var np = input('password', { placeholder: 'كلمة مرور جديدة', dir: 'ltr', autocomplete: 'new-password' }); np.setAttribute('aria-label', 'كلمة مرور جديدة لـ ' + u.name);
           var set = h('button', 'btn btn--sm', 'تغيير'); set.type = 'button';
           set.addEventListener('click', function () {
-            api('PATCH', 'users/' + u.id, { password: np.value }).then(function (res) { if (!res.ok) return oops(res); np.value = ''; say('تم تغيير كلمة مرور ' + u.name + '.'); }).catch(function () {});
+            api('PATCH', 'users/' + u.id, { password: np.value }).then(function (res) { if (!res.ok) return oops(res); np.value = ''; toast('تم تغيير كلمة مرور ' + u.name + '.'); }).catch(noop);
           });
-          card.appendChild(add(row, tog, np, set));
+          r.appendChild(add(act, np, set, tog));
         }
-        box.appendChild(card);
+        rows.appendChild(r);
       });
-      wide(box);
-      if (me.role === 'admin') addUserForm();
-    }).catch(function () { typing(false); });
-  }
-  function addUserForm() {
-    var f = h('form', 'card formcard'); f.noValidate = true;
+      a1.appendChild(add(p, rows));
+      if (admin) a2.appendChild(userForm());
+      ui.body.appendChild(admin ? add(cols, a1, a2) : a1);
+    }).catch(noop);
+  };
+
+  function userForm() {
+    var p = panel('إضافة موظف');
+    var f = h('form', 'form'); f.noValidate = true;
     var name = input('text', { required: true });
     var user = input('text', { dir: 'ltr', autocapitalize: 'none', spellcheck: false, autocomplete: 'off', required: true });
     var pass = input('password', { dir: 'ltr', autocomplete: 'new-password', required: true });
     var role = select({ staff: 'موظف', admin: 'مدير' }, 'staff');
     var err = h('p', 'err'); err.setAttribute('role', 'alert');
-    var btn = h('button', 'btn', 'إضافة'); btn.type = 'submit';
-    add(f, h('h2', null, 'إضافة موظف'), field('الاسم', name), field('اسم المستخدم', user, 'أحرف إنجليزية صغيرة وأرقام.'), field('كلمة المرور', pass, '8 أحرف على الأقل. يقدر يغيّرها بعد الدخول.'), field('الصلاحية', role, 'المدير يضيف ويوقف الموظفين.'), err, btn);
+    var btn = h('button', 'btn btn--solid', 'إضافة'); btn.type = 'submit';
+    add(f, field('الاسم', name), field('اسم المستخدم', user, 'أحرف إنجليزية صغيرة وأرقام.'), field('كلمة المرور', pass, '8 أحرف على الأقل. يقدر يغيّرها بعد الدخول.'), field('الصلاحية', role, 'المدير يضيف ويوقف الموظفين.'), err, btn);
     f.addEventListener('submit', function (e) {
       e.preventDefault();
+      if (btn.disabled) return;
       err.textContent = ''; btn.disabled = true;
       api('POST', 'users', { name: name.value.trim(), username: user.value.trim(), password: pass.value, role: role.value }).then(function (res) {
         btn.disabled = false;
         if (!res.ok) { err.textContent = errText(res.error); return; }
-        say('تمت إضافة ' + name.value.trim() + '.');
-        showUsers();
+        toast('تمت إضافة ' + name.value.trim() + '.');
+        go('#team');
       }).catch(function () { btn.disabled = false; });
     });
-    wide(f);
+    return add(p, f);
   }
-  function passwordForm() {
-    var f = h('form', 'card formcard'); f.noValidate = true;
+
+  PAGES.account = function () {
+    setTitle('حسابي');
+    var cols = h('div', 'cols');
+    var a1 = h('div', 'col'), a2 = h('div', 'col');
+    var p = panel('تغيير كلمة المرور');
+    var f = h('form', 'form'); f.noValidate = true;
     var cur = input('password', { dir: 'ltr', autocomplete: 'current-password', required: true });
     var nw = input('password', { dir: 'ltr', autocomplete: 'new-password', required: true });
     var err = h('p', 'err'); err.setAttribute('role', 'alert');
-    var btn = h('button', 'btn', 'تغيير كلمة المرور'); btn.type = 'submit';
-    add(f, h('h2', null, 'تغيير كلمة المرور'), field('كلمة المرور الحالية', cur), field('كلمة المرور الجديدة', nw, '8 أحرف على الأقل.'), err, btn);
+    var btn = h('button', 'btn btn--solid', 'تغيير كلمة المرور'); btn.type = 'submit';
+    add(f, field('كلمة المرور الحالية', cur), field('كلمة المرور الجديدة', nw, '8 أحرف على الأقل.'), err, btn);
     f.addEventListener('submit', function (e) {
       e.preventDefault();
+      if (btn.disabled) return;
       err.textContent = ''; btn.disabled = true;
       api('POST', 'password', { password: cur.value, new_password: nw.value }).then(function (res) {
         btn.disabled = false;
         if (!res.ok) { err.textContent = res.error === 'credentials' ? 'كلمة المرور الحالية غير صحيحة.' : errText(res.error); return; }
-        f.parentNode.remove(); say('تم تغيير كلمة المرور.');
+        cur.value = ''; nw.value = ''; toast('تم تغيير كلمة المرور.');
       }).catch(function () { btn.disabled = false; });
     });
-    wide(f); cur.focus();
-  }
+    a1.appendChild(add(p, f));
 
-  /* ------------------------------------------------------------ free text: search first, then ask */
+    var pi = panel('بيانات الحساب');
+    var facts = h('dl', 'facts');
+    [['الاسم', me.name], ['اسم المستخدم', me.username || '—'], ['الصلاحية', me.role === 'admin' ? 'مدير' : 'موظف']].forEach(function (x) {
+      var d = h('div'); add(d, h('dt', null, x[0]), h('dd', null, x[1])); facts.appendChild(d);
+    });
+    var out = h('button', 'btn', 'تسجيل الخروج'); out.type = 'button'; out.addEventListener('click', logout);
+    a2.appendChild(add(pi, facts, out));
+    ui.body.appendChild(add(cols, a1, a2));
+  };
+
   function toLatinDigits(s) {
     return String(s).replace(/[٠-٩]/g, function (c) { return c.charCodeAt(0) - 0x660; }).replace(/[۰-۹]/g, function (c) { return c.charCodeAt(0) - 0x6f0; });
-  }
-  function onText(text) {
-    var q = toLatinDigits(text).replace(/^(بحث|ابحث|دور|search)\s*(عن)?\s*/i, '').trim();
-    var digits = q.replace(/\D/g, '');
-    var idOnly = /^(#|طلب\s*#?|رقم\s*#?)\s*\d{1,6}$/.test(q) || /^\d{1,3}$/.test(q);
-    if (idOnly) return openLead(+digits);
-    var looksLikeSearch = digits.length >= 4 || (q !== text) || (q.split(/\s+/).length <= 2 && !/[؟?]|^(كم|وش|ايش|إيش|متى|مين|من|هل|ليش|كيف|اعطني|عطني|لخص)/.test(q));
-    if (!looksLikeSearch) return ask(text);
-    showLeads('q=' + encodeURIComponent(q), 'نتائج البحث عن «' + q + '»').then(function (n) { if (!n && digits.length < 4) ask(text); });
-  }
-  function ask(question) {
-    load('POST', 'ask', { question: question }).then(function (res) {
-      if (res.ok && res.reply) return say(res.reply);
-      say('المساعد الذكي غير متاح الآن (ممكن خلص حد اليوم). استخدم الاختصارات تحت أو ابحث باسم العميل أو جواله.');
-    }).catch(function () {});
   }
 
   /* ------------------------------------------------------------ boot */
@@ -583,7 +710,7 @@
       if (!res.ok) { app.textContent = ''; app.appendChild(h('p', 'gate', errText(res.error))); app.setAttribute('aria-busy', 'false'); return; }
       if (!res.user) return gate(!!res.needs_setup);
       me = res.user;
-      loadUsers().then(consoleView, consoleView);
+      loadUsers().then(shell, shell);
     }).catch(function () { app.textContent = ''; app.appendChild(h('p', 'gate', 'تعذر الاتصال. حدّث الصفحة.')); });
   }
   boot();
