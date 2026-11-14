@@ -25,7 +25,12 @@
     admin_only: 'هذا الإجراء للمدير فقط.',
     slot_taken: 'هذا الوقت محجوز لعميل آخر.',
     self: 'ما تقدر تسحب الصلاحية من حسابك أنت.',
-    chief_only: 'حساب رئيس الإدارة ما يعدّله إلا رئيس الإدارة.',
+    chief_only: 'هذا الإجراء لرئيس الإدارة فقط.',
+    location_required: 'لازم تسمح للصفحة تعرف موقعك عشان ينسجل الحضور.',
+    location_weak: 'إشارة الموقع ضعيفة. شغّل الـ GPS وجرّب مرة ثانية.',
+    place: 'الإحداثيات غير صحيحة.',
+    radius: 'المسافة المسموحة لازم تكون بين 30 و2000 متر.',
+    role: 'الصلاحية غير صحيحة.',
     login_required: 'انتهت الجلسة. سجّل دخولك من جديد.',
     not_configured: 'قاعدة البيانات غير مربوطة بعد.',
     staff: 'الموظف غير موجود أو حسابه موقوف.',
@@ -517,7 +522,8 @@
         var ra = h('div', 'rows');
         l.appointments.forEach(function (a) {
           var r = h('div', 'row row--plain'); var b = h('span', 'badge', APPT_STATUS[a.status] || a.status); b.dataset.s = a.status;
-          add(r, h('span', 'row__name', fmtDay(a.date)), h('span', 'row__id', fmtTime(a.time)), b); ra.appendChild(r);
+          add(r, h('span', 'row__name', fmtDay(a.date)), h('span', 'row__id', fmtTime(a.time)), b,
+            isAdmin() ? delBtn('حذف', 'link', function () { del('appointments/' + a.id, 'تم حذف الموعد.', function () { go('#lead/' + l.id); }); }) : null); ra.appendChild(r);
         });
         pa.appendChild(ra);
       } else pa.appendChild(empty('لا يوجد موعد محجوز.'));
@@ -687,7 +693,8 @@
         var ra = h('div', 'rows');
         res.appointments.forEach(function (a) {
           var r = h('div', 'row row--plain'); var b = h('span', 'badge', APPT_STATUS[a.status] || a.status); b.dataset.s = a.status;
-          add(r, h('span', 'row__name', fmtDay(a.date)), h('span', 'row__id', fmtTime(a.time)), b); ra.appendChild(r);
+          add(r, h('span', 'row__name', fmtDay(a.date)), h('span', 'row__id', fmtTime(a.time)), b,
+            isAdmin() ? delBtn('حذف', 'link', function () { del('appointments/' + a.id, 'تم حذف الموعد.', function () { go('#customer/' + c.id); }); }) : null); ra.appendChild(r);
         });
         pa.appendChild(ra);
       } else pa.appendChild(empty('لا يوجد موعد مسجل.'));
@@ -807,12 +814,33 @@
   }
   function fmtDur(min) { var hrs = Math.floor(min / 60), m = min % 60; return hrs + ':' + (m < 10 ? '0' : '') + m + ' ساعة'; }
   function monthStart(today) { return today.slice(0, 8) + '01'; }
+  // Reads the device's position. Used when check-in is tied to the showroom.
+  function whereAmI() {
+    return new Promise(function (resolve, reject) {
+      if (!navigator.geolocation) return reject('none');
+      navigator.geolocation.getCurrentPosition(
+        function (pos) { resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: Math.round(pos.coords.accuracy || 0) }); },
+        function (err) { reject(err && err.code === 1 ? 'denied' : 'failed'); },
+        { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
+    });
+  }
+  function geoError(code) {
+    toast(code === 'denied' ? 'الموقع مرفوض. اسمح للصفحة بالموقع من إعدادات المتصفح، بعدها سجّل.' : code === 'none' ? 'هذا المتصفح ما يدعم تحديد الموقع.' : 'ما قدرنا نحدد موقعك. شغّل الـ GPS وجرّب مرة ثانية.');
+  }
   function punch(kind, staffId, after) {
-    api('POST', 'attendance/' + kind, staffId ? { staff_id: staffId } : {}).then(function (res) {
-      if (!res.ok) return toast(res.error === 'already_in' ? 'الحضور مسجّل من قبل، وما انسجل انصراف بعده.' : res.error === 'not_in' ? 'ما فيه حضور مسجّل اليوم عشان ينسجل له انصراف.' : errText(res.error));
-      toast(kind === 'in' ? 'تم تسجيل الحضور.' : 'تم تسجيل الانصراف.');
-      after();
-    }).catch(noop);
+    var self = !staffId || staffId === me.id;
+    var send = function (pos) {
+      var payload = staffId ? { staff_id: staffId } : {};
+      if (pos) { payload.lat = pos.lat; payload.lng = pos.lng; payload.accuracy = pos.accuracy; }
+      api('POST', 'attendance/' + kind, payload).then(function (res) {
+        if (!res.ok) return toast(res.error === 'already_in' ? 'الحضور مسجّل من قبل، وما انسجل انصراف بعده.' : res.error === 'not_in' ? 'ما فيه حضور مسجّل اليوم عشان ينسجل له انصراف.'
+          : res.error === 'too_far' ? 'أنت بعيد عن المعرض (حوالي ' + (res.distance >= 1000 ? (res.distance / 1000).toFixed(1) + ' كم' : res.distance + ' متر') + '). التسجيل من داخل المعرض فقط.' : errText(res.error));
+        toast(kind === 'in' ? 'تم تسجيل الحضور.' : 'تم تسجيل الانصراف.');
+        after();
+      }).catch(noop);
+    };
+    if (self && ui.geo) { toast('جارٍ تحديد موقعك…'); whereAmI().then(send, geoError); }
+    else send(null);
   }
   function recordLine(r) {
     return fmtClock(r.in_at) + ' ← ' + (r.out_at ? fmtClock(r.out_at) + ' (' + fmtDur(r.minutes) + ')' : 'لم يُسجّل انصراف') + (r.by_admin ? ' · سجّله المدير' : '');
@@ -825,6 +853,7 @@
   // My own check-in / check-out for today. `t` is the answer of GET attendance (today, own records)
   function punchPanel(t, after) {
     var p = h('section', 'panel punch');
+    ui.geo = !!t.location_required;
     var s = state(t.records, 'لم يُسجّل حضور');
     var head = h('div', 'panel__head'); add(head, h('h2', null, 'حضوري اليوم'), s.badge);
     p.appendChild(head);
@@ -833,6 +862,7 @@
     var btn = h('button', 'btn btn--solid', s.open ? 'تسجيل انصراف' : 'تسجيل حضور'); btn.type = 'button';
     btn.addEventListener('click', function () { if (btn.disabled) return; btn.disabled = true; punch(s.open ? 'out' : 'in', null, after); setTimeout(function () { btn.disabled = false; }, 4000); });
     p.appendChild(btn);
+    if (t.location_required) p.appendChild(h('p', 'panel__hint', 'التسجيل مربوط بموقع المعرض. اسمح للصفحة بالموقع لما تطلب.'));
     return p;
   }
   function tally(rows, today) {
@@ -840,14 +870,18 @@
     rows.forEach(function (r) { (days[r.date] = days[r.date] || []).push(r); total += r.minutes; if (!r.out_at && r.date !== today) missing++; });
     return { days: days, keys: Object.keys(days).sort().reverse(), total: total, missing: missing };
   }
-  function dayRows(tl) {
+  function dayRows(tl, again) {
     var rows = h('div', 'rows');
     tl.keys.forEach(function (d) {
       var mins = tl.days[d].reduce(function (a, r) { return a + r.minutes; }, 0);
       var r = h('div', 'row row--day');
-      add(r, h('span', 'row__name', fmtDay(d)),
-        h('span', 'row__meta', tl.days[d].slice().reverse().map(function (x) { return fmtClock(x.in_at) + ' – ' + (x.out_at ? fmtClock(x.out_at) : '؟'); }).join('، ')),
-        h('span', 'row__id', fmtDur(mins)));
+      var times = h('span', 'row__meta');
+      tl.days[d].slice().reverse().forEach(function (x, i) {
+        var one = h('span', 'rec', (i ? '، ' : '') + fmtClock(x.in_at) + ' – ' + (x.out_at ? fmtClock(x.out_at) : '؟'));
+        if (again) one.appendChild(delBtn('حذف', 'link', function () { del('attendance/' + x.id, 'تم حذف سجل الحضور.', again); }));
+        times.appendChild(one);
+      });
+      add(r, h('span', 'row__name', fmtDay(d)), times, h('span', 'row__id', fmtDur(mins)));
       rows.appendChild(r);
     });
     return rows;
@@ -860,12 +894,14 @@
 
   PAGES.att = function (args, t) {
     var admin = me.role === 'admin';
-    var tab = admin && (args[0] === 'roll' || args[0] === 'report') ? args[0] : 'me';
+    var tab = admin && (args[0] === 'roll' || args[0] === 'report' || args[0] === 'place') ? args[0] : 'me';
     setTitle('الحضور والانصراف');
-    if (admin) ui.body.appendChild(add(h('div', 'toolbar'), tabs([['me', 'حضوري'], ['roll', 'تحضير اليوم'], ['report', 'تقرير الشهر']], tab, 'att')));
+    if (admin) ui.body.appendChild(add(h('div', 'toolbar'), tabs([['me', 'حضوري'], ['roll', 'تحضير اليوم'], ['report', 'تقرير الشهر'], ['place', 'موقع الحضور']], tab, 'att')));
+    if (tab === 'place') return placePage(t);
 
     if (tab === 'roll') return fetchPage(t, ['attendance?all=1']).then(function (all) {
       var res = all[0];
+      ui.geo = !!res.location_required;
       var p = panel('تحضير اليوم — ' + fmtDay(res.today));
       var rows = h('div', 'rows');
       res.staff.forEach(function (s) {
@@ -874,7 +910,10 @@
         var r = h('div', 'row row--roll');
         var btn = h('button', 'btn btn--sm', st.open ? 'تسجيل انصراف' : 'تسجيل حضور'); btn.type = 'button';
         btn.addEventListener('click', function () { if (btn.disabled) return; btn.disabled = true; punch(st.open ? 'out' : 'in', s.id, function () { go('#att/roll'); }); setTimeout(function () { btn.disabled = false; }, 4000); });
-        add(r, h('span', 'row__name', s.name), h('span', 'row__meta', mine.length ? mine.slice().reverse().map(recordLine).join('، ') : '—'), st.badge, btn);
+        var meta = h('span', 'row__meta');
+        if (!mine.length) meta.textContent = '—';
+        mine.slice().reverse().forEach(function (x) { var one = h('span', 'rec', recordLine(x)); one.appendChild(delBtn('حذف', 'link', function () { del('attendance/' + x.id, 'تم حذف سجل الحضور.', function () { go('#att/roll'); }); })); meta.appendChild(one); });
+        add(r, h('span', 'row__name', s.name), meta, st.badge, btn);
         rows.appendChild(r);
       });
       ui.body.appendChild(add(p, rows));
@@ -905,7 +944,7 @@
             var sum = h('summary');
             add(sum, h('span', 'row__name', s.name), h('span', 'row__meta', 'أيام الحضور: ' + tl.keys.length + (tl.missing ? ' · بدون انصراف: ' + tl.missing : '')), h('span', 'badge', fmtDur(tl.total)));
             d.appendChild(sum);
-            d.appendChild(tl.keys.length ? dayRows(tl) : empty('لا يوجد حضور مسجّل هذا الشهر.'));
+            d.appendChild(tl.keys.length ? dayRows(tl, function () { go('#att/report/' + ym); }) : empty('لا يوجد حضور مسجّل هذا الشهر.'));
             d.appendChild(add(h('div', 'quick fold__act'), one));
             ui.body.appendChild(d);
           });
@@ -923,6 +962,55 @@
       });
     }).catch(noop);
   };
+
+  // Where check-in is allowed: the showroom's point and how far from it still counts
+  function placePage(t) {
+    fetchPage(t, ['attendance/place']).then(function (all) {
+      var pl = all[0].place;
+      var cols = h('div', 'cols');
+      var a1 = h('div', 'col'), a2 = h('div', 'col');
+      var p = panel('موقع تسجيل الحضور');
+      var badge = h('span', 'badge', pl ? 'مفعّل' : 'غير مفعّل'); badge.dataset.s = pl ? 'new' : 'closed';
+      p.querySelector('.panel__head').appendChild(badge);
+      p.appendChild(h('p', 'panel__hint', pl ? 'الموظف ما يقدر يسجل حضور أو انصراف إلا وهو داخل المسافة المسموحة من هذي النقطة.' : 'ما فيه موقع محدد، والحضور ينسجل من أي مكان. حدد موقع المعرض عشان ينربط التسجيل فيه.'));
+      var f = h('form', 'form'); f.noValidate = true;
+      var lat = input('text', { dir: 'ltr', inputMode: 'decimal', value: pl ? String(pl.lat) : '' });
+      var lng = input('text', { dir: 'ltr', inputMode: 'decimal', value: pl ? String(pl.lng) : '' });
+      var rad = input('number', { dir: 'ltr', min: 30, max: 2000, step: 10, value: pl ? String(pl.radius) : '150' });
+      var err = h('p', 'err'); err.setAttribute('role', 'alert');
+      var here = h('button', 'btn btn--sm', 'استخدم موقعي الحالي'); here.type = 'button';
+      var note = h('p', 'panel__hint');
+      here.addEventListener('click', function () {
+        note.textContent = 'جارٍ تحديد موقعك…';
+        whereAmI().then(function (pos) { lat.value = pos.lat.toFixed(6); lng.value = pos.lng.toFixed(6); note.textContent = 'تم. دقة القراءة حوالي ' + pos.accuracy + ' متر. اضغط حفظ.'; }, function (c) { note.textContent = ''; geoError(c); });
+      });
+      var map = hlink('panel__more', 'افتح النقطة في خرائط قوقل', '#'); map.target = '_blank'; map.rel = 'noopener';
+      map.addEventListener('click', function (e) { if (!lat.value || !lng.value) { e.preventDefault(); return; } map.href = 'https://www.google.com/maps?q=' + encodeURIComponent(toLatinDigits(lat.value).trim() + ',' + toLatinDigits(lng.value).trim()); });
+      var two = h('div', 'form__two'); add(two, field('خط العرض', lat), field('خط الطول', lng));
+      var btn = h('button', 'btn btn--solid', 'حفظ الموقع'); btn.type = 'submit';
+      add(f, add(h('div', 'quick'), here), note, two, field('المسافة المسموحة (متر)', rad, 'كم متر حول النقطة ينحسب داخل المعرض. 150 مناسبة لأغلب المباني.'), map, err, btn);
+      f.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (btn.disabled) return;
+        err.textContent = ''; btn.disabled = true;
+        api('PUT', 'attendance/place', { lat: +toLatinDigits(lat.value).trim(), lng: +toLatinDigits(lng.value).trim(), radius: +toLatinDigits(rad.value) }).then(function (r) {
+          btn.disabled = false;
+          if (!r.ok) { err.textContent = errText(r.error); return; }
+          toast('تم حفظ موقع الحضور.'); go('#att/place');
+        }).catch(function () { btn.disabled = false; });
+      });
+      a1.appendChild(add(p, f));
+      var p2 = panel('كيف يشتغل');
+      var ul = h('ul', 'bullets');
+      ['أنت في المعرض؟ اضغط "استخدم موقعي الحالي" ثم حفظ.', 'أو انسخ الإحداثيات من خرائط قوقل والصقها في الخانتين.', 'الموظف يضغط تسجيل حضور، والصفحة تطلب موقعه وترفض لو كان بعيد.', 'تحضير المدير لموظف ثاني من "تحضير اليوم" ما ينطبق عليه شرط الموقع.'].forEach(function (x) { ul.appendChild(h('li', null, x)); });
+      p2.appendChild(ul);
+      if (pl) p2.appendChild(delBtn('إلغاء ربط الموقع', 'btn btn--sm btn--danger', function () {
+        api('PUT', 'attendance/place', { clear: true }).then(function (r) { if (!r.ok) return oops(r); toast('تم إلغاء ربط الموقع.'); go('#att/place'); }).catch(noop);
+      }));
+      a2.appendChild(p2);
+      ui.body.appendChild(add(cols, a1, a2));
+    }).catch(noop);
+  }
 
   // Printable monthly sheet: one page per member, every day of the month listed
   function printSheets(staff, res, ym, to) {
@@ -977,9 +1065,12 @@
   /* ------------------------------------------------------------ team & account */
   function loadUsers() { return api('GET', 'users').then(function (res) { if (res.ok) users = res.users; return users; }); }
 
-  PAGES.team = function (_, t) {
+  PAGES.team = function (args, t) {
     var admin = me.role === 'admin';
+    var tab = args[0] === 'activity' ? 'activity' : 'members';
     setTitle('الفريق');
+    ui.body.appendChild(add(h('div', 'toolbar'), tabs([['members', 'الأعضاء'], ['activity', 'سجل النشاط']], tab, 'team')));
+    if (tab === 'activity') return activityPage(args[1], t);
     var l0 = h('p', 'loading', 'جارٍ التحميل…'); ui.body.appendChild(l0);
     loadUsers().then(function () {
       if (!live(t)) return;
@@ -987,40 +1078,108 @@
       var cols = h('div', 'cols');
       var a1 = h('div', 'col'), a2 = h('div', 'col');
       var p = panel('أعضاء الفريق (' + users.length + ')');
-      var rows = h('div', 'rows');
+      p.appendChild(h('p', 'panel__hint', 'افتح أي موظف عشان تعدل بياناته أو صلاحيته أو مسماه. الإيقاف يمنع الدخول ويحفظ السجل، والحذف يشيل الحساب نهائياً مع حضوره ومهامه.'));
       users.forEach(function (u) {
-        var r = h('div', 'row row--user');
-        var badge = h('span', 'badge', u.active ? 'فعّال' : 'موقوف'); badge.dataset.s = u.active ? 'confirmed' : 'closed';
-        var who = h('div', 'row__who'); add(who, h('span', 'row__name', u.name), h('span', 'row__type ltr', u.username));
-        add(r, who, h('span', 'row__meta', jobName(u) + (u.role === 'admin' ? ' · صلاحية مدير' : '')), badge);
         var locked = isChief(u) && !isChief(me);
-        if (admin && !locked) {
+        var d = h('details', 'fold member');
+        var sum = h('summary');
+        var badge = h('span', 'badge', u.active ? 'فعّال' : 'موقوف'); badge.dataset.s = u.active ? 'confirmed' : 'closed';
+        add(sum, h('span', 'row__name', u.name), h('span', 'row__meta', jobName(u) + (u.role === 'admin' ? ' · صلاحية مدير' : '') + ' · ' + u.username), badge);
+        d.appendChild(sum);
+        if (locked) d.appendChild(empty('حساب رئيس الإدارة ما يعدّله إلا هو.'));
+        else {
+          var f = h('form', 'form'); f.noValidate = true;
+          var name = input('text', { value: u.name, required: true });
+          var uname = input('text', { value: u.username, dir: 'ltr', autocapitalize: 'none', spellcheck: false, autocomplete: 'off', required: true });
           var jobs = {}; Object.keys(JOBS).forEach(function (k) { if (k !== 'chief' || isChief(me)) jobs[k] = JOBS[k]; });
-          var js = select(jobs, jobOf(u)); js.setAttribute('aria-label', 'تصنيف ' + u.name);
-          js.addEventListener('change', function () { api('PATCH', 'users/' + u.id, { job: js.value }).then(function (res) { if (!res.ok) return oops(res); toast('تم تحديث التصنيف.'); if (u.id === me.id) me.job = js.value; go('#team'); }).catch(noop); });
-          r.appendChild(add(h('div', 'row__act'), js));
-        }
-        if (admin && u.id !== me.id && !locked) {
-          var act = h('div', 'row__act');
-          var tog = h('button', 'btn btn--sm', u.active ? 'إيقاف الحساب' : 'تفعيل الحساب'); tog.type = 'button';
-          tog.addEventListener('click', function () {
-            api('PATCH', 'users/' + u.id, { active: !u.active }).then(function (res) { if (!res.ok) return oops(res); toast(u.active ? 'تم إيقاف حساب ' + u.name + '.' : 'تم تفعيل حساب ' + u.name + '.'); go('#team'); }).catch(noop);
+          var job = select(jobs, jobOf(u));
+          var role = select({ staff: 'موظف (يشوف ما يخصه)', admin: 'مدير (يشوف كل شي)' }, u.base_role === 'admin' ? 'admin' : 'staff');
+          var pass = input('password', { dir: 'ltr', autocomplete: 'new-password', placeholder: 'اتركها فاضية إذا ما تبغى تغيّرها' });
+          var err = h('p', 'err'); err.setAttribute('role', 'alert');
+          var save = h('button', 'btn btn--sm btn--solid', 'حفظ التعديلات'); save.type = 'submit';
+          var r1 = h('div', 'form__two'); add(r1, field('الاسم', name), field('اسم المستخدم', uname));
+          var r2 = h('div', 'form__two'); add(r2, field('المسمى الوظيفي', job), field('الصلاحية', role, 'رئيس الإدارة والإدارة لهم صلاحية المدير دائماً.'));
+          add(f, r1, r2, field('كلمة مرور جديدة', pass), err);
+          var acts = h('div', 'quick'); acts.appendChild(save);
+          acts.appendChild(hlink('btn btn--sm', 'نشاطه', '#team/activity/' + u.id));
+          if (u.id !== me.id) {
+            var tog = h('button', 'btn btn--sm', u.active ? 'إيقاف الحساب' : 'تفعيل الحساب'); tog.type = 'button';
+            tog.addEventListener('click', function () {
+              api('PATCH', 'users/' + u.id, { active: !u.active }).then(function (res) { if (!res.ok) return oops(res); toast(u.active ? 'تم إيقاف حساب ' + u.name + '.' : 'تم تفعيل حساب ' + u.name + '.'); go('#team'); }).catch(noop);
+            });
+            add(acts, tog, delBtn('حذف الموظف', 'btn btn--sm btn--danger', function () { del('users/' + u.id, 'تم حذف ' + u.name + '.', function () { go('#team'); }); }));
+          }
+          f.appendChild(acts);
+          f.addEventListener('submit', function (e) {
+            e.preventDefault();
+            if (save.disabled) return;
+            err.textContent = '';
+            var payload = {};
+            if (name.value.trim() !== u.name) payload.name = name.value.trim();
+            if (uname.value.trim().toLowerCase() !== u.username) payload.username = uname.value.trim();
+            if (job.value !== jobOf(u) || !u.job) payload.job = job.value;
+            if (role.value !== (u.base_role === 'admin' ? 'admin' : 'staff')) payload.role = role.value;
+            if (pass.value) payload.password = pass.value;
+            save.disabled = true;
+            api('PATCH', 'users/' + u.id, payload).then(function (res) {
+              save.disabled = false;
+              if (!res.ok) { err.textContent = errText(res.error); return; }
+              toast('تم حفظ بيانات ' + (payload.name || u.name) + '.');
+              if (u.id === me.id) return location.reload();
+              go('#team');
+            }).catch(function () { save.disabled = false; });
           });
-          var np = input('password', { placeholder: 'كلمة مرور جديدة', dir: 'ltr', autocomplete: 'new-password' }); np.setAttribute('aria-label', 'كلمة مرور جديدة لـ ' + u.name);
-          var set = h('button', 'btn btn--sm', 'تغيير'); set.type = 'button';
-          set.addEventListener('click', function () {
-            api('PATCH', 'users/' + u.id, { password: np.value }).then(function (res) { if (!res.ok) return oops(res); np.value = ''; toast('تم تغيير كلمة مرور ' + u.name + '.'); }).catch(noop);
-          });
-          r.appendChild(add(act, np, set, tog, delBtn('حذف الموظف', 'btn btn--sm btn--danger', function () { del('users/' + u.id, 'تم حذف ' + u.name + '.', function () { go('#team'); }); })));
+          d.appendChild(f);
         }
-        rows.appendChild(r);
+        p.appendChild(d);
       });
-      a1.appendChild(add(p, rows));
-      if (admin) p.appendChild(h('p', 'panel__hint', 'الإيقاف يمنع الدخول ويحفظ السجل. الحذف يشيل الحساب نهائياً مع حضوره ومهامه وملاحظاته في لوحة الفريق.'));
-      if (admin) a2.appendChild(userForm());
-      ui.body.appendChild(admin ? add(cols, a1, a2) : a1);
+      a1.appendChild(p);
+      a2.appendChild(userForm());
+      ui.body.appendChild(add(cols, a1, a2));
     }).catch(noop);
   };
+
+  // What each member did on the system: sign-ins, attendance, and every add, change and delete
+  function activityPage(who, t) {
+    var sid = /^\d+$/.test(who || '') ? who : '';
+    fetchPage(t, ['activity' + (sid ? '?staff=' + sid : '')]).then(function (all) {
+      var res = all[0];
+      var cols = h('div', 'cols');
+      var a1 = h('div', 'col'), a2 = h('div', 'col');
+      var opts = { '': 'كل الموظفين' }; users.forEach(function (u) { opts[u.id] = u.name; });
+      var pick = select(opts, sid); pick.setAttribute('aria-label', 'الموظف');
+      pick.addEventListener('change', function () { go('#team/activity' + (pick.value ? '/' + pick.value : '')); });
+      var bar = h('div', 'monthpick'); add(bar, h('span', null, 'الموظف'), pick);
+      var p = panel('آخر النشاط (' + res.activity.length + ')');
+      p.appendChild(bar);
+      if (!res.activity.length) p.appendChild(empty('لا يوجد نشاط مسجّل بعد. التسجيل يبدأ من الآن.'));
+      else {
+        var rows = h('div', 'rows');
+        res.activity.forEach(function (x) {
+          var r = h('div', 'row row--act');
+          add(r, h('span', 'row__name', x.staff_name || '—'), h('span', 'act', x.action), h('span', 'row__meta', fmtDate(x.created_at)),
+            isChief(me) ? delBtn('حذف', 'link', function () { del('activity/' + x.id, 'تم حذف السطر.', route); }) : h('span'));
+          rows.appendChild(r);
+        });
+        p.appendChild(rows);
+      }
+      a1.appendChild(p);
+      var p2 = panel('آخر ظهور لكل موظف');
+      var rows2 = h('div', 'rows');
+      users.forEach(function (u) {
+        var l = res.last.filter(function (y) { return y.staff_id === u.id; })[0];
+        var r = hlink('row row--plain', null, '#team/activity/' + u.id);
+        add(r, h('span', 'row__name', u.name), h('span', 'row__meta', l ? fmtDate(l.at) : 'لا يوجد'), h('span', 'badge', l ? String(l.n) : '0'));
+        rows2.appendChild(r);
+      });
+      a2.appendChild(add(p2, rows2, h('p', 'panel__hint', 'الرقم هو عدد الإجراءات المسجلة.')));
+      if (isChief(me) && res.activity.length) {
+        var p3 = panel('مسح السجل');
+        a2.appendChild(add(p3, h('p', 'panel__hint', 'يمسح سجل النشاط كله عند الجميع.'), delBtn('مسح سجل النشاط كله', 'btn btn--sm btn--danger', function () { del('activity', 'تم مسح السجل.', function () { go('#team/activity'); }); })));
+      }
+      ui.body.appendChild(add(cols, a1, a2));
+    }).catch(noop);
+  }
 
   function userForm() {
     var p = panel('إضافة موظف');
