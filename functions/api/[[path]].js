@@ -316,6 +316,27 @@ async function summary(env) {
   return { counts, total, week: week.n, today_appointments: todayAppts.n, upcoming_appointments: upcoming.n, pending_appointments: pending.n, today };
 }
 
+// Tables added after the first release are created on first use, so no manual database step is needed.
+let schemaReady = false;
+async function ensureSchema(env) {
+  if (schemaReady) return;
+  await env.DB.batch([
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS customers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, phone TEXT NOT NULL UNIQUE, city TEXT, address TEXT, type TEXT, note TEXT,
+      vip INTEGER NOT NULL DEFAULT 0, lead_id INTEGER, created_by INTEGER, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`),
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS tasks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, note TEXT, assigned_to INTEGER NOT NULL, created_by INTEGER NOT NULL,
+      due TEXT, status TEXT NOT NULL DEFAULT 'todo', created_at TEXT NOT NULL, done_at TEXT)`),
+    env.DB.prepare('CREATE INDEX IF NOT EXISTS tasks_assigned ON tasks(assigned_to, status)'),
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS announcements (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL DEFAULT 'general', body TEXT NOT NULL, created_by INTEGER NOT NULL, created_at TEXT NOT NULL)`),
+  ]);
+  schemaReady = true;
+}
+const TASK_STATUS = ['todo', 'doing', 'done'];
+const NOTE_KINDS = ['general', 'task', 'vip'];
+const validDate = (d) => /^\d{4}-\d{2}-\d{2}$/.test(d || '');
+
 async function staffRoutes(env, request, method, parts) {
   const route = parts.join('/');
 
@@ -369,7 +390,150 @@ async function staffRoutes(env, request, method, parts) {
   const me = await currentStaff(env, request);
   if (!me) return fail(401, 'login_required');
 
-  if (method === 'GET' && route === 'summary') return json({ ok: true, summary: await summary(env) });
+  await ensureSchema(env);
+  const admin = me.role === 'admin';
+
+  // The full picture is for the manager; a member gets only what concerns them
+  if (method === 'GET' && route === 'summary') {
+    if (admin) return json({ ok: true, summary: await summary(env) });
+    const today = todayRiyadh();
+    const mine = await env.DB.prepare("SELECT COUNT(*) AS n FROM leads WHERE assigned_to = ? AND status NOT IN ('won','closed')").bind(me.id).first();
+    const fresh = await env.DB.prepare("SELECT COUNT(*) AS n FROM leads WHERE status = 'new'").first();
+    const tasks = await env.DB.prepare("SELECT COUNT(*) AS n FROM tasks WHERE assigned_to = ? AND status != 'done'").bind(me.id).first();
+    const appts = await env.DB.prepare("SELECT COUNT(*) AS n FROM appointments WHERE date = ? AND status IN ('pending','confirmed')").bind(today).first();
+    return json({ ok: true, summary: { member: true, my_leads: mine.n, new_leads: fresh.n, my_tasks: tasks.n, today_appointments: appts.n, today } });
+  }
+
+  /* ---- manager notes shown to the whole team ---- */
+  if (parts[0] === 'announcements') {
+    if (method === 'GET' && parts.length === 1) {
+      const rows = await env.DB.prepare('SELECT a.id, a.kind, a.body, a.created_at, s.name AS author FROM announcements a LEFT JOIN staff s ON s.id = a.created_by ORDER BY a.id DESC LIMIT 20').all();
+      return json({ ok: true, announcements: rows.results || [] });
+    }
+    if (!admin) return fail(403, 'admin_only');
+    if (method === 'POST' && parts.length === 1) {
+      const b = await body(request);
+      const text = clean(b && b.body, 600);
+      if (!text) return fail(422, 'body');
+      await env.DB.prepare('INSERT INTO announcements (kind, body, created_by, created_at) VALUES (?, ?, ?, ?)')
+        .bind(NOTE_KINDS.includes(b.kind) ? b.kind : 'general', text, me.id, nowIso()).run();
+      return json({ ok: true });
+    }
+    if (method === 'DELETE' && /^\d+$/.test(parts[1] || '')) {
+      await env.DB.prepare('DELETE FROM announcements WHERE id = ?').bind(+parts[1]).run();
+      return json({ ok: true });
+    }
+  }
+
+  /* ---- tasks: a member sees and adds their own; the manager sees all and assigns to anyone ---- */
+  if (parts[0] === 'tasks') {
+    const sel = 'SELECT t.*, a.name AS assigned_name, c.name AS creator_name FROM tasks t LEFT JOIN staff a ON a.id = t.assigned_to LEFT JOIN staff c ON c.id = t.created_by';
+    if (method === 'GET' && parts.length === 1) {
+      const url = new URL(request.url);
+      const all = admin && url.searchParams.get('all') === '1';
+      const done = url.searchParams.get('done') === '1';
+      const rows = await env.DB.prepare(
+        sel + ' WHERE ' + (done ? "t.status = 'done'" : "t.status != 'done'") + (all ? '' : ' AND t.assigned_to = ?') +
+        (done ? ' ORDER BY t.done_at DESC LIMIT 60' : " ORDER BY (t.due IS NULL), t.due, t.id DESC LIMIT 200")
+      ).bind(...(all ? [] : [me.id])).all();
+      return json({ ok: true, today: todayRiyadh(), tasks: rows.results || [] });
+    }
+    if (method === 'POST' && parts.length === 1) {
+      const b = await body(request);
+      if (!b) return fail(400, 'bad_request');
+      const title = clean(b.title, 160);
+      if (title.length < 2) return fail(422, 'title');
+      let target = me.id;
+      if (b.assigned_to != null && +b.assigned_to !== me.id) {
+        if (!admin) return fail(403, 'admin_only');
+        const s = await env.DB.prepare('SELECT id FROM staff WHERE id = ? AND active = 1').bind(+b.assigned_to).first();
+        if (!s) return fail(422, 'staff');
+        target = s.id;
+      }
+      await env.DB.prepare('INSERT INTO tasks (title, note, assigned_to, created_by, due, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+        .bind(title, clean(b.note, 600), target, me.id, validDate(b.due) ? b.due : null, 'todo', nowIso()).run();
+      return json({ ok: true });
+    }
+    if (/^\d+$/.test(parts[1] || '')) {
+      const t = await env.DB.prepare('SELECT * FROM tasks WHERE id = ?').bind(+parts[1]).first();
+      if (!t) return fail(404, 'not_found');
+      if (!admin && t.assigned_to !== me.id) return fail(403, 'admin_only');
+      if (method === 'PATCH') {
+        const b = await body(request);
+        if (!b || !TASK_STATUS.includes(b.status)) return fail(422, 'status');
+        await env.DB.prepare('UPDATE tasks SET status = ?, done_at = ? WHERE id = ?').bind(b.status, b.status === 'done' ? nowIso() : null, t.id).run();
+        return json({ ok: true });
+      }
+      if (method === 'DELETE') {
+        // a member can remove only a task they wrote for themselves
+        if (!admin && t.created_by !== me.id) return fail(403, 'admin_only');
+        await env.DB.prepare('DELETE FROM tasks WHERE id = ?').bind(t.id).run();
+        return json({ ok: true });
+      }
+    }
+  }
+
+  /* ---- customers: one shared register, everyone on the team can see, add and edit; only the manager deletes ---- */
+  if (parts[0] === 'customers') {
+    const fields = (b) => ({ city: clean(b.city, 60), address: clean(b.address, 200), type: clean(b.type, 60), note: clean(b.note, 800), vip: b.vip ? 1 : 0 });
+    if (method === 'GET' && parts.length === 1) {
+      const url = new URL(request.url);
+      const q = clean(url.searchParams.get('q'), 60);
+      const where = []; const args = [];
+      if (url.searchParams.get('vip') === '1') where.push('c.vip = 1');
+      if (q) {
+        const digits = toLatinDigits(q).replace(/\D/g, '');
+        if (digits.length >= 4) { where.push('c.phone LIKE ?'); args.push('%' + digits.replace(/^966/, '').replace(/^0/, '') + '%'); }
+        else { where.push('c.name LIKE ?'); args.push('%' + q.replace(/[%_]/g, '') + '%'); }
+      }
+      const rows = await env.DB.prepare('SELECT c.id, c.name, c.phone, c.city, c.type, c.vip, c.created_at FROM customers c' + (where.length ? ' WHERE ' + where.join(' AND ') : '') + ' ORDER BY c.id DESC LIMIT 200').bind(...args).all();
+      const total = await env.DB.prepare('SELECT COUNT(*) AS n FROM customers').first();
+      return json({ ok: true, customers: rows.results || [], total: total.n });
+    }
+    if (method === 'POST' && parts.length === 1) {
+      const b = await body(request);
+      if (!b) return fail(400, 'bad_request');
+      const name = clean(b.name, 80);
+      const phone = normPhone(b.phone);
+      if (name.length < 2) return fail(422, 'name');
+      if (!phone) return fail(422, 'phone');
+      const had = await env.DB.prepare('SELECT id FROM customers WHERE phone = ?').bind(phone).first();
+      if (had) return json({ ok: false, error: 'customer_exists', id: had.id }, 409);
+      const f = fields(b); const now = nowIso();
+      const r = await env.DB.prepare('INSERT INTO customers (name, phone, city, address, type, note, vip, lead_id, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+        .bind(name, phone, f.city, f.address, f.type, f.note, f.vip, /^\d+$/.test(String(b.lead_id || '')) ? +b.lead_id : null, me.id, now, now).run();
+      return json({ ok: true, id: r.meta.last_row_id });
+    }
+    if (/^\d+$/.test(parts[1] || '')) {
+      const id = +parts[1];
+      const c = await env.DB.prepare('SELECT c.*, s.name AS creator_name FROM customers c LEFT JOIN staff s ON s.id = c.created_by WHERE c.id = ?').bind(id).first();
+      if (!c) return fail(404, 'not_found');
+      if (method === 'GET') {
+        const leads = await env.DB.prepare('SELECT id, created_at, type, status FROM leads WHERE phone = ? ORDER BY id DESC LIMIT 20').bind(c.phone).all();
+        const appts = await env.DB.prepare('SELECT id, date, time, status FROM appointments WHERE phone = ? ORDER BY date DESC, time DESC LIMIT 10').bind(c.phone).all();
+        return json({ ok: true, customer: c, leads: leads.results || [], appointments: appts.results || [] });
+      }
+      if (method === 'PATCH') {
+        const b = await body(request);
+        if (!b) return fail(400, 'bad_request');
+        const name = clean(b.name, 80);
+        const phone = normPhone(b.phone);
+        if (name.length < 2) return fail(422, 'name');
+        if (!phone) return fail(422, 'phone');
+        const other = await env.DB.prepare('SELECT id FROM customers WHERE phone = ? AND id != ?').bind(phone, id).first();
+        if (other) return json({ ok: false, error: 'customer_exists', id: other.id }, 409);
+        const f = fields(b);
+        await env.DB.prepare('UPDATE customers SET name = ?, phone = ?, city = ?, address = ?, type = ?, note = ?, vip = ?, updated_at = ? WHERE id = ?')
+          .bind(name, phone, f.city, f.address, f.type, f.note, f.vip, nowIso(), id).run();
+        return json({ ok: true });
+      }
+      if (method === 'DELETE') {
+        if (!admin) return fail(403, 'admin_only');
+        await env.DB.prepare('DELETE FROM customers WHERE id = ?').bind(id).run();
+        return json({ ok: true });
+      }
+    }
+  }
 
   /* ---- attendance: check-in / check-out; an admin can take attendance for anyone ---- */
   if (parts[0] === 'attendance') {
@@ -463,6 +627,7 @@ async function staffRoutes(env, request, method, parts) {
         sets.push('status = ?'); args.push(b.status);
       }
       if (b.assigned_to !== undefined) {
+        if (!admin && (b.assigned_to === null || +b.assigned_to !== me.id)) return fail(403, 'admin_only');
         if (b.assigned_to === null) sets.push('assigned_to = NULL');
         else {
           const s = await env.DB.prepare('SELECT id FROM staff WHERE id = ? AND active = 1').bind(+b.assigned_to).first();
@@ -526,7 +691,7 @@ async function staffRoutes(env, request, method, parts) {
   }
 
   if (method === 'GET' && route === 'users') {
-    const rows = await env.DB.prepare('SELECT id, username, name, role, active FROM staff ORDER BY id').all();
+    const rows = await env.DB.prepare(admin ? 'SELECT id, username, name, role, active FROM staff ORDER BY id' : 'SELECT id, name, active FROM staff WHERE active = 1 ORDER BY id').all();
     return json({ ok: true, users: rows.results || [] });
   }
 
@@ -572,6 +737,7 @@ async function staffRoutes(env, request, method, parts) {
     const b = await body(request);
     const question = clean(b && b.question, 500);
     if (!question) return fail(400, 'bad_request');
+    if (!admin) return fail(403, 'admin_only');
     if (!(await allow(env, request, 'ask', 60, 86400, String(me.id)))) return json({ ok: false, fallback: true });
     const s = await summary(env);
     const leads = await env.DB.prepare(
