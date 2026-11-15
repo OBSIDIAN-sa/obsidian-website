@@ -148,6 +148,16 @@
   var JOBS = { chief: 'رئيس الإدارة', management: 'إدارة', showroom_manager: 'مدير معرض', accountant: 'محاسب مالي', designer: 'مصمم', employee: 'موظف' };
   function jobOf(u) { return u.job && JOBS[u.job] ? u.job : (u.role === 'admin' ? 'chief' : 'employee'); }
   function jobName(u) { return JOBS[jobOf(u)]; }
+  var ROLES = { staff: 'موظف: يشوف ما يخصه', finance: 'محاسب: أرقام المعرض وتقرير حضور الكل', admin: 'مدير: يشوف كل شي' };
+  var ROLE_SHORT = { staff: 'موظف', finance: 'محاسب', admin: 'مدير' };
+  // the permission each title usually goes with; picked for you when the title changes, and you can change it
+  function roleFor(job) { return job === 'chief' || job === 'management' ? 'admin' : job === 'accountant' ? 'finance' : 'staff'; }
+  // title and permission side by side: the permission follows the title until it is changed by hand, and is fixed for the head of management
+  function linkRole(job, role) {
+    var sync = function () { role.disabled = job.value === 'chief'; if (role.disabled) role.value = 'admin'; };
+    job.addEventListener('change', function () { role.value = roleFor(job.value); sync(); });
+    sync();
+  }
   function isChief(u) { return jobOf(u) === 'chief'; }
   function isAdmin() { return me && me.role === 'admin'; }
   // deleting, managing members, the activity log, the attendance place and marking others belong to the head of management alone
@@ -907,7 +917,7 @@
   }
 
   PAGES.att = function (args, t) {
-    var admin = me.role === 'admin' || me.job === 'accountant';
+    var admin = me.role === 'admin' || me.role === 'finance';
     var chief = iAmChief();
     var tab = (admin && args[0] === 'report') || (chief && (args[0] === 'roll' || args[0] === 'place')) ? args[0] : 'me';
     setTitle('الحضور والانصراف');
@@ -1130,7 +1140,7 @@
         var d = h('details', 'fold member');
         var sum = h('summary');
         var badge = h('span', 'badge', u.active ? 'فعّال' : 'موقوف'); badge.dataset.s = u.active ? 'confirmed' : 'closed';
-        add(sum, h('span', 'row__name', u.name), h('span', 'row__meta', jobName(u) + (u.role === 'admin' ? ' · صلاحية مدير' : '') + ' · ' + u.username), badge);
+        add(sum, h('span', 'row__name', u.name), h('span', 'row__meta', jobName(u) + ' · الصلاحية: ' + (ROLE_SHORT[u.role] || ROLE_SHORT.staff) + ' · ' + u.username), badge);
         d.appendChild(sum);
         if (locked) d.appendChild(empty('التعديل على الحسابات عند رئيس الإدارة فقط.'));
         else {
@@ -1139,12 +1149,13 @@
           var uname = input('text', { value: u.username, dir: 'ltr', autocapitalize: 'none', spellcheck: false, autocomplete: 'off', required: true });
           var jobs = {}; Object.keys(JOBS).forEach(function (k) { if (k !== 'chief' || isChief(me)) jobs[k] = JOBS[k]; });
           var job = select(jobs, jobOf(u));
-          var role = select({ staff: 'موظف (يشوف ما يخصه)', admin: 'مدير (يشوف كل شي)' }, u.base_role === 'admin' ? 'admin' : 'staff');
+          var role = select(ROLES, ROLES[u.role] ? u.role : 'staff');
+          linkRole(job, role);
           var pass = input('password', { dir: 'ltr', autocomplete: 'new-password', placeholder: 'اتركها فاضية إذا ما تبغى تغيّرها' });
           var err = h('p', 'err'); err.setAttribute('role', 'alert');
           var save = h('button', 'btn btn--sm btn--solid', 'حفظ التعديلات'); save.type = 'submit';
           var r1 = h('div', 'form__two'); add(r1, field('الاسم', name), field('اسم المستخدم', uname));
-          var r2 = h('div', 'form__two'); add(r2, field('المسمى الوظيفي', job), field('الصلاحية', role, 'رئيس الإدارة والإدارة لهم صلاحية المدير دائماً. المحاسب المالي يشوف أرقام المعرض وتقرير حضور الكل.'));
+          var r2 = h('div', 'form__two'); add(r2, field('المسمى الوظيفي', job), field('الصلاحية', role, 'الصلاحية هي اللي تحدد وش يشوف. المسمى اسم فقط.'));
           add(f, r1, r2, field('كلمة مرور جديدة', pass), err);
           var acts = h('div', 'quick'); acts.appendChild(save);
           acts.appendChild(hlink('btn btn--sm', 'نشاطه', '#team/activity/' + u.id));
@@ -1164,7 +1175,7 @@
             if (name.value.trim() !== u.name) payload.name = name.value.trim();
             if (uname.value.trim().toLowerCase() !== u.username) payload.username = uname.value.trim();
             if (job.value !== jobOf(u) || !u.job) payload.job = job.value;
-            if (role.value !== (u.base_role === 'admin' ? 'admin' : 'staff')) payload.role = role.value;
+            if (role.value !== u.role && job.value !== 'chief') payload.role = role.value;
             if (pass.value) payload.password = pass.value;
             save.disabled = true;
             api('PATCH', 'users/' + u.id, payload).then(function (res) {
@@ -1233,12 +1244,13 @@
     var name = input('text', { required: true });
     var user = input('text', { dir: 'ltr', autocapitalize: 'none', spellcheck: false, autocomplete: 'off', required: true });
     var pass = input('password', { dir: 'ltr', autocomplete: 'new-password', required: true });
-    var role = select({ staff: 'موظف (يشوف ما يخصه)', admin: 'مدير (يشوف كل شي)' }, 'staff');
+    var role = select(ROLES, 'staff');
     var jobsNew = {}; Object.keys(JOBS).forEach(function (k) { if (k !== 'chief' || isChief(me)) jobsNew[k] = JOBS[k]; });
     var job = select(jobsNew, 'employee');
+    linkRole(job, role);
     var err = h('p', 'err'); err.setAttribute('role', 'alert');
     var btn = h('button', 'btn btn--solid', 'إضافة'); btn.type = 'submit';
-    add(f, field('الاسم', name), field('اسم المستخدم', user, 'أحرف إنجليزية صغيرة وأرقام.'), field('كلمة المرور', pass, '8 أحرف على الأقل. يقدر يغيّرها بعد الدخول.'), field('التصنيف', job), field('الصلاحية', role, 'رئيس الإدارة والإدارة لهم صلاحيات المدير دائماً. باقي التصنيفات حسب هذا الاختيار.'), err, btn);
+    add(f, field('الاسم', name), field('اسم المستخدم', user, 'أحرف إنجليزية صغيرة وأرقام.'), field('كلمة المرور', pass, '8 أحرف على الأقل. يقدر يغيّرها بعد الدخول.'), field('المسمى الوظيفي', job), field('الصلاحية', role, 'الصلاحية هي اللي تحدد وش يشوف. المسمى اسم فقط.'), err, btn);
     f.addEventListener('submit', function (e) {
       e.preventDefault();
       if (btn.disabled) return;
@@ -1278,7 +1290,7 @@
 
     var pi = panel('بيانات الحساب');
     var facts = h('dl', 'facts');
-    [['الاسم', me.name], ['اسم المستخدم', me.username || '—'], ['التصنيف', jobName(me)], ['الصلاحية', me.role === 'admin' ? 'مدير' : 'موظف']].forEach(function (x) {
+    [['الاسم', me.name], ['اسم المستخدم', me.username || '—'], ['المسمى الوظيفي', jobName(me)], ['الصلاحية', ROLE_SHORT[me.role] || 'موظف']].forEach(function (x) {
       var d = h('div'); add(d, h('dt', null, x[0]), h('dd', null, x[1])); facts.appendChild(d);
     });
     var out = h('button', 'btn', 'تسجيل الخروج'); out.type = 'button'; out.addEventListener('click', logout);
