@@ -345,7 +345,7 @@ async function ensureSchema(env) {
   try { await env.DB.prepare('ALTER TABLE staff ADD COLUMN job TEXT').run(); } catch (e) {}
   schemaReady = true;
 }
-const JOBS = ['chief', 'management', 'showroom_manager', 'designer', 'employee'];
+const JOBS = ['chief', 'management', 'showroom_manager', 'accountant', 'designer', 'employee'];
 // The head of management: classified so, or a manager account from before classifications existed
 const isChief = (u) => !!u && (u.job === 'chief' || (!u.job && u.role === 'admin'));
 const TASK_STATUS = ['todo', 'doing', 'done'];
@@ -469,10 +469,12 @@ async function staffRoutesInner(env, request, method, parts) {
   const admin = me.role === 'admin';
   // Deleting, managing members, the activity log, the attendance place and marking others present or absent belong to the head of management alone
   const chief = isChief(me);
+  // The accountant sits between a member and management: sees the showroom's full numbers and everyone's attendance report, nothing else extra
+  const finance = admin || me.job === 'accountant';
 
   // The full picture is for the manager; a member gets only what concerns them
   if (method === 'GET' && route === 'summary') {
-    if (admin) return json({ ok: true, summary: await summary(env) });
+    if (finance) return json({ ok: true, summary: await summary(env) });
     const today = todayRiyadh();
     const mine = await env.DB.prepare("SELECT COUNT(*) AS n FROM leads WHERE assigned_to = ? AND status NOT IN ('won','closed')").bind(me.id).first();
     const fresh = await env.DB.prepare("SELECT COUNT(*) AS n FROM leads WHERE status = 'new'").first();
@@ -736,7 +738,7 @@ async function staffRoutesInner(env, request, method, parts) {
       const ok = (d) => /^\d{4}-\d{2}-\d{2}$/.test(d || '');
       const from = ok(url.searchParams.get('from')) ? url.searchParams.get('from') : today;
       const to = ok(url.searchParams.get('to')) ? url.searchParams.get('to') : today;
-      const all = me.role === 'admin' && url.searchParams.get('all') === '1';
+      const all = finance && url.searchParams.get('all') === '1';
       const rows = await env.DB.prepare(
         'SELECT a.id, a.staff_id, a.date, a.in_at, a.out_at, a.in_by, a.out_by, a.in_dist, a.out_dist, s.name FROM attendance a JOIN staff s ON s.id = a.staff_id WHERE a.date BETWEEN ? AND ?' +
         (all ? '' : ' AND a.staff_id = ?') + ' ORDER BY a.date DESC, a.in_at DESC LIMIT 800'

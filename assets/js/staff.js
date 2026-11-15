@@ -145,7 +145,7 @@
   var NAV = [];
   var TASK_STATUS = { todo: 'لم تبدأ', doing: 'جارية', done: 'منجزة' };
   var NOTE_KIND = { general: 'ملاحظة', task: 'مهمة جديدة', vip: 'عميل مميز' };
-  var JOBS = { chief: 'رئيس الإدارة', management: 'إدارة', showroom_manager: 'مدير معرض', designer: 'مصمم', employee: 'موظف' };
+  var JOBS = { chief: 'رئيس الإدارة', management: 'إدارة', showroom_manager: 'مدير معرض', accountant: 'محاسب مالي', designer: 'مصمم', employee: 'موظف' };
   function jobOf(u) { return u.job && JOBS[u.job] ? u.job : (u.role === 'admin' ? 'chief' : 'employee'); }
   function jobName(u) { return JOBS[jobOf(u)]; }
   function isChief(u) { return jobOf(u) === 'chief'; }
@@ -907,7 +907,7 @@
   }
 
   PAGES.att = function (args, t) {
-    var admin = me.role === 'admin';
+    var admin = me.role === 'admin' || me.job === 'accountant';
     var chief = iAmChief();
     var tab = (admin && args[0] === 'report') || (chief && (args[0] === 'roll' || args[0] === 'place')) ? args[0] : 'me';
     setTitle('الحضور والانصراف');
@@ -1144,7 +1144,7 @@
           var err = h('p', 'err'); err.setAttribute('role', 'alert');
           var save = h('button', 'btn btn--sm btn--solid', 'حفظ التعديلات'); save.type = 'submit';
           var r1 = h('div', 'form__two'); add(r1, field('الاسم', name), field('اسم المستخدم', uname));
-          var r2 = h('div', 'form__two'); add(r2, field('المسمى الوظيفي', job), field('الصلاحية', role, 'رئيس الإدارة والإدارة لهم صلاحية المدير دائماً.'));
+          var r2 = h('div', 'form__two'); add(r2, field('المسمى الوظيفي', job), field('الصلاحية', role, 'رئيس الإدارة والإدارة لهم صلاحية المدير دائماً. المحاسب المالي يشوف أرقام المعرض وتقرير حضور الكل.'));
           add(f, r1, r2, field('كلمة مرور جديدة', pass), err);
           var acts = h('div', 'quick'); acts.appendChild(save);
           acts.appendChild(hlink('btn btn--sm', 'نشاطه', '#team/activity/' + u.id));
