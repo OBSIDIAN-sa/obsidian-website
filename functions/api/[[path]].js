@@ -346,7 +346,7 @@ async function ensureSchema(env) {
   schemaReady = true;
 }
 const JOBS = ['chief', 'management', 'showroom_manager', 'accountant', 'designer', 'employee'];
-const ROLES = ['staff', 'finance', 'admin'];
+const ROLES = ['staff', 'viewer', 'finance', 'admin'];
 // The head of management: classified so, or a manager account from before classifications existed
 const isChief = (u) => !!u && (u.job === 'chief' || (!u.job && u.role === 'admin'));
 const TASK_STATUS = ['todo', 'doing', 'done'];
@@ -390,6 +390,19 @@ function describeAction(method, parts, b) {
   if (a === 'activity') return 'مسح سجل النشاط';
   return method + ' ' + parts.join('/');
 }
+// For the viewer permission: phone numbers lose their middle digits; notes and addresses are left out
+function scrub(v) {
+  if (Array.isArray(v)) return v.map(scrub);
+  if (v && typeof v === 'object') {
+    const out = {};
+    for (const k of Object.keys(v)) {
+      if (k === 'note' || k === 'notes' || k === 'address') continue;
+      out[k] = k === 'phone' && typeof v[k] === 'string' ? v[k].slice(0, 2) + '••••••' + v[k].slice(-2) : scrub(v[k]);
+    }
+    return out;
+  }
+  return v;
+}
 // metres between two points
 function distance(lat1, lng1, lat2, lng2) {
   const r = Math.PI / 180, dLat = (lat2 - lat1) * r, dLng = (lng2 - lng1) * r;
@@ -403,9 +416,23 @@ async function attendancePlace(env) {
 
 async function staffRoutes(env, request, method, parts) {
   await ensureSchema(env);
-  if (method === 'GET' || parts[0] === 'login' || parts[0] === 'setup') return staffRoutesInner(env, request, method, parts);
-  // every successful change is written to the activity log under the member who made it
+  if (parts[0] === 'login' || parts[0] === 'setup') return staffRoutesInner(env, request, method, parts);
   const who = await currentStaff(env, request);
+  // viewer: an overview permission. Reads the showroom's lists without contact details, and changes nothing
+  // except their own attendance, password and tasks.
+  if (who && who.role === 'viewer') {
+    if (method !== 'GET') {
+      const own = parts[0] === 'logout' || parts[0] === 'password' || parts[0] === 'tasks' || (parts[0] === 'attendance' && (parts[1] === 'in' || parts[1] === 'out'));
+      if (!own) return fail(403, 'read_only');
+    } else if (parts[0] === 'leads' || parts[0] === 'customers' || parts[0] === 'appointments') {
+      const res = await staffRoutesInner(env, request, method, parts);
+      let data = null;
+      try { data = await res.json(); } catch (e) {}
+      return json(scrub(data), res.status);
+    }
+  }
+  if (method === 'GET') return staffRoutesInner(env, request, method, parts);
+  // every successful change is written to the activity log under the member who made it
   let b = null;
   try { b = await request.clone().json(); } catch (e) {}
   const res = await staffRoutesInner(env, request, method, parts);
@@ -473,10 +500,11 @@ async function staffRoutesInner(env, request, method, parts) {
   // The permission (staff | finance | admin) alone decides what a member sees; the job title is a label.
   // finance sits between a member and a manager: the showroom's full numbers and everyone's attendance report, nothing else extra
   const finance = admin || me.role === 'finance';
+  const viewer = me.role === 'viewer';
 
   // The full picture is for the manager; a member gets only what concerns them
   if (method === 'GET' && route === 'summary') {
-    if (finance) return json({ ok: true, summary: await summary(env) });
+    if (finance || viewer) return json({ ok: true, summary: await summary(env) });
     const today = todayRiyadh();
     const mine = await env.DB.prepare("SELECT COUNT(*) AS n FROM leads WHERE assigned_to = ? AND status NOT IN ('won','closed')").bind(me.id).first();
     const fresh = await env.DB.prepare("SELECT COUNT(*) AS n FROM leads WHERE status = 'new'").first();
@@ -513,7 +541,7 @@ async function staffRoutesInner(env, request, method, parts) {
     const sel = 'SELECT t.*, a.name AS assigned_name, c.name AS creator_name FROM tasks t LEFT JOIN staff a ON a.id = t.assigned_to LEFT JOIN staff c ON c.id = t.created_by';
     if (method === 'GET' && parts.length === 1) {
       const url = new URL(request.url);
-      const all = admin && url.searchParams.get('all') === '1';
+      const all = (admin || viewer) && url.searchParams.get('all') === '1';
       const done = url.searchParams.get('done') === '1';
       const rows = await env.DB.prepare(
         sel + ' WHERE ' + (done ? "t.status = 'done'" : "t.status != 'done'") + (all ? '' : ' AND t.assigned_to = ?') +

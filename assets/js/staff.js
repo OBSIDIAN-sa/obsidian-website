@@ -31,6 +31,7 @@
     place: 'الإحداثيات غير صحيحة.',
     radius: 'المسافة المسموحة لازم تكون بين 30 و2000 متر.',
     role: 'الصلاحية غير صحيحة.',
+    read_only: 'صلاحيتك للاطلاع فقط.',
     has_attendance: 'هذا الموظف له حضور مسجّل في هذا اليوم. احذف سجل الحضور أول.',
     date: 'التاريخ غير صحيح.',
     login_required: 'انتهت الجلسة. سجّل دخولك من جديد.',
@@ -148,8 +149,17 @@
   var JOBS = { chief: 'رئيس الإدارة', management: 'إدارة', showroom_manager: 'مدير معرض', accountant: 'محاسب مالي', designer: 'مصمم', employee: 'موظف' };
   function jobOf(u) { return u.job && JOBS[u.job] ? u.job : (u.role === 'admin' ? 'chief' : 'employee'); }
   function jobName(u) { return JOBS[jobOf(u)]; }
-  var ROLES = { staff: 'موظف: يشوف ما يخصه', finance: 'محاسب: أرقام المعرض وتقرير حضور الكل', admin: 'مدير: يشوف كل شي' };
-  var ROLE_SHORT = { staff: 'موظف', finance: 'محاسب', admin: 'مدير' };
+  var ROLES = { staff: 'موظف: يشوف ما يخصه', viewer: 'إداري: يشوف بدون تعديل وبدون أرقام العملاء', finance: 'محاسب: أرقام المعرض وتقرير حضور الكل', admin: 'مدير: يشوف كل شي' };
+  var ROLE_SHORT = { staff: 'موظف', viewer: 'إداري', finance: 'محاسب', admin: 'مدير' };
+  // the viewer permission reads only: no adding or changing customers, requests or appointments
+  function canEdit() { return !!me && me.role !== 'viewer'; }
+  // a customer's number with call and WhatsApp links; plain text when the number arrives masked
+  function contact(phone, text) {
+    var ph = h('span', 'phones');
+    if (/•/.test(phone)) return add(ph, h('span', 'ltr', phone));
+    var tel = h('a', 'ltr', phone); tel.href = 'tel:' + phone;
+    return add(ph, tel, link('واتساب', wa(phone, text)));
+  }
   // the permission each title usually goes with; picked for you when the title changes, and you can change it
   function roleFor(job) { return job === 'chief' || job === 'management' ? 'admin' : job === 'accountant' ? 'finance' : 'staff'; }
   // title and permission side by side: the permission follows the title until it is changed by hand, and is fixed for the head of management
@@ -342,7 +352,7 @@
       if (att.ok) a2.appendChild(punchPanel(att, function () { go('#home'); }));
       var quick = panel('إجراءات سريعة');
       var qr = h('div', 'quick');
-      add(qr, hlink('btn btn--sm', 'طلب جديد', '#leads/add'), hlink('btn btn--sm', 'عميل جديد', '#customers/add'), hlink('btn btn--sm', 'مهمة جديدة', '#tasks/mine'));
+      add(qr, canEdit() ? hlink('btn btn--sm', 'طلب جديد', '#leads/add') : null, canEdit() ? hlink('btn btn--sm', 'عميل جديد', '#customers/add') : null, hlink('btn btn--sm', 'مهمة جديدة', '#tasks/mine'));
       a2.appendChild(add(quick, qr));
       if (isAdmin()) a2.appendChild(askPanel());
       ui.body.appendChild(add(cols, a1, a2));
@@ -378,7 +388,7 @@
       b.disabled = true;
       api('POST', 'announcements', { kind: kind.value, body: v }).then(function (r) { b.disabled = false; if (!r.ok) return oops(r); toast('تم نشر الملاحظة.'); go('#home'); }).catch(function () { b.disabled = false; });
     });
-    p.appendChild(add(f, isAdmin() ? kind : null, txt, b));
+    if (canEdit()) p.appendChild(add(f, isAdmin() ? kind : null, txt, b));
     return p;
   }
 
@@ -417,7 +427,8 @@
     if (tab === 'q') { try { q = decodeURIComponent(args.slice(1).join('/')); } catch (e) { q = ''; } }
     setTitle('الطلبات');
     var bar = h('div', 'toolbar');
-    var addBtn = hlink('btn btn--sm btn--solid', 'إضافة طلب', '#leads/add');
+    var addBtn = canEdit() ? hlink('btn btn--sm btn--solid', 'إضافة طلب', '#leads/add') : null;
+    if (!canEdit() && tab === 'add') tab = 'new';
     add(bar, tabs([['new', 'جديدة'], ['open', 'مفتوحة'], ['mine', 'طلباتي'], ['all', 'الكل']], tab, 'leads'), addBtn);
     ui.body.appendChild(bar);
     if (tab === 'add') return ui.body.appendChild(leadForm());
@@ -492,8 +503,7 @@
       add(top, h('h2', 'lead__name', l.name), badge);
       var facts = h('dl', 'facts');
       function fact(k, v) { var d = h('div'); add(d, h('dt', null, k), typeof v === 'string' ? h('dd', null, v) : add(h('dd'), v)); facts.appendChild(d); }
-      var ph = h('span', 'phones'); var tel = h('a', 'ltr', l.phone); tel.href = 'tel:' + l.phone;
-      add(ph, tel, link('واتساب', wa(l.phone, 'مرحباً ' + l.name + '، معك أوبسيديان ديزاين بخصوص طلبك.')));
+      var ph = contact(l.phone, 'مرحباً ' + l.name + '، معك أوبسيديان ديزاين بخصوص طلبك.');
       fact('الجوال', ph);
       fact('نوع المشروع', l.type || 'بدون نوع');
       fact('تاريخ الطلب', fmtDate(l.created_at));
@@ -502,7 +512,7 @@
       if (l.note) { p.appendChild(h('h3', 'sub', 'ملاحظة العميل')); p.appendChild(h('p', 'note', l.note)); }
 
       var ctl = h('div', 'form__two');
-      var st = select(LEAD_STATUS, l.status);
+      var st = select(LEAD_STATUS, l.status); st.disabled = !canEdit();
       st.addEventListener('change', function () {
         api('PATCH', 'leads/' + l.id, { status: st.value }).then(function (r) {
           if (!r.ok) { st.value = l.status; return oops(r); }
@@ -515,7 +525,8 @@
       as.addEventListener('change', function () {
         api('PATCH', 'leads/' + l.id, { assigned_to: as.value === '' ? null : +as.value }).then(function (r) { if (!r.ok) return oops(r); toast('تم تحديث المسؤول.'); }).catch(noop);
       });
-      if (isAdmin()) add(ctl, field('الحالة', st), field('المسؤول', as));
+      if (!canEdit()) { var w0 = h('div', 'field'); add(w0, h('label', null, 'المسؤول'), h('p', 'who', l.assigned_name || 'غير مسند')); add(ctl, field('الحالة', st), w0); }
+      else if (isAdmin()) add(ctl, field('الحالة', st), field('المسؤول', as));
       else {
         var mineNow = l.assigned_to === me.id;
         var take = h('button', 'btn btn--sm', 'استلام الطلب'); take.type = 'button';
@@ -534,7 +545,7 @@
           oops(r);
         }).catch(noop);
       });
-      p.appendChild(add(h('div', 'quick'), reg));
+      if (canEdit()) p.appendChild(add(h('div', 'quick'), reg));
       a1.appendChild(p);
 
       var pa = panel('مواعيد العميل');
@@ -576,7 +587,8 @@
       });
       add(nf, ni, nb);
       add(pn, ul, nf);
-      a2.appendChild(pn);
+      if (canEdit()) a2.appendChild(pn);
+      else a2.appendChild(add(panel('للاطلاع فقط'), h('p', 'panel__hint', 'صلاحيتك تعرض الطلب بدون رقم العميل كامل وبدون الملاحظات، وما تقدر تعدل عليه.')));
       if (iAmChief()) {
         var pd = panel('حذف الطلب');
         a2.appendChild(add(pd, h('p', 'panel__hint', 'ينحذف الطلب عند الجميع، مع ملاحظاته ومواعيده.'),
@@ -633,7 +645,8 @@
     if (tab === 'q') { try { q = decodeURIComponent(args.slice(1).join('/')); } catch (e) { q = ''; } }
     setTitle('العملاء');
     var bar = h('div', 'toolbar');
-    add(bar, tabs([['all', 'كل العملاء'], ['vip', 'المميزون']], tab, 'customers'), hlink('btn btn--sm btn--solid', 'عميل جديد', '#customers/add'));
+    if (!canEdit() && tab === 'add') tab = 'all';
+    add(bar, tabs([['all', 'كل العملاء'], ['vip', 'المميزون']], tab, 'customers'), canEdit() ? hlink('btn btn--sm btn--solid', 'عميل جديد', '#customers/add') : null);
     ui.body.appendChild(bar);
     if (tab === 'add') {
       var pf = panel('تسجيل عميل جديد');
@@ -678,10 +691,10 @@
       var a1 = h('div', 'col'), a2 = h('div', 'col');
       var p = h('section', 'panel');
       var top = h('div', 'lead__top'); add(top, h('h2', 'lead__name', c.name), star(c));
-      var ph = h('span', 'phones'); var tel = h('a', 'ltr', c.phone); tel.href = 'tel:' + c.phone;
-      add(ph, tel, link('واتساب', wa(c.phone, 'مرحباً ' + c.name + '، معك أوبسيديان ديزاين.')));
+      var ph = contact(c.phone, 'مرحباً ' + c.name + '، معك أوبسيديان ديزاين.');
       add(p, top, ph, h('p', 'row__meta', 'سجّله ' + (c.creator_name || '—') + ' · ' + fmtDate(c.created_at)),
-        customerForm(c, function () { toast('تم حفظ بيانات العميل.'); go('#customer/' + c.id); }));
+        canEdit() ? customerForm(c, function () { toast('تم حفظ بيانات العميل.'); go('#customer/' + c.id); })
+          : h('p', 'panel__hint', 'المدينة: ' + (c.city || '—') + ' · نوع المشروع: ' + (c.type || '—') + '. صلاحيتك للاطلاع فقط.'));
       a1.appendChild(p);
 
       var pl = panel('طلبات العميل');
@@ -695,8 +708,9 @@
       } else pl.appendChild(empty('ما له طلبات مسجلة بهذا الرقم.'));
       var pn = panel('ملاحظات الفريق على العميل');
       var ul = h('ul', 'notes');
-      if (!res.notes.length) ul.appendChild(h('li', 'empty', 'لا توجد ملاحظات بعد.'));
-      res.notes.forEach(function (n) {
+      var cnotes = res.notes || [];
+      if (!cnotes.length) ul.appendChild(h('li', 'empty', 'لا توجد ملاحظات بعد.'));
+      cnotes.forEach(function (n) {
         var li = h('li', null, n.body); var sm = h('small', null, (n.staff_name || '—') + ' · ' + fmtDate(n.created_at));
         if (iAmChief() || n.staff_id === me.id) sm.appendChild(delBtn('حذف', 'link', function () { del('customers/' + c.id + '/notes/' + n.id, 'تم حذف الملاحظة.', function () { go('#customer/' + c.id); }); }));
         li.appendChild(sm); ul.appendChild(li);
@@ -710,7 +724,7 @@
         nb.disabled = true;
         api('POST', 'customers/' + c.id + '/notes', { body: v }).then(function (r) { nb.disabled = false; if (!r.ok) return oops(r); toast('تم حفظ الملاحظة.'); go('#customer/' + c.id); }).catch(function () { nb.disabled = false; });
       });
-      a2.appendChild(add(pn, ul, add(nf, ni, nb)));
+      if (canEdit()) a2.appendChild(add(pn, ul, add(nf, ni, nb)));
       a2.appendChild(pl);
       var pa = panel('مواعيد العميل');
       if (res.appointments.length) {
@@ -736,6 +750,7 @@
   function taskRow(x, today, after, showOwner) {
     var r = h('div', 'row row--task'); r.dataset.s = x.status;
     var st = select(TASK_STATUS, x.status); st.setAttribute('aria-label', 'حالة المهمة: ' + x.title); st.dataset.s = x.status;
+    st.disabled = !isAdmin() && x.assigned_to !== me.id;
     st.addEventListener('change', function () {
       api('PATCH', 'tasks/' + x.id, { status: st.value }).then(function (res) { if (!res.ok) { st.value = x.status; return oops(res); } toast(st.value === 'done' ? 'تم إنجاز المهمة.' : 'تم تحديث المهمة.'); after(); }).catch(noop);
     });
@@ -754,9 +769,10 @@
 
   PAGES.tasks = function (args, t) {
     var admin = isAdmin();
-    var tab = args[0] === 'done' || (admin && args[0] === 'all') ? args[0] : 'mine';
+    var seeAll = admin || me.role === 'viewer';
+    var tab = args[0] === 'done' || (seeAll && args[0] === 'all') ? args[0] : 'mine';
     setTitle('المهام');
-    var items = [['mine', 'مهامي']]; if (admin) items.push(['all', 'مهام الفريق']); items.push(['done', 'المنجزة']);
+    var items = [['mine', 'مهامي']]; if (seeAll) items.push(['all', 'مهام الفريق']); items.push(['done', 'المنجزة']);
     ui.body.appendChild(add(h('div', 'toolbar'), tabs(items, tab, 'tasks')));
     var again = function () { go('#tasks/' + tab); };
     fetchPage(t, ['tasks' + (tab === 'done' ? '?done=1' + (admin ? '&all=1' : '') : tab === 'all' ? '?all=1' : '')]).then(function (all) {
@@ -765,7 +781,7 @@
       var a1 = h('div', 'col'), a2 = h('div', 'col');
       var p = panel(({ mine: 'مهامي المفتوحة', all: 'مهام الفريق المفتوحة', done: 'المهام المنجزة' })[tab] + ' (' + res.tasks.length + ')');
       if (!res.tasks.length) p.appendChild(empty('لا يوجد.'));
-      else { var rows = h('div', 'rows'); res.tasks.forEach(function (x) { rows.appendChild(taskRow(x, res.today, again, admin && tab !== 'mine')); }); p.appendChild(rows); }
+      else { var rows = h('div', 'rows'); res.tasks.forEach(function (x) { rows.appendChild(taskRow(x, res.today, again, seeAll && tab !== 'mine')); }); p.appendChild(rows); }
       a1.appendChild(p);
 
       var pf = panel('مهمة جديدة');
@@ -798,9 +814,8 @@
     var r = h('div', 'row row--appt');
     var who = h('div', 'row__who');
     add(who, h('span', 'row__name', a.name), a.lead_type ? h('span', 'row__type', a.lead_type) : null);
-    var ph = h('span', 'phones'); var tel = h('a', 'ltr', a.phone); tel.href = 'tel:' + a.phone;
-    add(ph, tel, link('واتساب', wa(a.phone, 'مرحباً ' + a.name + '، نأكد موعد زيارتك لمعرض أوبسيديان ديزاين يوم ' + fmtDay(a.date) + ' الساعة ' + fmtTime(a.time) + '. ننتظرك.')));
-    var st = select(APPT_STATUS, a.status); st.setAttribute('aria-label', 'حالة موعد ' + a.name); st.dataset.s = a.status;
+    var ph = contact(a.phone, 'مرحباً ' + a.name + '، نأكد موعد زيارتك لمعرض أوبسيديان ديزاين يوم ' + fmtDay(a.date) + ' الساعة ' + fmtTime(a.time) + '. ننتظرك.');
+    var st = select(APPT_STATUS, a.status); st.setAttribute('aria-label', 'حالة موعد ' + a.name); st.dataset.s = a.status; st.disabled = !canEdit();
     st.addEventListener('change', function () {
       api('PATCH', 'appointments/' + a.id, { status: st.value }).then(function (res) {
         if (!res.ok) { st.value = a.status; return oops(res); }
