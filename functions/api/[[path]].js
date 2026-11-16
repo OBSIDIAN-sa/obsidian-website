@@ -377,14 +377,15 @@ function describeAction(method, parts, b) {
   if (a === 'attendance') {
     if (id === 'absent') return method === 'DELETE' ? 'ألغى تسجيل غياب' : 'سجّل غياب موظف';
     if (method === 'DELETE') return 'حذف سجل حضور' + n;
+    if (method === 'PATCH') return 'عدّل سجل حضور' + n;
     if (id === 'place') return 'غيّر موقع تسجيل الحضور';
     return (id === 'in' ? 'سجّل حضور' : 'سجّل انصراف') + (b && b.staff_id !== undefined ? ' لموظف آخر' : '');
   }
   if (a === 'leads') {
-    if (sub === 'notes') return (method === 'DELETE' ? 'حذف ملاحظة من الطلب' : 'كتب ملاحظة على الطلب') + n;
+    if (sub === 'notes') return (method === 'DELETE' ? 'حذف ملاحظة من الطلب' : method === 'PATCH' ? 'عدّل ملاحظة على الطلب' : 'كتب ملاحظة على الطلب') + n;
     if (method === 'POST') return 'أضاف طلب' + t(b && b.name);
     if (method === 'DELETE') return 'حذف الطلب' + n;
-    return (b && b.status ? 'غيّر حالة الطلب' : 'غيّر مسؤول الطلب') + n;
+    return (b && b.status ? 'غيّر حالة الطلب' : b && b.assigned_to !== undefined ? 'غيّر مسؤول الطلب' : 'عدّل بيانات الطلب') + n;
   }
   if (a === 'customers') {
     if (sub === 'notes') return (method === 'DELETE' ? 'حذف ملاحظة من ملف العميل' : 'كتب ملاحظة على العميل') + n;
@@ -393,15 +394,15 @@ function describeAction(method, parts, b) {
     return 'عدّل بيانات العميل' + n;
   }
   if (a === 'tasks') return method === 'POST' ? 'أضاف مهمة' + t(b && b.title) : method === 'DELETE' ? 'حذف المهمة' + n : 'غيّر حالة المهمة' + n;
-  if (a === 'announcements') return method === 'POST' ? 'نشر ملاحظة للفريق' : 'حذف ملاحظة من لوحة الفريق';
-  if (a === 'appointments') return (method === 'DELETE' ? 'حذف الموعد' : 'غيّر حالة الموعد') + n;
+  if (a === 'announcements') return method === 'POST' ? 'نشر ملاحظة للفريق' : method === 'PATCH' ? 'عدّل ملاحظة في لوحة الفريق' : 'حذف ملاحظة من لوحة الفريق';
+  if (a === 'appointments') return (method === 'DELETE' ? 'حذف الموعد' : b && (b.date || b.time) ? 'غيّر وقت الموعد' : 'غيّر حالة الموعد') + n;
   if (a === 'users') return method === 'POST' ? 'أضاف موظف' + t(b && b.name) : method === 'DELETE' ? 'حذف الموظف' + n : 'عدّل حساب الموظف' + n;
   if (a === 'activity') return 'مسح سجل النشاط';
   if (a === 'devices') return method === 'DELETE' ? 'حذف جهاز' + n : (b && b.status === 'approved' ? 'اعتمد جهاز' : 'رفض جهاز') + n;
   if (a === 'requests') return method === 'POST' ? 'رفع طلب للإدارة' : method === 'DELETE' ? 'حذف طلب للإدارة' + n : (b && b.status === 'approved' ? 'قبل طلب' : 'رفض طلب') + n;
-  if (a === 'commissions') return method === 'POST' ? 'سجّل عمولة' + t(b && b.source) : 'حذف عمولة' + n;
+  if (a === 'commissions') return method === 'POST' ? 'سجّل عمولة' + t(b && b.source) : method === 'PATCH' ? 'عدّل عمولة' + n : 'حذف عمولة' + n;
   if (a === 'docs') return method === 'POST' ? 'رفع مستند' + t(b && b.name) : 'حذف مستند' + n;
-  if (a === 'hr') return id === 'money' ? 'حذف حركة مالية' : id === 'leaves' ? 'حذف إجازة' : sub === 'money' ? 'سجّل حركة مالية لموظف' + n : sub === 'leaves' ? 'سجّل إجازة لموظف' + n : 'عدّل راتب أو رصيد إجازات موظف' + n;
+  if (a === 'hr') return id === 'default' ? 'غيّر رصيد الإجازات السنوي للكل' : id === 'money' ? (method === 'PATCH' ? 'عدّل حركة مالية' : 'حذف حركة مالية') : id === 'leaves' ? (method === 'PATCH' ? 'عدّل إجازة' : 'حذف إجازة') : sub === 'money' ? 'سجّل حركة مالية لموظف' + n : sub === 'leaves' ? 'سجّل إجازة لموظف' + n : 'عدّل راتب أو رصيد إجازات موظف' + n;
   return method + ' ' + parts.join('/');
 }
 // For the viewer permission: phone numbers lose their middle digits; notes and addresses are left out
@@ -556,6 +557,13 @@ async function staffRoutesInner(env, request, method, parts) {
         .bind(admin && NOTE_KINDS.includes(b.kind) ? b.kind : 'general', text, me.id, nowIso()).run();
       return json({ ok: true });
     }
+    if (method === 'PATCH' && /^\d+$/.test(parts[1] || '')) {
+      if (!chief) return fail(403, 'chief_only');
+      const b = await body(request); const text = clean(b && b.body, 600);
+      if (!text) return fail(422, 'body');
+      await env.DB.prepare('UPDATE announcements SET body = ?, kind = ? WHERE id = ?').bind(text, NOTE_KINDS.includes(b.kind) ? b.kind : 'general', +parts[1]).run();
+      return json({ ok: true });
+    }
     if (method === 'DELETE' && /^\d+$/.test(parts[1] || '')) {
       const n = await env.DB.prepare('SELECT created_by FROM announcements WHERE id = ?').bind(+parts[1]).first();
       if (!n) return fail(404, 'not_found');
@@ -600,8 +608,25 @@ async function staffRoutesInner(env, request, method, parts) {
       if (!admin && t.assigned_to !== me.id) return fail(403, 'admin_only');
       if (method === 'PATCH') {
         const b = await body(request);
-        if (!b || !TASK_STATUS.includes(b.status)) return fail(422, 'status');
-        await env.DB.prepare('UPDATE tasks SET status = ?, done_at = ? WHERE id = ?').bind(b.status, b.status === 'done' ? nowIso() : null, t.id).run();
+        if (!b) return fail(400, 'bad_request');
+        // the head of management can rewrite a task; everyone else only moves its status
+        if (b.title !== undefined || b.note !== undefined || b.due !== undefined || b.assigned_to !== undefined) {
+          if (!chief) return fail(403, 'chief_only');
+          const title = b.title !== undefined ? clean(b.title, 160) : t.title;
+          if (title.length < 2) return fail(422, 'title');
+          let to = t.assigned_to;
+          if (b.assigned_to !== undefined) {
+            const s2 = await env.DB.prepare('SELECT id FROM staff WHERE id = ?').bind(+b.assigned_to).first();
+            if (!s2) return fail(422, 'staff');
+            to = s2.id;
+          }
+          await env.DB.prepare('UPDATE tasks SET title = ?, note = ?, due = ?, assigned_to = ? WHERE id = ?')
+            .bind(title, b.note !== undefined ? clean(b.note, 600) : t.note, b.due !== undefined ? (validDate(b.due) ? b.due : null) : t.due, to, t.id).run();
+        }
+        if (b.status !== undefined) {
+          if (!TASK_STATUS.includes(b.status)) return fail(422, 'status');
+          await env.DB.prepare('UPDATE tasks SET status = ?, done_at = ? WHERE id = ?').bind(b.status, b.status === 'done' ? nowIso() : null, t.id).run();
+        }
         return json({ ok: true });
       }
       if (method === 'DELETE') {
@@ -655,6 +680,13 @@ async function staffRoutesInner(env, request, method, parts) {
         const appts = await env.DB.prepare('SELECT id, date, time, status FROM appointments WHERE phone = ? ORDER BY date DESC, time DESC LIMIT 10').bind(c.phone).all();
         const notes = await env.DB.prepare('SELECT n.id, n.body, n.created_at, n.staff_id, s.name AS staff_name FROM customer_notes n LEFT JOIN staff s ON s.id = n.staff_id WHERE n.customer_id = ? ORDER BY n.id DESC LIMIT 50').bind(id).all();
         return json({ ok: true, customer: c, leads: leads.results || [], appointments: appts.results || [], notes: notes.results || [] });
+      }
+      if (method === 'PATCH' && parts[2] === 'notes' && /^\d+$/.test(parts[3] || '')) {
+        if (!chief) return fail(403, 'chief_only');
+        const b = await body(request); const text = clean(b && b.body, 800);
+        if (!text) return fail(422, 'body');
+        await env.DB.prepare('UPDATE customer_notes SET body = ? WHERE id = ? AND customer_id = ?').bind(text, +parts[3], id).run();
+        return json({ ok: true });
       }
       if (method === 'DELETE' && parts[2] === 'notes' && /^\d+$/.test(parts[3] || '')) {
         const n = await env.DB.prepare('SELECT staff_id FROM customer_notes WHERE id = ? AND customer_id = ?').bind(+parts[3], id).first();
@@ -755,6 +787,18 @@ async function staffRoutesInner(env, request, method, parts) {
         await env.DB.prepare('DELETE FROM absences WHERE id = ?').bind(+parts[2]).run();
         return json({ ok: true });
       }
+    }
+    if (method === 'PATCH' && /^\d+$/.test(parts[1] || '')) {
+      if (!chief) return fail(403, 'chief_only');
+      const b = await body(request);
+      const rec = await env.DB.prepare('SELECT id, date FROM attendance WHERE id = ?').bind(+parts[1]).first();
+      if (!b || !rec) return fail(404, 'not_found');
+      const okTime = (x) => /^([01]\d|2[0-3]):[0-5]\d$/.test(x || '');
+      if (!okTime(b.in_time) || (b.out_time && !okTime(b.out_time))) return fail(422, 'time');
+      if (b.out_time && b.out_time <= b.in_time) return fail(422, 'time');
+      const at = (x) => new Date(rec.date + 'T' + x + ':00+03:00').toISOString();
+      await env.DB.prepare('UPDATE attendance SET in_at = ?, in_by = ?, out_at = ?, out_by = ? WHERE id = ?').bind(at(b.in_time), me.id, b.out_time ? at(b.out_time) : null, b.out_time ? me.id : null, rec.id).run();
+      return json({ ok: true });
     }
     if (method === 'DELETE' && /^\d+$/.test(parts[1] || '')) {
       if (!chief) return fail(403, 'chief_only');
@@ -873,11 +917,25 @@ async function staffRoutesInner(env, request, method, parts) {
           sets.push('assigned_to = ?'); args.push(s.id);
         }
       }
+      if (b.name !== undefined || b.phone !== undefined || b.type !== undefined || b.note !== undefined) {
+        if (!chief) return fail(403, 'chief_only');
+        if (b.name !== undefined) { const v = clean(b.name, 80); if (v.length < 2) return fail(422, 'name'); sets.push('name = ?'); args.push(v); }
+        if (b.phone !== undefined) { const v = normPhone(b.phone); if (!v) return fail(422, 'phone'); sets.push('phone = ?'); args.push(v); }
+        if (b.type !== undefined) { sets.push('type = ?'); args.push(clean(b.type, 60)); }
+        if (b.note !== undefined) { sets.push('note = ?'); args.push(clean(b.note, 600)); }
+      }
       if (!sets.length) return fail(400, 'bad_request');
       sets.push('updated_at = ?'); args.push(nowIso());
       const r = await env.DB.prepare('UPDATE leads SET ' + sets.join(', ') + ' WHERE id = ?').bind(...args, id).run();
       if (!r.meta.changes) return fail(404, 'not_found');
       return json({ ok: true, lead: await leadCard(env, id) });
+    }
+    if (method === 'PATCH' && parts[2] === 'notes' && /^\d+$/.test(parts[3] || '')) {
+      if (!chief) return fail(403, 'chief_only');
+      const b = await body(request); const text = clean(b && b.body, 800);
+      if (!text) return fail(422, 'body');
+      await env.DB.prepare('UPDATE lead_notes SET body = ? WHERE id = ? AND lead_id = ?').bind(text, +parts[3], id).run();
+      return json({ ok: true });
     }
     if (method === 'DELETE' && parts[2] === 'notes' && /^\d+$/.test(parts[3] || '')) {
       const n = await env.DB.prepare('SELECT staff_id FROM lead_notes WHERE id = ? AND lead_id = ?').bind(+parts[3], id).first();
@@ -931,10 +989,18 @@ async function staffRoutesInner(env, request, method, parts) {
 
   if (method === 'PATCH' && parts[0] === 'appointments' && /^\d+$/.test(parts[1] || '')) {
     const b = await body(request);
-    if (!b || !APPT_STATUS.includes(b.status)) return fail(422, 'status');
+    if (!b) return fail(400, 'bad_request');
+    const cur = await env.DB.prepare('SELECT * FROM appointments WHERE id = ?').bind(+parts[1]).first();
+    if (!cur) return fail(404, 'not_found');
+    let date = cur.date, time = cur.time, status = cur.status;
+    if (b.date !== undefined || b.time !== undefined) {
+      if (!chief) return fail(403, 'chief_only');
+      if (b.date !== undefined) { if (!validDate(b.date)) return fail(422, 'date'); date = b.date; }
+      if (b.time !== undefined) { if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(b.time)) return fail(422, 'time'); time = b.time; }
+    }
+    if (b.status !== undefined) { if (!APPT_STATUS.includes(b.status)) return fail(422, 'status'); status = b.status; }
     try {
-      const r = await env.DB.prepare('UPDATE appointments SET status = ? WHERE id = ?').bind(b.status, +parts[1]).run();
-      if (!r.meta.changes) return fail(404, 'not_found');
+      await env.DB.prepare('UPDATE appointments SET status = ?, date = ?, time = ? WHERE id = ?').bind(status, date, time, +parts[1]).run();
     } catch (e) {
       return fail(409, 'slot_taken'); // re-opening a cancelled booking whose slot has since been taken
     }

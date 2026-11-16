@@ -390,6 +390,10 @@
         var m = h('article', 'memo'); m.dataset.kind = n.kind; if (n.author_role === 'admin') m.dataset.from = 'admin';
         var head = h('div', 'memo__head');
         add(head, h('span', 'tag', n.kind !== 'general' ? NOTE_KIND[n.kind] : n.author_role === 'admin' ? 'من الإدارة' : 'ملاحظة'), h('span', 'row__meta', (n.author || '') + ' · ' + fmtDate(n.created_at)));
+        if (iAmChief()) head.appendChild(editBtn(m, function () {
+          var nk = select(NOTE_KIND, n.kind), nb = input('textarea', { maxLength: 600 }); nb.value = n.body;
+          return { nodes: [field('النوع', nk), field('النص', nb)], read: function () { return { kind: nk.value, body: nb.value.trim() }; } };
+        }, function (v) { return api('PATCH', 'announcements/' + n.id, v); }, function () { go('#home'); }));
         if (iAmChief() || n.created_by === me.id) {
           head.appendChild(delBtn('حذف', 'link', function () { del('announcements/' + n.id, 'تم حذف الملاحظة.', function () { go('#home'); }); }));
         }
@@ -588,6 +592,10 @@
         if (!notes.length) ul.appendChild(h('li', 'empty', 'لا توجد ملاحظات بعد.'));
         notes.forEach(function (n) {
           var li = h('li', null, n.body); var sm = h('small', null, (n.staff_name || '—') + ' · ' + fmtDate(n.created_at));
+          if (iAmChief()) sm.appendChild(editBtn(li, function () {
+            var eb = input('textarea', { maxLength: 800 }); eb.value = n.body;
+            return { nodes: [field('الملاحظة', eb)], read: function () { return { body: eb.value.trim() }; } };
+          }, function (v) { return api('PATCH', 'leads/' + l.id + '/notes/' + n.id, v); }, function () { go('#lead/' + l.id); }));
           if (iAmChief() || n.staff_id === me.id) sm.appendChild(delBtn('حذف', 'link', function () { del('leads/' + l.id + '/notes/' + n.id, 'تم حذف الملاحظة.', function () { go('#lead/' + l.id); }); }));
           li.appendChild(sm); ul.appendChild(li);
         });
@@ -611,6 +619,10 @@
       if (canEdit()) a2.appendChild(pn);
       else a2.appendChild(add(panel('للاطلاع فقط'), h('p', 'panel__hint', 'صلاحيتك تعرض الطلب بدون رقم العميل كامل وبدون الملاحظات، وما تقدر تعدل عليه.')));
       if (iAmChief()) {
+        var en = input('text', { value: l.name }), ep = input('tel', { dir: 'ltr', value: l.phone }), et = input('text', { maxLength: 60, value: l.type || '' }), eo = input('textarea', { maxLength: 600 });
+        eo.value = l.note || '';
+        a2.appendChild(add(panel('تعديل بيانات الطلب'), simpleForm([two(field('الاسم', en), field('الجوال', ep)), field('نوع المشروع', et), field('ملاحظة العميل', eo)], 'حفظ التعديل',
+          function () { return api('PATCH', 'leads/' + l.id, { name: en.value.trim(), phone: ep.value.trim(), type: et.value.trim(), note: eo.value.trim() }); }, function () { toast('تم حفظ بيانات الطلب.'); go('#lead/' + l.id); })));
         var pd = panel('حذف الطلب');
         a2.appendChild(add(pd, h('p', 'panel__hint', 'ينحذف الطلب عند الجميع، مع ملاحظاته ومواعيده.'),
           delBtn('حذف الطلب', 'btn btn--sm btn--danger', function () { del('leads/' + l.id, 'تم حذف الطلب.', function () { go('#leads/open'); }); })));
@@ -742,6 +754,10 @@
       if (!cnotes.length) ul.appendChild(h('li', 'empty', 'لا توجد ملاحظات بعد.'));
       cnotes.forEach(function (n) {
         var li = h('li', null, n.body); var sm = h('small', null, (n.staff_name || '—') + ' · ' + fmtDate(n.created_at));
+        if (iAmChief()) sm.appendChild(editBtn(li, function () {
+          var eb = input('textarea', { maxLength: 800 }); eb.value = n.body;
+          return { nodes: [field('الملاحظة', eb)], read: function () { return { body: eb.value.trim() }; } };
+        }, function (v) { return api('PATCH', 'customers/' + c.id + '/notes/' + n.id, v); }, function () { go('#customer/' + c.id); }));
         if (iAmChief() || n.staff_id === me.id) sm.appendChild(delBtn('حذف', 'link', function () { del('customers/' + c.id + '/notes/' + n.id, 'تم حذف الملاحظة.', function () { go('#customer/' + c.id); }); }));
         li.appendChild(sm); ul.appendChild(li);
       });
@@ -791,6 +807,12 @@
     if (x.due && x.status !== 'done' && x.due < today) { due.dataset.late = '1'; due.textContent = 'متأخرة · ' + fmtDay(x.due); }
     else if (x.due && x.due === today && x.status !== 'done') { due.dataset.today = '1'; due.textContent = 'اليوم'; }
     var act = h('div', 'row__act'); act.appendChild(st);
+    if (iAmChief()) act.appendChild(editBtn(r, function () {
+      var tt = input('text', { maxLength: 160, value: x.title }), tn = input('textarea', { maxLength: 600 }), td = input('date', { value: x.due || '' });
+      tn.value = x.note || '';
+      var o = {}; users.forEach(function (u) { o[u.id] = u.name; }); var ta = select(o, String(x.assigned_to));
+      return { nodes: [field('المهمة', tt), field('تفاصيل', tn), two(field('موعد الإنجاز', td), field('على مين', ta))], read: function () { return { title: tt.value.trim(), note: tn.value.trim(), due: td.value, assigned_to: +ta.value }; } };
+    }, function (v) { return api('PATCH', 'tasks/' + x.id, v); }, after));
     if (iAmChief() || x.created_by === me.id) {
       act.appendChild(delBtn('حذف', 'link', function () { del('tasks/' + x.id, 'تم حذف المهمة.', after); }));
     }
@@ -855,6 +877,10 @@
     });
     var act = h('div', 'row__act');
     add(act, st, a.lead_id ? hlink('btn btn--sm', 'الطلب #' + a.lead_id, '#lead/' + a.lead_id) : null,
+      iAmChief() ? editBtn(r, function () {
+        var ad = input('date', { value: a.date }), at = input('time', { value: a.time });
+        return { nodes: [two(field('اليوم', ad), field('الوقت', at))], read: function () { return { date: ad.value, time: at.value }; } };
+      }, function (v) { return api('PATCH', 'appointments/' + a.id, v); }, function () { route(); }) : null,
       iAmChief() ? delBtn('حذف', 'link', function () { del('appointments/' + a.id, 'تم حذف الموعد.', function () { route(); }); }) : null);
     return add(r, h('span', 'row__time', fmtTime(a.time)), who, ph, act);
   }
@@ -948,7 +974,13 @@
       var times = h('span', 'row__meta');
       tl.days[d].slice().reverse().forEach(function (x, i) {
         var one = h('span', 'rec', (i ? '، ' : '') + fmtClock(x.in_at) + ' – ' + (x.out_at ? fmtClock(x.out_at) : '؟'));
-        if (again) one.appendChild(delBtn('حذف', 'link', function () { del('attendance/' + x.id, 'تم حذف سجل الحضور.', again); }));
+        if (again) {
+          one.appendChild(editBtn(r, function () {
+            var ti = input('time', { value: hhmm(x.in_at) }), to = input('time', { value: hhmm(x.out_at) });
+            return { nodes: [two(field('وقت الحضور', ti), field('وقت الانصراف', to, 'اتركه فاضي إذا ما انصرف'))], read: function () { return { in_time: ti.value, out_time: to.value }; } };
+          }, function (v) { return api('PATCH', 'attendance/' + x.id, v); }, again));
+          one.appendChild(delBtn('حذف', 'link', function () { del('attendance/' + x.id, 'تم حذف سجل الحضور.', again); }));
+        }
         times.appendChild(one);
       });
       add(r, h('span', 'row__name', fmtDay(d)), times, h('span', 'row__id', fmtDur(mins)));
@@ -992,7 +1024,14 @@
           var r = h('div', 'row row--roll');
           var meta = h('span', 'row__meta');
           if (!mine.length) meta.textContent = ab ? (ab.note || 'غياب مسجّل') : '—';
-          mine.slice().reverse().forEach(function (x) { var one = h('span', 'rec', recordLine(x)); one.appendChild(delBtn('حذف', 'link', function () { del('attendance/' + x.id, 'تم حذف سجل الحضور.', again); })); meta.appendChild(one); });
+          mine.slice().reverse().forEach(function (x) {
+            var one = h('span', 'rec', recordLine(x));
+            one.appendChild(editBtn(r, function () {
+              var ti = input('time', { value: hhmm(x.in_at) }), to = input('time', { value: hhmm(x.out_at) });
+              return { nodes: [two(field('وقت الحضور', ti), field('وقت الانصراف', to, 'اتركه فاضي إذا ما انصرف'))], read: function () { return { in_time: ti.value, out_time: to.value }; } };
+            }, function (v) { return api('PATCH', 'attendance/' + x.id, v); }, again));
+            one.appendChild(delBtn('حذف', 'link', function () { del('attendance/' + x.id, 'تم حذف سجل الحضور.', again); })); meta.appendChild(one);
+          });
           var act = h('div', 'row__act');
           if (isToday) {
             var btn = h('button', 'btn btn--sm', st.open ? 'انصراف' : 'حاضر'); btn.type = 'button';
@@ -1423,6 +1462,22 @@
     return add(w, x, p);
   }
 
+  // "edit" for the head of management: opens a small form right under the row; build() returns { nodes, read }
+  function editBtn(host, build, save, after) {
+    var b = h('button', 'link link--edit', 'تعديل'); b.type = 'button';
+    var box = null;
+    b.addEventListener('click', function () {
+      if (box) { box.remove(); box = null; return; }
+      var made = build();
+      box = h(host.tagName === 'LI' ? 'li' : 'div', 'editbox');
+      box.appendChild(simpleForm(made.nodes, 'حفظ التعديل', function () { return save(made.read()); }, function () { toast('تم حفظ التعديل.'); after(); }));
+      host.parentNode.insertBefore(box, host.nextSibling);
+    });
+    return b;
+  }
+  // HH:MM in Riyadh from a stored timestamp
+  function hhmm(iso) { return iso ? new Date(new Date(iso).getTime() + 3 * 3600000).toISOString().slice(11, 16) : ''; }
+
   /* ------------------------------------------------------------ a member's file: pay, leave, commissions, documents */
   var MONEY = { due: 'مستحق للموظف', debt: 'مديونية أو سلفة عليه', settle: 'سداد مديونية', salary: 'راتب مصروف' };
   var REQ_KIND = { general: 'طلب عام', correction: 'تصحيح تحضير', leave: 'إجازة' };
@@ -1469,7 +1524,10 @@
           d.money.forEach(function (m) {
             var r = h('div', 'row row--money'); var b = h('span', 'badge', MONEY[m.kind] || m.kind); b.dataset.s = m.kind === 'debt' ? 'cancelled' : m.kind === 'due' ? 'new' : m.kind === 'salary' ? 'confirmed' : 'won';
             add(r, h('span', 'row__id', sar(m.amount)), b, h('span', 'row__meta', fmtDay(m.date) + (m.note ? ' · ' + m.note : '') + (m.by_name ? ' · سجّلها ' + m.by_name : '')),
-              chief ? delBtn('حذف', 'link', function () { del('hr/money/' + m.id, 'تم حذف الحركة.', again); }) : h('span'));
+              chief ? add(h('span', 'acts'), editBtn(r, function () {
+                var k = select(MONEY, m.kind), am = input('number', { dir: 'ltr', min: 0, step: '0.01', value: String(m.amount) }), dt = input('date', { value: m.date }), nt = input('text', { maxLength: 200, value: m.note || '' });
+                return { nodes: [field('النوع', k), two(field('المبلغ (ر.س)', am), field('التاريخ', dt)), field('البيان', nt)], read: function () { return { kind: k.value, amount: am.value, date: dt.value, note: nt.value.trim() }; } };
+              }, function (v) { return api('PATCH', 'hr/money/' + m.id, v); }, again), delBtn('حذف', 'link', function () { del('hr/money/' + m.id, 'تم حذف الحركة.', again); })) : h('span'));
             rows.appendChild(r);
           });
           p.appendChild(rows);
@@ -1496,7 +1554,10 @@
           d.leaves.forEach(function (x) {
             var r = h('div', 'row row--money');
             add(r, h('span', 'row__id', x.days + ' يوم'), h('span', 'row__name', fmtDay(x.date_from) + (x.date_to !== x.date_from ? ' إلى ' + fmtDay(x.date_to) : '')), h('span', 'row__meta', x.note || ''),
-              chief ? delBtn('حذف', 'link', function () { del('hr/leaves/' + x.id, 'تم حذف الإجازة.', again); }) : h('span'));
+              chief ? add(h('span', 'acts'), editBtn(r, function () {
+                var e1 = input('date', { value: x.date_from }), e2 = input('date', { value: x.date_to }), ed = input('number', { dir: 'ltr', min: 0.5, step: '0.5', value: String(x.days) }), en = input('text', { maxLength: 200, value: x.note || '' });
+                return { nodes: [two(field('من', e1), field('إلى', e2)), field('عدد الأيام', ed), field('البيان', en)], read: function () { return { date_from: e1.value, date_to: e2.value, days: ed.value, note: en.value.trim() }; } };
+              }, function (v) { return api('PATCH', 'hr/leaves/' + x.id, v); }, again), delBtn('حذف', 'link', function () { del('hr/leaves/' + x.id, 'تم حذف الإجازة.', again); })) : h('span'));
             lr.appendChild(r);
           });
           pl.appendChild(lr);
@@ -1508,7 +1569,10 @@
           a2.appendChild(add(panel('تسجيل إجازة'), simpleForm([two(field('من', f1), field('إلى', f2)), field('عدد الأيام', dn), field('البيان', ln)], 'تسجيل الإجازة',
             function () { return api('POST', 'hr/' + sid + '/leaves', { date_from: f1.value, date_to: f2.value || f1.value, days: dn.value, note: ln.value.trim() }); }, function () { toast('تم تسجيل الإجازة.'); again(); })));
           var ent = input('number', { dir: 'ltr', min: 0, step: '0.5', value: String(s.leave_days) });
-          a2.appendChild(add(panel('الرصيد السنوي'), simpleForm([field('عدد أيام الإجازة في السنة', ent)], 'حفظ الرصيد', function () { return api('PATCH', 'hr/' + sid, { leave_days: ent.value }); }, function () { toast('تم حفظ الرصيد.'); again(); })));
+          var pe = add(panel('الرصيد السنوي'), h('p', 'panel__hint', s.leave_own ? 'هذا الموظف له رصيد خاص.' : 'يتبع الرصيد العام لكل الموظفين. اكتب رقم هنا عشان يصير له رصيد خاص.'),
+            simpleForm([field('عدد أيام الإجازة في السنة', ent)], 'حفظ الرصيد', function () { return api('PATCH', 'hr/' + sid, { leave_days: ent.value }); }, function () { toast('تم حفظ الرصيد.'); again(); }));
+          if (s.leave_own) { var back = h('button', 'btn btn--sm', 'رجوع للرصيد العام'); back.type = 'button'; back.addEventListener('click', function () { api('PATCH', 'hr/' + sid, { leave_days: null }).then(function (x) { if (!x.ok) return oops(x); toast('رجع للرصيد العام.'); again(); }).catch(noop); }); pe.appendChild(back); }
+          a2.appendChild(pe);
         } else if (own) {
           a2.appendChild(add(panel('طلب إجازة'), h('p', 'panel__hint', 'الطلب يروح لرئيس الإدارة، وينخصم من الرصيد بعد القبول.'), simpleForm([two(field('من', f1), field('إلى', f2)), field('عدد الأيام', dn), field('السبب', ln)], 'إرسال الطلب',
             function () { return api('POST', 'requests', { kind: 'leave', date: f1.value, date_to: f2.value || f1.value, days: dn.value, body: ln.value.trim() || 'طلب إجازة' }); }, function () { toast('تم إرسال طلب الإجازة.'); go('#account/requests'); })));
@@ -1524,7 +1588,12 @@
           d.commissions.forEach(function (x) {
             var r = h('div', 'row row--money');
             add(r, h('span', 'row__id', sar(x.amount)), h('span', 'row__name', x.source), h('span', 'row__meta', fmtDay(x.date) + (x.percent != null ? ' · النسبة ' + x.percent + '%' : '') + (x.base != null ? ' · من ' + sar(x.base) : '')),
-              chief || own ? delBtn('حذف', 'link', function () { del('commissions/' + x.id, 'تم حذف العمولة.', again); }) : h('span'));
+              chief || own ? add(h('span', 'acts'), chief ? editBtn(r, function () {
+                var es = input('textarea', { maxLength: 300 }); es.value = x.source;
+                var eb = input('number', { dir: 'ltr', min: 0, step: '0.01', value: x.base == null ? '' : String(x.base) }), ep = input('number', { dir: 'ltr', min: 0, max: 100, step: '0.1', value: x.percent == null ? '' : String(x.percent) }),
+                  ea = input('number', { dir: 'ltr', min: 0, step: '0.01', value: String(x.amount) }), ed = input('date', { value: x.date });
+                return { nodes: [field('مصدر العمولة', es), two(field('قيمة الصفقة', eb), field('النسبة %', ep)), two(field('مبلغ العمولة', ea), field('التاريخ', ed))], read: function () { return { source: es.value.trim(), base: eb.value, percent: ep.value, amount: ea.value, date: ed.value }; } };
+              }, function (v) { return api('PATCH', 'commissions/' + x.id, v); }, again) : null, delBtn('حذف', 'link', function () { del('commissions/' + x.id, 'تم حذف العمولة.', again); })) : h('span'));
             cr.appendChild(r);
           });
           pc.appendChild(cr);
@@ -1692,6 +1761,11 @@
       p.appendChild(exportBar('رواتب وأرصدة الموظفين', ['الموظف', 'المسمى', 'الراتب الشهري', 'مستحقات له', 'مديونيات عليه', 'رواتب مصروفة', 'العمولات', 'رصيد الإجازة السنوي', 'المستخدم', 'المتبقي'],
         function () { return list.map(function (x) { return [x.name, JOBS[x.job] || 'موظف', x.salary, x.dues, x.debts, x.salaries_paid, x.commissions, x.leave_days, x.leave_used, x.leave_left]; }); }));
       ui.body.appendChild(p);
+      if (iAmChief()) {
+        var dl = input('number', { dir: 'ltr', min: 0, max: 365, step: '0.5', value: String(all[0].leave_default) });
+        ui.body.appendChild(add(panel('رصيد الإجازات السنوي لكل الموظفين'), h('p', 'panel__hint', 'ينطبق على كل موظف ما حددت له رصيد خاص من ملفه.'),
+          simpleForm([field('عدد الأيام في السنة', dl)], 'حفظ', function () { return api('PUT', 'hr/default', { leave_days: dl.value }); }, function () { toast('تم حفظ الرصيد السنوي.'); go('#payroll'); })));
+      }
     }).catch(noop);
   };
   // head of management: every member's requests, waiting ones first
