@@ -14,6 +14,17 @@
   var TYPES = ['مطبخ', 'خزائن وغرف ملابس', 'حلول داخلية', 'أكثر من واحد', 'أعمال خشب أو رخام أخرى'];
   var ERR = {
     credentials: 'اسم المستخدم أو كلمة المرور غير صحيحة.',
+    device_pending: 'هذا الجهاز ينتظر اعتماد رئيس الإدارة. بعد ما يعتمده، سجّل دخولك مرة ثانية.',
+    device_rejected: 'هذا الجهاز مرفوض من رئيس الإدارة. تواصل معه.',
+    amount: 'اكتب مبلغ صحيح.',
+    days: 'عدد الأيام غير صحيح.',
+    kind: 'النوع غير صحيح.',
+    percent: 'النسبة لازم تكون بين 0 و100.',
+    source: 'اشرح مصدر العمولة.',
+    file: 'اختر ملف.',
+    too_large: 'الملف أكبر من 4 ميجابايت.',
+    time: 'وقت الانصراف لازم يكون بعد وقت الحضور.',
+    decided: 'هذا الطلب تم البت فيه من قبل.',
     slow_down: 'محاولات كثيرة. جرّب بعد ربع ساعة.',
     setup_key: 'مفتاح الإعداد غير صحيح.',
     already_set_up: 'تم الإعداد من قبل. سجّل دخولك.',
@@ -297,7 +308,7 @@
     var page = PAGES[parts[0]] ? parts[0] : 'home';
     var t = ++seq;
     if (page === 'team' && !isAdmin()) page = 'home';
-    var section = page === 'lead' ? 'leads' : page === 'customer' ? 'customers' : page;
+    var section = page === 'lead' ? 'leads' : page === 'customer' ? 'customers' : page === 'member' ? 'team' : page;
     NAV.forEach(function (it) {
       if (it[0] === section) ui.nav[it[0]].setAttribute('aria-current', 'page'); else ui.nav[it[0]].removeAttribute('aria-current');
     });
@@ -331,6 +342,14 @@
         stat(s.week, 'طلبات آخر 7 أيام', '#leads/all', 'rose');
       }
       ui.body.appendChild(grid);
+      if (iAmChief()) api('GET', 'inbox').then(function (ib) {
+        if (!live(t) || !ib.ok || !(ib.requests + ib.devices)) return;
+        var w = h('section', 'panel panel--alert');
+        add(w, h('h2', null, 'ينتظر قرارك'), add(h('div', 'quick'),
+          ib.requests ? hlink('btn btn--sm btn--solid', 'طلبات الموظفين: ' + ib.requests, '#team/requests') : null,
+          ib.devices ? hlink('btn btn--sm btn--solid', 'أجهزة تنتظر الاعتماد: ' + ib.devices, '#team/devices') : null));
+        ui.body.insertBefore(w, grid.nextSibling);
+      }).catch(noop);
       ui.body.appendChild(notesPanel(an.ok ? an.announcements : []));
 
       var cols = h('div', 'cols cols--home');
@@ -352,7 +371,8 @@
       if (att.ok) a2.appendChild(punchPanel(att, function () { go('#home'); }));
       var quick = panel('إجراءات سريعة');
       var qr = h('div', 'quick');
-      add(qr, canEdit() ? hlink('btn btn--sm', 'طلب جديد', '#leads/add') : null, canEdit() ? hlink('btn btn--sm', 'عميل جديد', '#customers/add') : null, hlink('btn btn--sm', 'مهمة جديدة', '#tasks/mine'));
+      add(qr, canEdit() ? hlink('btn btn--sm', 'طلب جديد', '#leads/add') : null, canEdit() ? hlink('btn btn--sm', 'عميل جديد', '#customers/add') : null, hlink('btn btn--sm', 'مهمة جديدة', '#tasks/mine'), hlink('btn btn--sm', 'طلب للإدارة', '#account/requests'), hlink('btn btn--sm', 'ملفي', '#account/money'),
+        iAmChief() || me.role === 'finance' ? hlink('btn btn--sm', 'الرواتب والمستحقات', '#payroll') : null);
       a2.appendChild(add(quick, qr));
       if (isAdmin()) a2.appendChild(askPanel());
       ui.body.appendChild(add(cols, a1, a2));
@@ -450,6 +470,7 @@
           rows.appendChild(chief ? rowLine(leadRow(l), delBtn('حذف', 'link', function () { del('leads/' + l.id, 'تم حذف الطلب #' + l.id + '.', route); })) : leadRow(l));
         });
         p.appendChild(rows);
+        p.appendChild(exportBar(title, ['الرقم', 'العميل', 'الجوال', 'نوع المشروع', 'الحالة', 'المسؤول', 'التاريخ'], function () { return leads.map(function (l) { return [l.id, l.name, l.phone || '', l.type || '', LEAD_STATUS[l.status] || l.status, l.assigned_name || '', l.created_at.slice(0, 10)]; }); }));
       }
       ui.body.appendChild(p);
     }).catch(noop);
@@ -604,7 +625,8 @@
     var a = hlink('row row--cust', null, '#customer/' + c.id);
     var name = h('span', 'row__name', c.name);
     var tel = h('span', 'row__id ltr', c.phone);
-    add(a, add(h('span', 'row__who'), name), tel, h('span', 'row__type', c.city || '—'), h('span', 'row__type', c.type || '—'), star(c) || h('span'));
+    var sb = h('span', 'badge', STAGES[c.stage] || STAGES.new); sb.dataset.s = { new: 'new', contract: 'pending', design: 'appointment', manufacturing: 'contacted', installation: 'contacted', delivery: 'won', done: 'closed' }[c.stage] || 'new';
+    add(a, add(h('span', 'row__who'), name, star(c)), tel, h('span', 'row__type', c.city || '—'), h('span', 'row__type', c.type || '—'), sb);
     return a;
   }
   function customerForm(c, onSaved) {
@@ -620,16 +642,17 @@
     var note = input('textarea', { maxLength: 800 }); note.value = c.note || '';
     var vip = h('input'); vip.type = 'checkbox'; vip.checked = !!c.vip;
     var vl = h('label', 'check'); add(vl, vip, h('span', null, 'عميل مميز'));
+    var stage = select(STAGES, STAGES[c.stage] ? c.stage : 'new');
     var err = h('p', 'err'); err.setAttribute('role', 'alert');
     var btn = h('button', 'btn btn--solid', c.id ? 'حفظ التعديلات' : 'تسجيل العميل'); btn.type = 'submit';
     var r1 = h('div', 'form__two'); add(r1, field('الاسم', name), field('رقم الجوال', phone));
     var r2 = h('div', 'form__two'); add(r2, field('المدينة أو الحي', city), field('نوع المشروع', type));
-    add(f, r1, r2, field('العنوان', address), field('ملاحظات', note), vl, err, btn);
+    add(f, r1, r2, field('مرحلة العميل', stage), field('العنوان', address), field('ملاحظات', note), vl, err, btn);
     f.addEventListener('submit', function (e) {
       e.preventDefault();
       if (btn.disabled) return;
       err.textContent = ''; btn.disabled = true;
-      var payload = { name: name.value.trim(), phone: phone.value.trim(), city: city.value.trim(), type: type.value, address: address.value.trim(), note: note.value.trim(), vip: vip.checked };
+      var payload = { name: name.value.trim(), phone: phone.value.trim(), city: city.value.trim(), type: type.value, address: address.value.trim(), note: note.value.trim(), vip: vip.checked, stage: stage.value };
       api(c.id ? 'PATCH' : 'POST', c.id ? 'customers/' + c.id : 'customers', payload).then(function (res) {
         btn.disabled = false;
         if (!res.ok) { err.textContent = errText(res.error); if (res.error === 'customer_exists' && res.id) err.appendChild(hlink('err__link', ' فتح ملفه', '#customer/' + res.id)); return; }
@@ -658,13 +681,18 @@
     var sb = h('button', 'btn btn--sm', 'بحث'); sb.type = 'submit';
     sf.addEventListener('submit', function (e) { e.preventDefault(); var v = toLatinDigits(si.value).trim(); go(v ? '#customers/q/' + encodeURIComponent(v) : '#customers/all'); });
     ui.body.appendChild(add(sf, si, sb));
-    fetchPage(t, ['customers' + (tab === 'vip' ? '?vip=1' : tab === 'q' ? '?q=' + encodeURIComponent(q) : '')]).then(function (all) {
+    var stageKey = tab === 'stage' && STAGES[args[1]] ? args[1] : '';
+    var so = { '': 'كل المراحل' }; Object.keys(STAGES).forEach(function (k) { so[k] = STAGES[k]; });
+    var ss = select(so, stageKey); ss.setAttribute('aria-label', 'مرحلة العميل');
+    ss.addEventListener('change', function () { go(ss.value ? '#customers/stage/' + ss.value : '#customers/all'); });
+    ui.body.appendChild(add(h('div', 'monthpick'), h('span', null, 'المرحلة'), ss));
+    fetchPage(t, ['customers' + (tab === 'vip' ? '?vip=1' : tab === 'q' ? '?q=' + encodeURIComponent(q) : stageKey ? '?stage=' + stageKey : '')]).then(function (all) {
       var list = all[0].customers;
-      var p = panel((tab === 'q' ? 'نتائج البحث عن «' + q + '»' : tab === 'vip' ? 'العملاء المميزون' : 'كل العملاء') + ' (' + list.length + ')');
+      var p = panel((tab === 'q' ? 'نتائج البحث عن «' + q + '»' : tab === 'vip' ? 'العملاء المميزون' : stageKey ? 'عملاء مرحلة ' + STAGES[stageKey] : 'كل العملاء') + ' (' + list.length + ')');
       if (!list.length) p.appendChild(empty(tab === 'q' ? 'ما فيه عميل يطابق البحث.' : 'لا يوجد عملاء مسجلين بعد.'));
       else {
         var head = h('div', 'row row--cust row--head'); head.setAttribute('aria-hidden', 'true');
-        add(head, h('span', null, 'العميل'), h('span', null, 'الجوال'), h('span', null, 'المدينة'), h('span', null, 'النوع'), h('span'));
+        add(head, h('span', null, 'العميل'), h('span', null, 'الجوال'), h('span', null, 'المدينة'), h('span', null, 'النوع'), h('span', null, 'المرحلة'));
         var rows = h('div', 'rows');
         var chief = iAmChief();
         rows.appendChild(chief ? rowLine(head) : head);
@@ -672,6 +700,7 @@
           rows.appendChild(chief ? rowLine(customerRow(c), delBtn('حذف', 'link', function () { del('customers/' + c.id, 'تم حذف العميل.', route); })) : customerRow(c));
         });
         p.appendChild(rows);
+        p.appendChild(exportBar('العملاء', ['الاسم', 'الجوال', 'المدينة', 'نوع المشروع', 'المرحلة', 'مميز', 'تاريخ التسجيل'], function () { return list.map(function (c) { return [c.name, c.phone, c.city || '', c.type || '', STAGES[c.stage] || STAGES.new, c.vip ? 'نعم' : '', c.created_at.slice(0, 10)]; }); }));
       }
       ui.body.appendChild(p);
     }).catch(noop);
@@ -690,7 +719,8 @@
       var cols = h('div', 'cols');
       var a1 = h('div', 'col'), a2 = h('div', 'col');
       var p = h('section', 'panel');
-      var top = h('div', 'lead__top'); add(top, h('h2', 'lead__name', c.name), star(c));
+      var sbg = h('span', 'badge', 'المرحلة: ' + (STAGES[c.stage] || STAGES.new)); sbg.dataset.s = 'contacted';
+      var top = h('div', 'lead__top'); add(top, h('h2', 'lead__name', c.name), sbg, star(c));
       var ph = contact(c.phone, 'مرحباً ' + c.name + '، معك أوبسيديان ديزاين.');
       add(p, top, ph, h('p', 'row__meta', 'سجّله ' + (c.creator_name || '—') + ' · ' + fmtDate(c.created_at)),
         canEdit() ? customerForm(c, function () { toast('تم حفظ بيانات العميل.'); go('#customer/' + c.id); })
@@ -781,7 +811,8 @@
       var a1 = h('div', 'col'), a2 = h('div', 'col');
       var p = panel(({ mine: 'مهامي المفتوحة', all: 'مهام الفريق المفتوحة', done: 'المهام المنجزة' })[tab] + ' (' + res.tasks.length + ')');
       if (!res.tasks.length) p.appendChild(empty('لا يوجد.'));
-      else { var rows = h('div', 'rows'); res.tasks.forEach(function (x) { rows.appendChild(taskRow(x, res.today, again, seeAll && tab !== 'mine')); }); p.appendChild(rows); }
+      else { var rows = h('div', 'rows'); res.tasks.forEach(function (x) { rows.appendChild(taskRow(x, res.today, again, seeAll && tab !== 'mine')); }); p.appendChild(rows);
+        p.appendChild(exportBar('المهام', ['المهمة', 'التفاصيل', 'على', 'من', 'موعد الإنجاز', 'الحالة'], function () { return res.tasks.map(function (x) { return [x.title, x.note || '', x.assigned_name || '', x.creator_name || '', x.due || '', TASK_STATUS[x.status] || x.status]; }); })); }
       a1.appendChild(p);
 
       var pf = panel('مهمة جديدة');
@@ -1000,6 +1031,14 @@
           pall.addEventListener('click', function () { printSheets(res.staff, res, ym, to); });
           var mf = h('div', 'monthpick'); add(mf, h('span', null, 'الشهر'), mi);
           ui.body.appendChild(add(bar, mf, pall));
+          ui.body.appendChild(exportBar('تقرير الحضور ' + ym, ['الموظف', 'التاريخ', 'الحضور', 'الانصراف', 'الساعات', 'ملاحظات'], function () {
+            var out = [];
+            res.staff.forEach(function (s) {
+              res.records.filter(function (r) { return r.staff_id === s.id; }).slice().reverse().forEach(function (r) { out.push([s.name, r.date, fmtClock(r.in_at), r.out_at ? fmtClock(r.out_at) : '', Math.round(r.minutes / 6) / 10, r.by_admin ? 'سجّله المدير' : '']); });
+              res.absences.filter(function (x) { return x.staff_id === s.id; }).forEach(function (x) { out.push([s.name, x.date, '', '', 0, 'غائب' + (x.note ? ' - ' + x.note : '')]); });
+            });
+            return out;
+          }));
           ui.body.appendChild(h('p', 'hello', 'من ' + fmtDay(res.from) + ' إلى ' + fmtDay(res.to) + ' — كل موظف يطلع في صفحة لحاله عند الطباعة.'));
           res.staff.forEach(function (s) {
             var tl = tally(res.records.filter(function (r) { return r.staff_id === s.id; }), res.today);
@@ -1025,6 +1064,7 @@
         pm.appendChild(tl.keys.length ? dayRows(tl) : empty('لا يوجد حضور مسجّل هذا الشهر.'));
         a1.appendChild(pm);
         a2.appendChild(punchPanel(today, function () { go('#att/me'); }));
+        a2.appendChild(correctionPanel(today.today));
         ui.body.appendChild(add(cols, a1, a2));
       });
     }).catch(noop);
@@ -1136,12 +1176,15 @@
 
   PAGES.team = function (args, t) {
     var admin = me.role === 'admin';
-    var tab = args[0] === 'activity' ? 'activity' : 'members';
+    var tab = { activity: 1, requests: 1, devices: 1 }[args[0]] ? args[0] : 'members';
     setTitle('الفريق');
     var chief = iAmChief();
     if (!chief) tab = 'members';
-    if (chief) ui.body.appendChild(add(h('div', 'toolbar'), tabs([['members', 'الأعضاء'], ['activity', 'سجل النشاط']], tab, 'team')));
+    if (chief) ui.body.appendChild(add(h('div', 'toolbar'), tabs([['members', 'الأعضاء'], ['requests', 'طلبات الموظفين'], ['devices', 'الأجهزة'], ['activity', 'سجل النشاط']], tab, 'team')));
+    if (chief && tab === 'members') ui.body.appendChild(add(h('div', 'quick'), hlink('btn btn--sm', 'الرواتب والمستحقات', '#payroll')));
     if (tab === 'activity') return activityPage(args[1], t);
+    if (tab === 'requests') return requestsInbox(t);
+    if (tab === 'devices') return devicesPage(t);
     var l0 = h('p', 'loading', 'جارٍ التحميل…'); ui.body.appendChild(l0);
     loadUsers().then(function () {
       if (!live(t)) return;
@@ -1173,6 +1216,7 @@
           var r2 = h('div', 'form__two'); add(r2, field('المسمى الوظيفي', job), field('الصلاحية', role, 'الصلاحية هي اللي تحدد وش يشوف. المسمى اسم فقط.'));
           add(f, r1, r2, field('كلمة مرور جديدة', pass), err);
           var acts = h('div', 'quick'); acts.appendChild(save);
+          acts.appendChild(hlink('btn btn--sm', 'ملفه', '#member/' + u.id + '/money'));
           acts.appendChild(hlink('btn btn--sm', 'نشاطه', '#team/activity/' + u.id));
           if (u.id !== me.id) {
             var tog = h('button', 'btn btn--sm', u.active ? 'إيقاف الحساب' : 'تفعيل الحساب'); tog.type = 'button';
@@ -1234,6 +1278,7 @@
           rows.appendChild(r);
         });
         p.appendChild(rows);
+        p.appendChild(exportBar('سجل النشاط', ['الوقت', 'الموظف', 'الإجراء'], function () { return res.activity.map(function (x) { return [fmtDate(x.created_at), x.staff_name || '', x.action]; }); }));
       }
       a1.appendChild(p);
       var p2 = panel('آخر ظهور لكل موظف');
@@ -1280,8 +1325,7 @@
     return add(p, f);
   }
 
-  PAGES.account = function () {
-    setTitle('حسابي');
+  function accountMain() {
     var cols = h('div', 'cols');
     var a1 = h('div', 'col'), a2 = h('div', 'col');
     var p = panel('تغيير كلمة المرور');
@@ -1315,6 +1359,377 @@
 
   function toLatinDigits(s) {
     return String(s).replace(/[٠-٩]/g, function (c) { return c.charCodeAt(0) - 0x660; }).replace(/[۰-۹]/g, function (c) { return c.charCodeAt(0) - 0x6f0; });
+  }
+
+  /* ------------------------------------------------------------ exports: Excel and PDF */
+  var CRC = (function () { var t = [], c, n, k; for (n = 0; n < 256; n++) { c = n; for (k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  function crc32(b) { var c = 0xffffffff; for (var i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 0xff] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; }
+  // a zip with stored (uncompressed) files — all an .xlsx needs
+  function zip(files) {
+    var enc = new TextEncoder(), parts = [], central = [], offset = 0;
+    var u16 = function (n) { return [n & 255, (n >>> 8) & 255]; }, u32 = function (n) { return [n & 255, (n >>> 8) & 255, (n >>> 16) & 255, (n >>> 24) & 255]; };
+    files.forEach(function (f) {
+      var name = enc.encode(f[0]), data = enc.encode(f[1]), crc = crc32(data);
+      var head = [].concat(u16(20), u16(0x0800), u16(0), u16(0), u16(0x21), u32(crc), u32(data.length), u32(data.length), u16(name.length), u16(0));
+      parts.push(new Uint8Array([0x50, 0x4b, 3, 4].concat(head)), name, data);
+      central.push(new Uint8Array([0x50, 0x4b, 1, 2].concat(u16(20), head, u16(0), u16(0), u16(0), u32(0), u32(offset))), name);
+      offset += 30 + name.length + data.length;
+    });
+    var size = central.reduce(function (a, x) { return a + x.length; }, 0);
+    var end = new Uint8Array([0x50, 0x4b, 5, 6].concat(u16(0), u16(0), u16(files.length), u16(files.length), u32(size), u32(offset), u16(0)));
+    return new Blob(parts.concat(central, [end]), { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  }
+  function xmlEsc(v) { return String(v == null ? '' : v).replace(/[<>&"]/g, function (c) { return { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]; }).replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, ''); }
+  function downloadXlsx(title, cols, rows) {
+    var cell = function (v) { return typeof v === 'number' && isFinite(v) ? '<c><v>' + v + '</v></c>' : '<c t="inlineStr"><is><t xml:space="preserve">' + xmlEsc(v) + '</t></is></c>'; };
+    var sheet = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0" rightToLeft="1"/></sheetViews><cols>' +
+      cols.map(function (_, i) { return '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="22" customWidth="1"/>'; }).join('') + '</cols><sheetData>' +
+      [cols].concat(rows).map(function (r) { return '<row>' + r.map(cell).join('') + '</row>'; }).join('') + '</sheetData></worksheet>';
+    var blob = zip([
+      ['[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>'],
+      ['_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'],
+      ['xl/workbook.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="' + xmlEsc(title.replace(/[\[\]:*?\/\\]/g, ' ').slice(0, 31)) + '" sheetId="1" r:id="rId1"/></sheets></workbook>'],
+      ['xl/_rels/workbook.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>'],
+      ['xl/worksheets/sheet1.xml', sheet],
+    ]);
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = title + '.xlsx';
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
+  }
+  // the same table as a printable page; the browser's print window saves it as PDF
+  function printTable(title, cols, rows) {
+    var old = document.getElementById('print'); if (old) old.remove();
+    var root = h('div', 'print'); root.id = 'print';
+    var sheet = h('section', 'sheet');
+    var head = h('header', 'sheet__head');
+    var logo = h('img'); logo.src = '../assets/img/logo-160.png'; logo.alt = ''; logo.width = 56; logo.height = 56;
+    add(head, logo, add(h('div'), h('h1', null, title), h('p', null, 'أوبسيديان ديزاين — سيهات')));
+    var table = h('table', 'sheet__table'), trh = h('tr');
+    cols.forEach(function (x) { trh.appendChild(h('th', null, x)); });
+    table.appendChild(add(h('thead'), trh));
+    var tb = h('tbody');
+    rows.forEach(function (r) { var tr = h('tr'); r.forEach(function (v) { tr.appendChild(h('td', typeof v === 'number' ? 'num' : null, v == null ? '' : String(v))); }); tb.appendChild(tr); });
+    table.appendChild(tb);
+    add(sheet, head, table, h('p', 'sheet__foot', 'عدد السطور: ' + rows.length + ' — صدر من نظام أوبسيديان ديزاين بتاريخ ' + new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Riyadh' })));
+    document.body.appendChild(add(root, sheet));
+    setTimeout(function () { window.print(); }, 150);
+  }
+  // two buttons for any report: rows() is called when pressed, so it exports what is on screen
+  function exportBar(title, cols, rows) {
+    var w = h('div', 'quick export');
+    var x = h('button', 'btn btn--sm', 'تصدير Excel'); x.type = 'button';
+    x.addEventListener('click', function () { var r = rows(); if (!r.length) return toast('ما فيه بيانات للتصدير.'); downloadXlsx(title, cols, r); });
+    var p = h('button', 'btn btn--sm', 'تصدير PDF'); p.type = 'button';
+    p.addEventListener('click', function () { var r = rows(); if (!r.length) return toast('ما فيه بيانات للتصدير.'); printTable(title, cols, r); });
+    return add(w, x, p);
+  }
+
+  /* ------------------------------------------------------------ a member's file: pay, leave, commissions, documents */
+  var MONEY = { due: 'مستحق للموظف', debt: 'مديونية أو سلفة عليه', settle: 'سداد مديونية', salary: 'راتب مصروف' };
+  var REQ_KIND = { general: 'طلب عام', correction: 'تصحيح تحضير', leave: 'إجازة' };
+  var REQ_STATUS = { pending: 'قيد الدراسة', approved: 'مقبول', rejected: 'مرفوض' };
+  var STAGES = { new: 'جديد', contract: 'توقيع العقد', design: 'التصاميم', manufacturing: 'التصنيع', installation: 'التركيب', delivery: 'التسليم', done: 'منتهي' };
+  function sar(n) { return Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 2 }) + ' ر.س'; }
+  function simpleForm(fields, label, send, done) {
+    var f = h('form', 'form'); f.noValidate = true;
+    var err = h('p', 'err'); err.setAttribute('role', 'alert');
+    var btn = h('button', 'btn btn--sm btn--solid', label); btn.type = 'submit';
+    fields.forEach(function (x) { f.appendChild(x); });
+    add(f, err, btn);
+    f.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (btn.disabled) return;
+      err.textContent = ''; btn.disabled = true;
+      Promise.resolve(send()).then(function (res) {
+        btn.disabled = false;
+        if (!res || !res.ok) { err.textContent = errText(res && res.error); return; }
+        done(res);
+      }).catch(function () { btn.disabled = false; });
+    });
+    return f;
+  }
+  function two(a, b) { return add(h('div', 'form__two'), a, b); }
+  function reqBadge(r) { var b = h('span', 'badge', REQ_STATUS[r.status] || r.status); b.dataset.s = r.status === 'approved' ? 'won' : r.status === 'rejected' ? 'cancelled' : 'pending'; return b; }
+
+  // base = '#account' for my own file, '#member/ID' when the head of management or the accountant opens someone's
+  function memberFile(sid, tab, base, t) {
+    var own = sid === me.id, chief = iAmChief(), fin = me.role === 'finance';
+    var again = function () { go(base + '/' + tab); };
+    fetchPage(t, ['hr/' + sid]).then(function (all) {
+      var d = all[0], s = d.staff, T = d.totals;
+      if (!own) ui.body.appendChild(h('p', 'hello', s.name + ' — ' + (JOBS[s.job] || 'موظف')));
+      var cols = h('div', 'cols'), a1 = h('div', 'col'), a2 = h('div', 'col');
+
+      if (tab === 'money') {
+        var p = panel('المستحقات والمديونيات والرواتب');
+        p.appendChild(miniStats([[sar(s.salary), 'الراتب الشهري'], [sar(T.dues), 'مستحقات له'], [sar(T.debts), 'مديونيات عليه']]));
+        p.appendChild(h('p', 'panel__hint', 'رواتب مصروفة مسجلة: ' + sar(T.salaries_paid) + ' · الصافي له بعد المديونيات: ' + sar(T.dues - T.debts)));
+        if (!d.money.length) p.appendChild(empty('لا توجد حركات مسجلة.'));
+        else {
+          var rows = h('div', 'rows');
+          d.money.forEach(function (m) {
+            var r = h('div', 'row row--money'); var b = h('span', 'badge', MONEY[m.kind] || m.kind); b.dataset.s = m.kind === 'debt' ? 'cancelled' : m.kind === 'due' ? 'new' : m.kind === 'salary' ? 'confirmed' : 'won';
+            add(r, h('span', 'row__id', sar(m.amount)), b, h('span', 'row__meta', fmtDay(m.date) + (m.note ? ' · ' + m.note : '') + (m.by_name ? ' · سجّلها ' + m.by_name : '')),
+              chief ? delBtn('حذف', 'link', function () { del('hr/money/' + m.id, 'تم حذف الحركة.', again); }) : h('span'));
+            rows.appendChild(r);
+          });
+          p.appendChild(rows);
+        }
+        p.appendChild(exportBar('الحركات المالية - ' + s.name, ['التاريخ', 'النوع', 'المبلغ', 'البيان', 'سجّلها'], function () { return d.money.map(function (m) { return [m.date, MONEY[m.kind] || m.kind, m.amount, m.note || '', m.by_name || '']; }); }));
+        a1.appendChild(p);
+        if (chief || fin) {
+          var kind = select(MONEY, 'due'), amount = input('number', { dir: 'ltr', min: 0, step: '0.01', inputMode: 'decimal' }), date = input('date', { value: d.today }), note = input('text', { maxLength: 200 });
+          a2.appendChild(add(panel('تسجيل حركة مالية'), simpleForm([field('النوع', kind), two(field('المبلغ (ر.س)', amount), field('التاريخ', date)), field('البيان', note)], 'تسجيل',
+            function () { return api('POST', 'hr/' + sid + '/money', { kind: kind.value, amount: amount.value, date: date.value, note: note.value.trim() }); }, function () { toast('تم تسجيل الحركة.'); again(); })));
+        }
+        if (chief) {
+          var sal = input('number', { dir: 'ltr', min: 0, step: '0.01', inputMode: 'decimal', value: String(s.salary || '') });
+          a2.appendChild(add(panel('الراتب الشهري'), simpleForm([field('الراتب (ر.س)', sal)], 'حفظ الراتب', function () { return api('PATCH', 'hr/' + sid, { salary: sal.value || 0 }); }, function () { toast('تم حفظ الراتب.'); again(); })));
+        }
+      }
+
+      if (tab === 'leave') {
+        var pl = panel('رصيد الإجازات لسنة ' + d.year);
+        pl.appendChild(miniStats([[s.leave_days, 'الرصيد السنوي (يوم)'], [T.leave_used, 'المستخدم'], [T.leave_left, 'المتبقي']]));
+        if (!d.leaves.length) pl.appendChild(empty('لا توجد إجازات مسجلة.'));
+        else {
+          var lr = h('div', 'rows');
+          d.leaves.forEach(function (x) {
+            var r = h('div', 'row row--money');
+            add(r, h('span', 'row__id', x.days + ' يوم'), h('span', 'row__name', fmtDay(x.date_from) + (x.date_to !== x.date_from ? ' إلى ' + fmtDay(x.date_to) : '')), h('span', 'row__meta', x.note || ''),
+              chief ? delBtn('حذف', 'link', function () { del('hr/leaves/' + x.id, 'تم حذف الإجازة.', again); }) : h('span'));
+            lr.appendChild(r);
+          });
+          pl.appendChild(lr);
+        }
+        pl.appendChild(exportBar('الإجازات - ' + s.name, ['من', 'إلى', 'الأيام', 'البيان'], function () { return d.leaves.map(function (x) { return [x.date_from, x.date_to, x.days, x.note || '']; }); }));
+        a1.appendChild(pl);
+        var f1 = input('date', {}), f2 = input('date', {}), dn = input('number', { dir: 'ltr', min: 0.5, step: '0.5', value: '1' }), ln = input('text', { maxLength: 200 });
+        if (chief) {
+          a2.appendChild(add(panel('تسجيل إجازة'), simpleForm([two(field('من', f1), field('إلى', f2)), field('عدد الأيام', dn), field('البيان', ln)], 'تسجيل الإجازة',
+            function () { return api('POST', 'hr/' + sid + '/leaves', { date_from: f1.value, date_to: f2.value || f1.value, days: dn.value, note: ln.value.trim() }); }, function () { toast('تم تسجيل الإجازة.'); again(); })));
+          var ent = input('number', { dir: 'ltr', min: 0, step: '0.5', value: String(s.leave_days) });
+          a2.appendChild(add(panel('الرصيد السنوي'), simpleForm([field('عدد أيام الإجازة في السنة', ent)], 'حفظ الرصيد', function () { return api('PATCH', 'hr/' + sid, { leave_days: ent.value }); }, function () { toast('تم حفظ الرصيد.'); again(); })));
+        } else if (own) {
+          a2.appendChild(add(panel('طلب إجازة'), h('p', 'panel__hint', 'الطلب يروح لرئيس الإدارة، وينخصم من الرصيد بعد القبول.'), simpleForm([two(field('من', f1), field('إلى', f2)), field('عدد الأيام', dn), field('السبب', ln)], 'إرسال الطلب',
+            function () { return api('POST', 'requests', { kind: 'leave', date: f1.value, date_to: f2.value || f1.value, days: dn.value, body: ln.value.trim() || 'طلب إجازة' }); }, function () { toast('تم إرسال طلب الإجازة.'); go('#account/requests'); })));
+        }
+      }
+
+      if (tab === 'commissions') {
+        var pc = panel('العمولات (' + d.commissions.length + ')');
+        pc.appendChild(miniStats([[sar(T.commissions), 'مجموع العمولات'], [d.commissions.length, 'عدد العمولات'], [d.commissions.length ? sar(T.commissions / d.commissions.length) : '0', 'متوسط العمولة']]));
+        if (!d.commissions.length) pc.appendChild(empty('لا توجد عمولات مسجلة.'));
+        else {
+          var cr = h('div', 'rows');
+          d.commissions.forEach(function (x) {
+            var r = h('div', 'row row--money');
+            add(r, h('span', 'row__id', sar(x.amount)), h('span', 'row__name', x.source), h('span', 'row__meta', fmtDay(x.date) + (x.percent != null ? ' · النسبة ' + x.percent + '%' : '') + (x.base != null ? ' · من ' + sar(x.base) : '')),
+              chief || own ? delBtn('حذف', 'link', function () { del('commissions/' + x.id, 'تم حذف العمولة.', again); }) : h('span'));
+            cr.appendChild(r);
+          });
+          pc.appendChild(cr);
+        }
+        pc.appendChild(exportBar('العمولات - ' + s.name, ['التاريخ', 'المصدر', 'قيمة الصفقة', 'النسبة %', 'العمولة'], function () { return d.commissions.map(function (x) { return [x.date, x.source, x.base == null ? '' : x.base, x.percent == null ? '' : x.percent, x.amount]; }); }));
+        a1.appendChild(pc);
+        if (own || chief) {
+          var src = input('textarea', { maxLength: 300, placeholder: 'مثال: مطبخ العميل فلان، عقد رقم كذا' }), base = input('number', { dir: 'ltr', min: 0, step: '0.01', inputMode: 'decimal' }), pct = input('number', { dir: 'ltr', min: 0, max: 100, step: '0.1', inputMode: 'decimal' }),
+            amt = input('number', { dir: 'ltr', min: 0, step: '0.01', inputMode: 'decimal' }), cd = input('date', { value: d.today });
+          var calc = function () { if (base.value && pct.value) amt.value = String(Math.round(base.value * pct.value) / 100); };
+          base.addEventListener('input', calc); pct.addEventListener('input', calc);
+          a2.appendChild(add(panel('تسجيل عمولة'), simpleForm([field('مصدر العمولة وشرحها', src), two(field('قيمة الصفقة (ر.س)', base), field('النسبة %', pct)), two(field('مبلغ العمولة (ر.س)', amt, 'ينحسب تلقائي من القيمة والنسبة، وتقدر تكتبه.'), field('التاريخ', cd))], 'تسجيل العمولة',
+            function () { return api('POST', 'commissions' + (own ? '' : '/' + sid), { source: src.value.trim(), base: base.value, percent: pct.value, amount: amt.value, date: cd.value }); }, function () { toast('تم تسجيل العمولة.'); again(); })));
+        }
+      }
+
+      if (tab === 'docs') {
+        var pd = panel('المستندات (' + (d.docs ? d.docs.length : 0) + ')');
+        if (!d.docs) pd.appendChild(empty('المستندات يشوفها صاحبها ورئيس الإدارة فقط.'));
+        else if (!d.docs.length) pd.appendChild(empty('لا توجد مستندات. ارفع صورة الجواز أو الإقامة أو أي ملف.'));
+        else {
+          var dr = h('div', 'rows');
+          d.docs.forEach(function (x) {
+            var r = h('div', 'row row--money');
+            var open = hlink('btn btn--sm', 'فتح', '/api/staff/docs/' + x.id + '/file'); open.target = '_blank'; open.rel = 'noopener';
+            add(r, open, h('span', 'row__name', x.name), h('span', 'row__meta', (x.size > 1048576 ? (x.size / 1048576).toFixed(1) + ' م.ب' : Math.max(1, Math.round(x.size / 1024)) + ' ك.ب') + ' · ' + fmtDate(x.created_at) + (x.by_name ? ' · رفعه ' + x.by_name : '')),
+              chief || x.uploaded_by === me.id ? delBtn('حذف', 'link', function () { del('docs/' + x.id, 'تم حذف المستند.', again); }) : h('span'));
+            dr.appendChild(r);
+          });
+          pd.appendChild(dr);
+        }
+        a1.appendChild(pd);
+        if (own || chief) {
+          var dname = input('text', { maxLength: 120, placeholder: 'مثال: الجواز، الإقامة، العقد' });
+          var file = h('input', 'input'); file.type = 'file'; file.accept = 'image/*,application/pdf,.doc,.docx,.xls,.xlsx';
+          a2.appendChild(add(panel('رفع مستند'), h('p', 'panel__hint', 'صورة أو ملف حتى 4 ميجابايت. الصور تتصغر تلقائي.'), simpleForm([field('اسم المستند', dname), field('الملف', file)], 'رفع',
+            function () {
+              var fl = file.files && file.files[0];
+              if (!fl) return { ok: false, error: 'file' };
+              return readFile(fl).then(function (x) {
+                if (x.size > 4 * 1024 * 1024) return { ok: false, error: 'too_large' };
+                return api('POST', 'docs', { staff_id: sid, name: dname.value.trim() || fl.name, mime: x.mime, data: x.data });
+              });
+            }, function () { toast('تم رفع المستند.'); again(); })));
+        }
+      }
+      ui.body.appendChild(add(cols, a1, a2));
+    }).catch(noop);
+  }
+  // a file as base64; photos are scaled down first so a phone picture stays small
+  function readFile(file) {
+    var asData = function (blob, mime) {
+      return new Promise(function (resolve, reject) {
+        var r = new FileReader();
+        r.onload = function () { var s = String(r.result); resolve({ data: s.slice(s.indexOf(',') + 1), mime: mime, size: blob.size }); };
+        r.onerror = reject; r.readAsDataURL(blob);
+      });
+    };
+    if (!/^image\/(jpeg|png|webp|heic|heif)$/.test(file.type) && !/\.(jpe?g|png|webp)$/i.test(file.name)) return asData(file, file.type || 'application/octet-stream');
+    return new Promise(function (resolve) {
+      var img = new Image(), url = URL.createObjectURL(file);
+      img.onload = function () {
+        var k = Math.min(1, 2000 / Math.max(img.naturalWidth, img.naturalHeight));
+        var cv = document.createElement('canvas'); cv.width = Math.round(img.naturalWidth * k); cv.height = Math.round(img.naturalHeight * k);
+        cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+        URL.revokeObjectURL(url);
+        cv.toBlob(function (b) { resolve(b ? asData(b, 'image/jpeg') : asData(file, file.type)); }, 'image/jpeg', 0.85);
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); resolve(asData(file, file.type || 'application/octet-stream')); };
+      img.src = url;
+    });
+  }
+
+  // one request card; `decide` adds the approve / reject controls for the head of management
+  function requestRow(r, again, decide) {
+    var card = h('article', 'memo'); card.dataset.kind = r.status === 'pending' ? 'vip' : r.status === 'approved' ? 'ok' : 'no';
+    var head = h('div', 'memo__head');
+    add(head, h('span', 'tag', REQ_KIND[r.kind] || r.kind), reqBadge(r), h('span', 'row__meta', (decide && r.name ? r.name + ' · ' : '') + fmtDate(r.created_at)));
+    if (iAmChief() || (r.staff_id === me.id && r.status === 'pending')) head.appendChild(delBtn(iAmChief() ? 'حذف' : 'سحب الطلب', 'link', function () { del('requests/' + r.id, 'تم حذف الطلب.', again); }));
+    card.appendChild(head);
+    if (r.kind === 'correction') card.appendChild(h('p', 'row__meta', 'اليوم: ' + fmtDay(r.date) + (r.in_time ? ' · الحضور ' + r.in_time : '') + (r.out_time ? ' · الانصراف ' + r.out_time : '')));
+    if (r.kind === 'leave') card.appendChild(h('p', 'row__meta', 'من ' + fmtDay(r.date) + ' إلى ' + fmtDay(r.date_to) + ' · ' + r.days + ' يوم'));
+    card.appendChild(h('p', 'memo__body', r.body));
+    if (r.reply) card.appendChild(h('p', 'row__meta', 'رد الإدارة: ' + r.reply));
+    if (decide && r.status === 'pending') {
+      var reply = input('text', { maxLength: 400, placeholder: 'رد اختياري يوصل للموظف' }); reply.setAttribute('aria-label', 'الرد على الطلب');
+      var ok = h('button', 'btn btn--sm btn--solid', 'قبول'); ok.type = 'button';
+      var no = h('button', 'btn btn--sm btn--danger', 'رفض'); no.type = 'button';
+      var act = function (status) { return function () { ok.disabled = no.disabled = true; api('PATCH', 'requests/' + r.id, { status: status, reply: reply.value.trim() }).then(function (x) { if (!x.ok) { ok.disabled = no.disabled = false; return oops(x); } toast(status === 'approved' ? 'تم قبول الطلب.' : 'تم رفض الطلب.'); again(); }).catch(noop); }; };
+      ok.addEventListener('click', act('approved')); no.addEventListener('click', act('rejected'));
+      card.appendChild(add(h('div', 'inline inline--wrap'), reply, ok, no));
+    }
+    return card;
+  }
+  function myRequests(t) {
+    fetchPage(t, ['requests']).then(function (all) {
+      var list = all[0].requests, again = function () { go('#account/requests'); };
+      var cols = h('div', 'cols'), a1 = h('div', 'col'), a2 = h('div', 'col');
+      var p = panel('طلباتي للإدارة (' + list.length + ')');
+      if (!list.length) p.appendChild(empty('ما رفعت أي طلب.'));
+      else { var box = h('div', 'memos'); list.forEach(function (r) { box.appendChild(requestRow(r, again, false)); }); p.appendChild(box); }
+      a1.appendChild(p);
+      var txt = input('textarea', { maxLength: 1000, placeholder: 'اكتب طلبك للإدارة…' });
+      a2.appendChild(add(panel('طلب جديد للإدارة'), h('p', 'panel__hint', 'الطلب يشوفه رئيس الإدارة فقط، ويبقى قيد الدراسة لين يقبله أو يرفضه.'), simpleForm([field('الطلب', txt)], 'إرسال الطلب',
+        function () { return api('POST', 'requests', { kind: 'general', body: txt.value.trim() }); }, function () { toast('تم إرسال الطلب.'); again(); })));
+      ui.body.appendChild(add(cols, a1, a2));
+    }).catch(noop);
+  }
+  // on the attendance page: ask for a day's record to be corrected
+  function correctionPanel(today) {
+    var p = panel('طلب تصحيح التحضير');
+    p.appendChild(h('p', 'panel__hint', 'غياب أو تأخير له سبب؟ اكتب اليوم والسبب، ورئيس الإدارة يوافق أو يرفض.'));
+    var day = input('date', { value: today, max: today }), tin = input('time', {}), tout = input('time', {}), why = input('textarea', { maxLength: 1000, placeholder: 'السبب…' });
+    return add(p, simpleForm([field('اليوم', day), two(field('وقت الحضور الصحيح', tin, 'اختياري'), field('وقت الانصراف الصحيح', tout, 'اختياري')), field('السبب', why)], 'إرسال طلب التصحيح',
+      function () { return api('POST', 'requests', { kind: 'correction', date: day.value, in_time: tin.value, out_time: tout.value, body: why.value.trim() }); }, function () { toast('تم إرسال طلب التصحيح.'); go('#account/requests'); }));
+  }
+
+  var FILE_TABS = [['money', 'المالية'], ['leave', 'الإجازات'], ['commissions', 'العمولات'], ['docs', 'المستندات']];
+  PAGES.account = function (args, t) {
+    var names = { me: 1, money: 1, leave: 1, commissions: 1, docs: 1, requests: 1 };
+    var tab = names[args[0]] ? args[0] : 'me';
+    setTitle('ملفي');
+    ui.body.appendChild(add(h('div', 'toolbar'), tabs([['me', 'حسابي']].concat(FILE_TABS, [['requests', 'طلباتي للإدارة']]), tab, 'account')));
+    if (tab === 'me') return accountMain();
+    if (tab === 'requests') return myRequests(t);
+    memberFile(me.id, tab, '#account', t);
+  };
+  // someone else's file: the head of management sees all of it, the accountant everything but the documents
+  PAGES.member = function (args, t) {
+    var sid = +args[0] || 0;
+    if (!(iAmChief() || me.role === 'finance') || !sid) return go('#home');
+    var tab = { money: 1, leave: 1, commissions: 1, docs: 1 }[args[1]] ? args[1] : 'money';
+    setTitle('ملف الموظف');
+    ui.body.appendChild(hlink('back', 'رجوع', iAmChief() ? '#team' : '#payroll'));
+    ui.body.appendChild(add(h('div', 'toolbar'), tabs(iAmChief() ? FILE_TABS : FILE_TABS.slice(0, 3), tab, 'member/' + sid)));
+    memberFile(sid, tab, '#member/' + sid, t);
+  };
+  // the whole team's pay, balances, leave and commissions in one table
+  PAGES.payroll = function (args, t) {
+    if (!(iAmChief() || me.role === 'finance')) return go('#home');
+    var tab = args[0] === 'commissions' ? 'commissions' : 'all';
+    setTitle('الرواتب والمستحقات');
+    ui.body.appendChild(add(h('div', 'toolbar'), tabs([['all', 'الرواتب والأرصدة'], ['commissions', 'كل العمولات']], tab, 'payroll')));
+    if (tab === 'commissions') return fetchPage(t, ['commissions']).then(function (all) {
+      var list = all[0].commissions;
+      var p = panel('عمولات الموظفين (' + list.length + ')');
+      if (!list.length) p.appendChild(empty('لا توجد عمولات مسجلة.'));
+      else { var rows = h('div', 'rows'); list.forEach(function (x) { var r = hlink('row row--money', null, '#member/' + x.staff_id + '/commissions'); add(r, h('span', 'row__id', sar(x.amount)), h('span', 'row__name', x.name || '—'), h('span', 'row__meta', fmtDay(x.date) + ' · ' + x.source + (x.percent != null ? ' · ' + x.percent + '%' : '')), h('span')); rows.appendChild(r); }); p.appendChild(rows); }
+      p.appendChild(exportBar('عمولات الموظفين', ['التاريخ', 'الموظف', 'المصدر', 'قيمة الصفقة', 'النسبة %', 'العمولة'], function () { return list.map(function (x) { return [x.date, x.name || '', x.source, x.base == null ? '' : x.base, x.percent == null ? '' : x.percent, x.amount]; }); }));
+      ui.body.appendChild(p);
+    }).catch(noop);
+    fetchPage(t, ['hr']).then(function (all) {
+      var list = all[0].staff;
+      var p = panel('رواتب وأرصدة الموظفين — ' + all[0].year);
+      var rows = h('div', 'rows');
+      var head = h('div', 'row row--pay row--head'); head.setAttribute('aria-hidden', 'true');
+      add(head, h('span', null, 'الموظف'), h('span', null, 'الراتب'), h('span', null, 'مستحقات'), h('span', null, 'مديونيات'), h('span', null, 'عمولات'), h('span', null, 'رصيد الإجازة'));
+      rows.appendChild(head);
+      list.forEach(function (x) {
+        var r = hlink('row row--pay', null, '#member/' + x.id + '/money');
+        add(r, add(h('span', 'row__who'), h('span', 'row__name', x.name), h('span', 'row__type', JOBS[x.job] || 'موظف')), h('span', 'row__id', sar(x.salary)), h('span', 'pay', 'له ' + sar(x.dues)), h('span', 'pay pay--debt', 'عليه ' + sar(x.debts)), h('span', 'pay', sar(x.commissions)), h('span', 'pay', x.leave_left + ' من ' + x.leave_days + ' يوم'));
+        rows.appendChild(r);
+      });
+      p.appendChild(rows);
+      p.appendChild(exportBar('رواتب وأرصدة الموظفين', ['الموظف', 'المسمى', 'الراتب الشهري', 'مستحقات له', 'مديونيات عليه', 'رواتب مصروفة', 'العمولات', 'رصيد الإجازة السنوي', 'المستخدم', 'المتبقي'],
+        function () { return list.map(function (x) { return [x.name, JOBS[x.job] || 'موظف', x.salary, x.dues, x.debts, x.salaries_paid, x.commissions, x.leave_days, x.leave_used, x.leave_left]; }); }));
+      ui.body.appendChild(p);
+    }).catch(noop);
+  };
+  // head of management: every member's requests, waiting ones first
+  function requestsInbox(t) {
+    fetchPage(t, ['requests?all=1']).then(function (all) {
+      var list = all[0].requests, again = function () { go('#team/requests'); };
+      var wait = list.filter(function (r) { return r.status === 'pending'; });
+      var p = panel('طلبات الموظفين — ' + wait.length + ' قيد الدراسة من ' + list.length);
+      if (!list.length) p.appendChild(empty('لا توجد طلبات.'));
+      else { var box = h('div', 'memos'); list.forEach(function (r) { box.appendChild(requestRow(r, again, true)); }); p.appendChild(box); }
+      p.appendChild(exportBar('طلبات الموظفين', ['التاريخ', 'الموظف', 'النوع', 'الطلب', 'اليوم', 'الحالة', 'الرد'], function () { return list.map(function (r) { return [r.created_at.slice(0, 10), r.name || '', REQ_KIND[r.kind] || r.kind, r.body, r.date || '', REQ_STATUS[r.status] || r.status, r.reply || '']; }); }));
+      ui.body.appendChild(p);
+    }).catch(noop);
+  }
+  // head of management: which devices may sign in
+  function devicesPage(t) {
+    fetchPage(t, ['devices']).then(function (all) {
+      var list = all[0].devices, again = function () { go('#team/devices'); };
+      var p = panel('الأجهزة (' + list.length + ')');
+      p.appendChild(h('p', 'panel__hint', 'أي جهاز جديد يحاول يدخل يطلع هنا "ينتظر الاعتماد"، وما يدخل لين تعتمده. الرفض أو الحذف يطلّع الجهاز فوراً.'));
+      if (!list.length) p.appendChild(empty('لا توجد أجهزة مسجلة بعد.'));
+      else {
+        var rows = h('div', 'rows');
+        var ST = { pending: 'ينتظر الاعتماد', approved: 'معتمد', rejected: 'مرفوض' };
+        list.forEach(function (x) {
+          var r = h('div', 'row row--roll'); var b = h('span', 'badge', ST[x.status] || x.status); b.dataset.s = x.status === 'approved' ? 'won' : x.status === 'rejected' ? 'cancelled' : 'pending';
+          var set = function (status, done) { return function () { api('PATCH', 'devices/' + x.id, { status: status }).then(function (res) { if (!res.ok) return oops(res); toast(done); again(); }).catch(noop); }; };
+          var act = h('div', 'row__act');
+          if (x.status !== 'approved') { var ok = h('button', 'btn btn--sm btn--solid', 'اعتماد'); ok.type = 'button'; ok.addEventListener('click', set('approved', 'تم اعتماد الجهاز.')); act.appendChild(ok); }
+          if (x.status !== 'rejected') { var no = h('button', 'btn btn--sm', 'رفض'); no.type = 'button'; no.addEventListener('click', set('rejected', 'تم رفض الجهاز.')); act.appendChild(no); }
+          act.appendChild(delBtn('حذف', 'link', function () { del('devices/' + x.id, 'تم حذف الجهاز.', again); }));
+          add(r, h('span', 'row__name', x.name || '—'), h('span', 'row__meta', (x.label || 'جهاز') + ' · أول محاولة ' + fmtDate(x.created_at) + (x.last_seen ? ' · آخر دخول ' + fmtDate(x.last_seen) : '')), b, act);
+          rows.appendChild(r);
+        });
+        p.appendChild(rows);
+      }
+      ui.body.appendChild(p);
+    }).catch(noop);
   }
 
   /* ------------------------------------------------------------ boot */

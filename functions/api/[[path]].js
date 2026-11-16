@@ -2,6 +2,7 @@
 // Bindings (see wrangler.toml): DB = D1 database, AI = Workers AI (optional: without it the chat falls back).
 // Secrets: SETUP_KEY — needed once, to create the first admin account at /staff/.
 import { HOURS, customerPrompt, staffPrompt } from '../_lib/kb.js';
+import { HR_SCHEMA, HR_COLUMNS, hrRoutes, hrDeleteStaff, deviceLabel } from '../_lib/hr.js';
 
 const LEAD_STATUS = ['new', 'contacted', 'appointment', 'quoted', 'won', 'closed'];
 const APPT_STATUS = ['pending', 'confirmed', 'done', 'cancelled', 'noshow'];
@@ -69,11 +70,11 @@ function normPhone(raw) {
 }
 const clean = (s, max) => String(s == null ? '' : s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '').trim().slice(0, max);
 
-async function body(request) {
+async function body(request, max = 20000) {
   if (!(request.headers.get('Content-Type') || '').includes('application/json')) return null;
   try {
     const text = await request.text();
-    if (text.length > 20000) return null;
+    if (text.length > max) return null;
     const data = JSON.parse(text);
     return data && typeof data === 'object' ? data : null;
   } catch (e) {
@@ -183,6 +184,12 @@ function cookie(request, name) {
   const m = (request.headers.get('Cookie') || '').match(new RegExp('(?:^|;\\s*)' + name + '=([^;]+)'));
   return m ? m[1] : null;
 }
+// A JSON answer that sets more than one cookie
+function jsonCookies(data, status, cookies) {
+  const h = new Headers({ 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+  cookies.forEach((c) => h.append('Set-Cookie', c));
+  return new Response(JSON.stringify(data), { status, headers: h });
+}
 function sessionCookie(request, token, maxAge) {
   const secure = new URL(request.url).protocol === 'https:' ? '; Secure' : '';
   return `obs_staff=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${secure}`;
@@ -191,14 +198,14 @@ async function currentStaff(env, request) {
   const token = cookie(request, 'obs_staff');
   if (!token || !/^[0-9a-f]{64}$/.test(token)) return null;
   const row = await env.DB.prepare(
-    "SELECT s.id, s.username, s.name, CASE WHEN s.job = 'chief' THEN 'admin' ELSE s.role END AS role, s.job FROM sessions x JOIN staff s ON s.id = x.staff_id WHERE x.token_hash = ? AND x.expires_at > ? AND s.active = 1"
+    "SELECT s.id, s.username, s.name, CASE WHEN s.job = 'chief' THEN 'admin' ELSE s.role END AS role, s.job FROM sessions x JOIN staff s ON s.id = x.staff_id LEFT JOIN devices d ON d.id = x.device_id WHERE x.token_hash = ? AND x.expires_at > ? AND s.active = 1 AND (s.job = 'chief' OR (s.job IS NULL AND s.role = 'admin') OR d.status = 'approved')"
   ).bind(await sha256(token), epoch()).first();
   return row || null;
 }
-async function startSession(env, request, staffId) {
+async function startSession(env, request, staffId, deviceId = null) {
   const token = randomHex(32);
-  await env.DB.prepare('INSERT INTO sessions (token_hash, staff_id, created_at, expires_at) VALUES (?, ?, ?, ?)')
-    .bind(await sha256(token), staffId, nowIso(), epoch() + SESSION_DAYS * 86400).run();
+  await env.DB.prepare('INSERT INTO sessions (token_hash, staff_id, created_at, expires_at, device_id) VALUES (?, ?, ?, ?, ?)')
+    .bind(await sha256(token), staffId, nowIso(), epoch() + SESSION_DAYS * 86400, deviceId).run();
   await env.DB.prepare('DELETE FROM sessions WHERE expires_at <= ?').bind(epoch()).run();
   return sessionCookie(request, token, SESSION_DAYS * 86400);
 }
@@ -343,6 +350,8 @@ async function ensureSchema(env) {
   for (const col of ['in_dist', 'out_dist']) { try { await env.DB.prepare('ALTER TABLE attendance ADD COLUMN ' + col + ' INTEGER').run(); } catch (e) {} }
   // job = the member's title (a label). Only 'chief' carries permissions by itself; everyone else follows role. Fails harmlessly once the column exists.
   try { await env.DB.prepare('ALTER TABLE staff ADD COLUMN job TEXT').run(); } catch (e) {}
+  await env.DB.batch(HR_SCHEMA.map((q) => env.DB.prepare(q)));
+  for (const q of HR_COLUMNS) { try { await env.DB.prepare(q).run(); } catch (e) {} }
   schemaReady = true;
 }
 const JOBS = ['chief', 'management', 'showroom_manager', 'accountant', 'designer', 'employee'];
@@ -388,6 +397,11 @@ function describeAction(method, parts, b) {
   if (a === 'appointments') return (method === 'DELETE' ? 'حذف الموعد' : 'غيّر حالة الموعد') + n;
   if (a === 'users') return method === 'POST' ? 'أضاف موظف' + t(b && b.name) : method === 'DELETE' ? 'حذف الموظف' + n : 'عدّل حساب الموظف' + n;
   if (a === 'activity') return 'مسح سجل النشاط';
+  if (a === 'devices') return method === 'DELETE' ? 'حذف جهاز' + n : (b && b.status === 'approved' ? 'اعتمد جهاز' : 'رفض جهاز') + n;
+  if (a === 'requests') return method === 'POST' ? 'رفع طلب للإدارة' : method === 'DELETE' ? 'حذف طلب للإدارة' + n : (b && b.status === 'approved' ? 'قبل طلب' : 'رفض طلب') + n;
+  if (a === 'commissions') return method === 'POST' ? 'سجّل عمولة' + t(b && b.source) : 'حذف عمولة' + n;
+  if (a === 'docs') return method === 'POST' ? 'رفع مستند' + t(b && b.name) : 'حذف مستند' + n;
+  if (a === 'hr') return id === 'money' ? 'حذف حركة مالية' : id === 'leaves' ? 'حذف إجازة' : sub === 'money' ? 'سجّل حركة مالية لموظف' + n : sub === 'leaves' ? 'سجّل إجازة لموظف' + n : 'عدّل راتب أو رصيد إجازات موظف' + n;
   return method + ' ' + parts.join('/');
 }
 // For the viewer permission: phone numbers lose their middle digits; notes and addresses are left out
@@ -422,7 +436,7 @@ async function staffRoutes(env, request, method, parts) {
   // except their own attendance, password and tasks.
   if (who && who.role === 'viewer') {
     if (method !== 'GET') {
-      const own = parts[0] === 'logout' || parts[0] === 'password' || parts[0] === 'tasks' || (parts[0] === 'attendance' && (parts[1] === 'in' || parts[1] === 'out'));
+      const own = ['logout', 'password', 'tasks', 'requests', 'commissions', 'docs'].includes(parts[0]) || (parts[0] === 'attendance' && (parts[1] === 'in' || parts[1] === 'out'));
       if (!own) return fail(403, 'read_only');
     } else if (parts[0] === 'leads' || parts[0] === 'customers' || parts[0] === 'appointments') {
       const res = await staffRoutesInner(env, request, method, parts);
@@ -478,10 +492,25 @@ async function staffRoutesInner(env, request, method, parts) {
     // hash even when the user doesn't exist, so timing doesn't reveal usernames
     const hash = await hashPassword(String(b.password || ''), row ? row.pass_salt : 'no-such-user-salt');
     if (!row || !safeEqual(hash, row.pass_hash)) return fail(401, 'credentials');
+    // Each device signs in only after the head of management approves it. The device is known by a long-lived cookie.
+    let devToken = cookie(request, 'obs_dev');
+    if (!devToken || !/^[0-9a-f]{64}$/.test(devToken)) devToken = randomHex(32);
+    const secure = new URL(request.url).protocol === 'https:' ? '; Secure' : '';
+    const devCookie = `obs_dev=${devToken}; Path=/; HttpOnly; SameSite=Strict; Max-Age=63072000${secure}`;
+    const devHash = await sha256(devToken);
+    const boss = isChief(row);
+    let dev = await env.DB.prepare('SELECT id, status FROM devices WHERE token_hash = ? AND staff_id = ?').bind(devHash, row.id).first();
+    if (!dev) {
+      const r = await env.DB.prepare('INSERT INTO devices (staff_id, token_hash, label, status, created_at, last_seen) VALUES (?, ?, ?, ?, ?, ?)')
+        .bind(row.id, devHash, deviceLabel(request.headers.get('User-Agent')), boss ? 'approved' : 'pending', nowIso(), nowIso()).run();
+      dev = { id: r.meta.last_row_id, status: boss ? 'approved' : 'pending' };
+      if (!boss) await logActivity(env, row, 'طلب اعتماد جهاز جديد');
+    }
+    if (dev.status !== 'approved' && !boss) return jsonCookies({ ok: false, error: dev.status === 'rejected' ? 'device_rejected' : 'device_pending' }, 403, [devCookie]);
+    await env.DB.prepare('UPDATE devices SET last_seen = ? WHERE id = ?').bind(nowIso(), dev.id).run();
     await logActivity(env, row, 'سجّل دخول');
-    return json({ ok: true, user: { id: row.id, username: row.username, name: row.name, role: row.job === 'chief' ? 'admin' : row.role } }, 200, {
-      'Set-Cookie': await startSession(env, request, row.id),
-    });
+    return jsonCookies({ ok: true, user: { id: row.id, username: row.username, name: row.name, role: row.job === 'chief' ? 'admin' : row.role } }, 200,
+      [await startSession(env, request, row.id, dev.id), devCookie]);
   }
 
   if (method === 'POST' && route === 'logout') {
@@ -586,18 +615,20 @@ async function staffRoutesInner(env, request, method, parts) {
 
   /* ---- customers: one shared register, everyone on the team can see, add and edit; only the manager deletes ---- */
   if (parts[0] === 'customers') {
-    const fields = (b) => ({ city: clean(b.city, 60), address: clean(b.address, 200), type: clean(b.type, 60), note: clean(b.note, 800), vip: b.vip ? 1 : 0 });
+    const STAGES = ['new', 'contract', 'design', 'manufacturing', 'installation', 'delivery', 'done'];
+    const fields = (b) => ({ city: clean(b.city, 60), address: clean(b.address, 200), type: clean(b.type, 60), note: clean(b.note, 800), vip: b.vip ? 1 : 0, stage: STAGES.includes(b.stage) ? b.stage : 'new' });
     if (method === 'GET' && parts.length === 1) {
       const url = new URL(request.url);
       const q = clean(url.searchParams.get('q'), 60);
       const where = []; const args = [];
       if (url.searchParams.get('vip') === '1') where.push('c.vip = 1');
+      if (STAGES.includes(url.searchParams.get('stage'))) { where.push("COALESCE(c.stage, 'new') = ?"); args.push(url.searchParams.get('stage')); }
       if (q) {
         const digits = toLatinDigits(q).replace(/\D/g, '');
         if (digits.length >= 4) { where.push('c.phone LIKE ?'); args.push('%' + digits.replace(/^966/, '').replace(/^0/, '') + '%'); }
         else { where.push('c.name LIKE ?'); args.push('%' + q.replace(/[%_]/g, '') + '%'); }
       }
-      const rows = await env.DB.prepare('SELECT c.id, c.name, c.phone, c.city, c.type, c.vip, c.created_at FROM customers c' + (where.length ? ' WHERE ' + where.join(' AND ') : '') + ' ORDER BY c.id DESC LIMIT 200').bind(...args).all();
+      const rows = await env.DB.prepare("SELECT c.id, c.name, c.phone, c.city, c.type, c.vip, COALESCE(c.stage, 'new') AS stage, c.created_at FROM customers c" + (where.length ? ' WHERE ' + where.join(' AND ') : '') + ' ORDER BY c.id DESC LIMIT 200').bind(...args).all();
       const total = await env.DB.prepare('SELECT COUNT(*) AS n FROM customers').first();
       return json({ ok: true, customers: rows.results || [], total: total.n });
     }
@@ -611,8 +642,8 @@ async function staffRoutesInner(env, request, method, parts) {
       const had = await env.DB.prepare('SELECT id FROM customers WHERE phone = ?').bind(phone).first();
       if (had) return json({ ok: false, error: 'customer_exists', id: had.id }, 409);
       const f = fields(b); const now = nowIso();
-      const r = await env.DB.prepare('INSERT INTO customers (name, phone, city, address, type, note, vip, lead_id, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-        .bind(name, phone, f.city, f.address, f.type, f.note, f.vip, /^\d+$/.test(String(b.lead_id || '')) ? +b.lead_id : null, me.id, now, now).run();
+      const r = await env.DB.prepare('INSERT INTO customers (name, phone, city, address, type, note, vip, stage, lead_id, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+        .bind(name, phone, f.city, f.address, f.type, f.note, f.vip, f.stage, /^\d+$/.test(String(b.lead_id || '')) ? +b.lead_id : null, me.id, now, now).run();
       return json({ ok: true, id: r.meta.last_row_id });
     }
     if (/^\d+$/.test(parts[1] || '')) {
@@ -649,8 +680,8 @@ async function staffRoutesInner(env, request, method, parts) {
         const other = await env.DB.prepare('SELECT id FROM customers WHERE phone = ? AND id != ?').bind(phone, id).first();
         if (other) return json({ ok: false, error: 'customer_exists', id: other.id }, 409);
         const f = fields(b);
-        await env.DB.prepare('UPDATE customers SET name = ?, phone = ?, city = ?, address = ?, type = ?, note = ?, vip = ?, updated_at = ? WHERE id = ?')
-          .bind(name, phone, f.city, f.address, f.type, f.note, f.vip, nowIso(), id).run();
+        await env.DB.prepare('UPDATE customers SET name = ?, phone = ?, city = ?, address = ?, type = ?, note = ?, vip = ?, stage = ?, updated_at = ? WHERE id = ?')
+          .bind(name, phone, f.city, f.address, f.type, f.note, f.vip, f.stage, nowIso(), id).run();
         return json({ ok: true });
       }
       if (method === 'DELETE') {
@@ -663,6 +694,9 @@ async function staffRoutesInner(env, request, method, parts) {
   }
 
   /* ---- attendance: check-in / check-out; an admin can take attendance for anyone ---- */
+  const hr = await hrRoutes({ env, request, method, parts, me, admin, chief, finance, json, fail, clean, body, nowIso, todayRiyadh });
+  if (hr) return hr;
+
   if (parts[0] === 'activity') {
     if (!chief) return fail(403, 'chief_only');
     if (method === 'GET') {
@@ -952,6 +986,7 @@ async function staffRoutesInner(env, request, method, parts) {
       if (isChief(target) && !isChief(me)) return fail(403, 'chief_only');
       await env.DB.batch([
         env.DB.prepare('DELETE FROM sessions WHERE staff_id = ?').bind(id),
+        ...hrDeleteStaff(env, id),
         env.DB.prepare('DELETE FROM attendance WHERE staff_id = ?').bind(id),
         env.DB.prepare('DELETE FROM absences WHERE staff_id = ?').bind(id),
         env.DB.prepare('UPDATE attendance SET in_by = NULL WHERE in_by = ?').bind(id),
