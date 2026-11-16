@@ -62,7 +62,7 @@ async function balances(env, staffId, year) {
 }
 
 export async function hrRoutes(c) {
-  const { env, request, method, parts, me, chief, finance, json, fail, clean, body, nowIso, todayRiyadh } = c;
+  const { env, request, method, parts, me, chief, finance, json, fail, clean, body, nowIso, todayRiyadh, notify, chiefIds } = c;
   const top = parts[0];
   const idAt = (i) => (/^\d+$/.test(parts[i] || '') ? +parts[i] : 0);
   const today = todayRiyadh();
@@ -103,13 +103,13 @@ export async function hrRoutes(c) {
     // the whole team in one table, for the payroll report
     if (method === 'GET' && parts.length === 1) {
       if (!chief && !finance) return fail(403, 'admin_only');
-      const staff = (await env.DB.prepare('SELECT id, name, job, salary, leave_days FROM staff WHERE active = 1 ORDER BY id').all()).results || [];
+      const staff = (await env.DB.prepare("SELECT id, name, job, title, role, salary, leave_days FROM staff WHERE active = 1 ORDER BY id").all()).results || [];
       const rows = [];
       const base = await defaultLeave(env);
       for (const s of staff) {
         const b = await balances(env, s.id, year);
         const ent = s.leave_days == null ? base : s.leave_days;
-        rows.push({ id: s.id, name: s.name, job: s.job, salary: s.salary || 0, ...b, leave_days: ent, leave_left: Math.round((ent - b.leave_used) * 100) / 100 });
+        rows.push({ id: s.id, name: s.name, job: s.job, title: s.title, chief: s.job === 'chief' || (!s.job && s.role === 'admin'), salary: s.salary || 0, ...b, leave_days: ent, leave_left: Math.round((ent - b.leave_used) * 100) / 100 });
       }
       return json({ ok: true, year, staff: rows, leave_default: base });
     }
@@ -155,7 +155,7 @@ export async function hrRoutes(c) {
     }
     const sid = idAt(1);
     if (sid) {
-      const s = await env.DB.prepare('SELECT id, name, job, role, salary, leave_days FROM staff WHERE id = ?').bind(sid).first();
+      const s = await env.DB.prepare('SELECT id, name, job, title, role, salary, leave_days FROM staff WHERE id = ?').bind(sid).first();
       if (!s) return fail(404, 'not_found');
       const mine = sid === me.id;
       if (!mine && !chief && !finance) return fail(403, 'admin_only');
@@ -168,7 +168,7 @@ export async function hrRoutes(c) {
         const docs = mine || chief ? (await env.DB.prepare('SELECT d.id, d.name, d.mime, d.size, d.created_at, d.uploaded_by, x.name AS by_name FROM docs d LEFT JOIN staff x ON x.id = d.uploaded_by WHERE d.staff_id = ? ORDER BY d.id DESC').bind(sid).all()).results || [] : null;
         return json({
           ok: true, year, today,
-          staff: { id: s.id, name: s.name, job: s.job, role: s.role, salary: s.salary || 0, leave_days: ent, leave_own: s.leave_days != null },
+          staff: { id: s.id, name: s.name, job: s.job, title: s.title, chief: s.job === 'chief' || (!s.job && s.role === 'admin'), role: s.role, salary: s.salary || 0, leave_days: ent, leave_own: s.leave_days != null },
           totals: { ...b, leave_left: Math.round((ent - b.leave_used) * 100) / 100 },
           money: money.results || [], leaves: leaves.results || [], commissions: com.results || [], docs,
         });
@@ -339,6 +339,7 @@ export async function hrRoutes(c) {
       }
       await env.DB.prepare('INSERT INTO requests (staff_id, kind, body, date, date_to, days, in_time, out_time, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
         .bind(me.id, kind, text, date, dateTo, days, tin, tout, 'pending', nowIso()).run();
+      await notify(env, await chiefIds(env), 'request', 'طلب جديد من ' + me.name, text, '#team/requests', nowIso);
       return json({ ok: true });
     }
     const id = idAt(1);
@@ -365,6 +366,7 @@ export async function hrRoutes(c) {
             .bind(r.staff_id, r.date, r.date_to, r.days, clean(r.body, 200), r.id, me.id, nowIso()).run();
         }
         await env.DB.prepare('UPDATE requests SET status = ?, reply = ?, decided_at = ? WHERE id = ?').bind(b.status, clean(b.reply, 400), nowIso(), id).run();
+        await notify(env, r.staff_id, 'request', b.status === 'approved' ? 'تم قبول طلبك' : 'تم رفض طلبك', clean(b.reply, 300) || clean(r.body, 120), '#account/requests', nowIso);
         return json({ ok: true });
       }
       if (method === 'DELETE') {
