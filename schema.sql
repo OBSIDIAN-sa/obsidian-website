@@ -108,3 +108,7 @@ CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 
 -- Days a member was marked absent by the head of management
 CREATE TABLE IF NOT EXISTS absences (id INTEGER PRIMARY KEY AUTOINCREMENT, staff_id INTEGER NOT NULL, date TEXT NOT NULL, note TEXT, created_by INTEGER, created_at TEXT NOT NULL, UNIQUE(staff_id, date));
+
+-- People side (pay and balances, leave, commissions, documents, requests to management, approved devices):
+-- tables money, leaves, commissions, docs, doc_chunks, requests, devices and the columns staff.salary, staff.leave_days,
+-- sessions.device_id, customers.stage are defined in functions/_lib/hr.js and created by the API on first use.
