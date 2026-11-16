@@ -5,6 +5,6 @@
   try { en = localStorage.getItem('obs_lang') === 'en'; } catch (e) {}
   if (en) { document.documentElement.lang = 'en'; document.documentElement.dir = 'ltr'; }
   var s = document.createElement('script');
-  s.src = '../assets/js/' + (en ? 'staff.en.js' : 'staff.js') + '?v=18';
+  s.src = '../assets/js/' + (en ? 'staff.en.js' : 'staff.js') + '?v=19';
   document.body.appendChild(s);
 })();

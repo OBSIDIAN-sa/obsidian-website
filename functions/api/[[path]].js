@@ -402,7 +402,7 @@ function describeAction(method, parts, b) {
   if (a === 'activity') return 'مسح سجل النشاط';
   if (a === 'roles') return method === 'POST' ? 'أضاف رتبة' + t(b && b.name) : method === 'DELETE' ? 'حذف رتبة' : 'عدّل رتبة وصلاحياتها';
   if (a === 'star') return method === 'DELETE' ? 'شال موظف الأسبوع' : 'ثبّت موظف الأسبوع';
-  if (a === 'notifications') return null;
+  if (a === 'notifications' || a === 'push') return null;
   if (a === 'devices') return method === 'DELETE' ? 'حذف جهاز' + n : (b && b.status === 'approved' ? 'اعتمد جهاز' : 'رفض جهاز') + n;
   if (a === 'requests') return method === 'POST' ? 'رفع طلب للإدارة' : method === 'DELETE' ? 'حذف طلب للإدارة' + n : (b && b.status === 'approved' ? 'قبل طلب' : 'رفض طلب') + n;
   if (a === 'commissions') return method === 'POST' ? 'سجّل عمولة' + t(b && b.source) : method === 'PATCH' ? 'عدّل عمولة' + n : 'حذف عمولة' + n;
@@ -443,7 +443,7 @@ async function staffRoutes(env, request, method, parts) {
   const WP = who && !isChief(who) ? await permsOf(env, who.role) : null;
   if (WP && (!WP.edit || !WP.contacts)) {
     if (method !== 'GET') {
-      const own = ['logout', 'password', 'tasks', 'requests', 'commissions', 'docs', 'notifications'].includes(parts[0]) || (parts[0] === 'attendance' && (parts[1] === 'in' || parts[1] === 'out'));
+      const own = ['logout', 'password', 'tasks', 'requests', 'commissions', 'docs', 'notifications', 'push'].includes(parts[0]) || (parts[0] === 'attendance' && (parts[1] === 'in' || parts[1] === 'out'));
       if (!own && !WP.edit) return fail(403, 'read_only');
     } else if (!WP.contacts && (parts[0] === 'leads' || parts[0] === 'customers' || parts[0] === 'appointments')) {
       const res = await staffRoutesInner(env, request, method, parts);
@@ -1072,6 +1072,8 @@ async function staffRoutesInner(env, request, method, parts) {
       await env.DB.batch([
         env.DB.prepare('DELETE FROM sessions WHERE staff_id = ?').bind(id),
         ...hrDeleteStaff(env, id),
+        env.DB.prepare('DELETE FROM push_subs WHERE staff_id = ?').bind(id),
+        env.DB.prepare('DELETE FROM notifications WHERE staff_id = ?').bind(id),
         env.DB.prepare('DELETE FROM attendance WHERE staff_id = ?').bind(id),
         env.DB.prepare('DELETE FROM absences WHERE staff_id = ?').bind(id),
         env.DB.prepare('UPDATE attendance SET in_by = NULL WHERE in_by = ?').bind(id),

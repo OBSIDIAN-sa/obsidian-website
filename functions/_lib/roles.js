@@ -17,6 +17,8 @@ export const ROLES_SCHEMA = [
   `CREATE TABLE IF NOT EXISTS notifications (id INTEGER PRIMARY KEY AUTOINCREMENT, staff_id INTEGER NOT NULL, kind TEXT NOT NULL, title TEXT NOT NULL, body TEXT,
      link TEXT, created_at TEXT NOT NULL, read_at TEXT)`,
   'CREATE INDEX IF NOT EXISTS notifications_staff ON notifications(staff_id, id)',
+  // one row per browser that asked for alerts while the page is closed (Web Push)
+  'CREATE TABLE IF NOT EXISTS push_subs (id INTEGER PRIMARY KEY AUTOINCREMENT, staff_id INTEGER NOT NULL, endpoint TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL)',
 ];
 export const ROLES_COLUMNS = ['ALTER TABLE staff ADD COLUMN title TEXT'];
 
@@ -43,6 +45,44 @@ export async function notify(env, to, kind, title, text, link, nowIso) {
   try {
     await env.DB.batch(ids.map((id) => env.DB.prepare('INSERT INTO notifications (staff_id, kind, title, body, link, created_at) VALUES (?, ?, ?, ?, ?, ?)')
       .bind(id, kind, String(title).slice(0, 120), String(text || '').slice(0, 300), link || '', nowIso())));
+  } catch (e) {}
+  await sendPush(env, ids);
+}
+
+/* ---- Web Push: wakes the member's browser even when the page is closed ----
+   The push itself carries no content. The browser's service worker (staff/sw.js) receives it, asks this API for the
+   member's newest notification and shows it. So nothing private travels through the push service, and no payload
+   encryption is needed; only the VAPID signature that proves the push comes from this site. */
+const b64u = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const b64uText = (text) => b64u(new TextEncoder().encode(text));
+// the site's signing key pair, made once and kept in the settings table
+export async function vapid(env) {
+  let row = await env.DB.prepare("SELECT value FROM settings WHERE key = 'vapid'").first();
+  if (!row) {
+    const pair = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+    const value = JSON.stringify({ jwk: await crypto.subtle.exportKey('jwk', pair.privateKey), pub: b64u(await crypto.subtle.exportKey('raw', pair.publicKey)) });
+    await env.DB.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('vapid', ?)").bind(value).run();
+    row = await env.DB.prepare("SELECT value FROM settings WHERE key = 'vapid'").first();
+  }
+  return JSON.parse(row.value);
+}
+async function sendPush(env, ids) {
+  try {
+    const subs = (await env.DB.prepare('SELECT id, endpoint FROM push_subs WHERE staff_id IN (' + ids.map(() => '?').join(',') + ')').bind(...ids).all()).results || [];
+    if (!subs.length) return;
+    const v = await vapid(env);
+    const key = await crypto.subtle.importKey('jwk', v.jwk, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+    const tokens = {};   // one signed token per push service
+    await Promise.allSettled(subs.map(async (sub) => {
+      const origin = new URL(sub.endpoint).origin;
+      if (!tokens[origin]) {
+        const unsigned = b64uText(JSON.stringify({ typ: 'JWT', alg: 'ES256' })) + '.' + b64uText(JSON.stringify({ aud: origin, exp: Math.floor(Date.now() / 1000) + 12 * 3600, sub: 'https://obsidiandesign.pages.dev' }));
+        tokens[origin] = unsigned + '.' + b64u(await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key, new TextEncoder().encode(unsigned)));
+      }
+      const res = await fetch(sub.endpoint, { method: 'POST', headers: { TTL: '86400', Urgency: 'high', Authorization: 'vapid t=' + tokens[origin] + ', k=' + v.pub }, body: new Uint8Array(0), signal: AbortSignal.timeout(4000) });
+      // the browser dropped this subscription: forget it
+      if (res.status === 404 || res.status === 410) await env.DB.prepare('DELETE FROM push_subs WHERE id = ?').bind(sub.id).run();
+    }));
   } catch (e) {}
 }
 export async function everyoneBut(env, id) {
@@ -95,7 +135,7 @@ export async function rolesRoutes(c) {
   if (top === 'notifications') {
     if (method === 'GET' && parts[1] === 'count') {
       const n = await env.DB.prepare('SELECT COUNT(*) AS n, MAX(id) AS last FROM notifications WHERE staff_id = ? AND read_at IS NULL').bind(me.id).first();
-      const newest = n.last ? await env.DB.prepare('SELECT title, body FROM notifications WHERE id = ?').bind(n.last).first() : null;
+      const newest = n.last ? await env.DB.prepare('SELECT title, body, link FROM notifications WHERE id = ?').bind(n.last).first() : null;
       return json({ ok: true, unread: n.n, last: n.last || 0, newest });
     }
     if (method === 'GET') {
@@ -111,6 +151,20 @@ export async function rolesRoutes(c) {
       else await env.DB.prepare('DELETE FROM notifications WHERE staff_id = ?').bind(me.id).run();
       return json({ ok: true });
     }
+  }
+
+  /* ---- alerts while the page is closed: this browser's push subscription ---- */
+  if (top === 'push') {
+    if (method === 'GET' && parts[1] === 'key') return json({ ok: true, key: (await vapid(env)).pub });
+    const b = await body(request);
+    const endpoint = b && typeof b.endpoint === 'string' && /^https:\/\/[^\s]{10,900}$/.test(b.endpoint) ? b.endpoint : '';
+    if (!endpoint) return fail(422, 'endpoint');
+    if (method === 'POST') {
+      // a browser belongs to whoever signed in on it last
+      await env.DB.prepare('INSERT INTO push_subs (staff_id, endpoint, created_at) VALUES (?, ?, ?) ON CONFLICT(endpoint) DO UPDATE SET staff_id = excluded.staff_id').bind(me.id, endpoint, nowIso()).run();
+      return json({ ok: true });
+    }
+    if (method === 'DELETE') { await env.DB.prepare('DELETE FROM push_subs WHERE endpoint = ?').bind(endpoint).run(); return json({ ok: true }); }
   }
 
   /* ---- employee of the week, pinned on everyone's home page ---- */

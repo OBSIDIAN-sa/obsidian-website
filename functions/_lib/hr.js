@@ -30,6 +30,8 @@ export const HR_COLUMNS = [
   'ALTER TABLE staff ADD COLUMN leave_days REAL',
   'ALTER TABLE sessions ADD COLUMN device_id INTEGER',
   "ALTER TABLE customers ADD COLUMN stage TEXT DEFAULT 'new'",
+  'ALTER TABLE requests ADD COLUMN doc_id INTEGER',     // a file attached to the request
+  'ALTER TABLE docs ADD COLUMN purpose TEXT',           // 'request' = an attachment, kept out of the member's documents list
 ];
 
 // A short human name for a device, from its browser's user-agent
@@ -165,7 +167,7 @@ export async function hrRoutes(c) {
         const money = await env.DB.prepare('SELECT m.id, m.kind, m.amount, m.note, m.date, x.name AS by_name FROM money m LEFT JOIN staff x ON x.id = m.created_by WHERE m.staff_id = ? ORDER BY m.date DESC, m.id DESC LIMIT 300').bind(sid).all();
         const leaves = await env.DB.prepare('SELECT id, date_from, date_to, days, note FROM leaves WHERE staff_id = ? ORDER BY date_from DESC LIMIT 100').bind(sid).all();
         const com = await env.DB.prepare('SELECT id, source, base, percent, amount, date FROM commissions WHERE staff_id = ? ORDER BY date DESC, id DESC LIMIT 300').bind(sid).all();
-        const docs = mine || chief ? (await env.DB.prepare('SELECT d.id, d.name, d.mime, d.size, d.created_at, d.uploaded_by, x.name AS by_name FROM docs d LEFT JOIN staff x ON x.id = d.uploaded_by WHERE d.staff_id = ? ORDER BY d.id DESC').bind(sid).all()).results || [] : null;
+        const docs = mine || chief ? (await env.DB.prepare('SELECT d.id, d.name, d.mime, d.size, d.created_at, d.uploaded_by, x.name AS by_name FROM docs d LEFT JOIN staff x ON x.id = d.uploaded_by WHERE d.staff_id = ? AND d.purpose IS NULL ORDER BY d.id DESC').bind(sid).all()).results || [] : null;
         return json({
           ok: true, year, today,
           staff: { id: s.id, name: s.name, job: s.job, title: s.title, chief: s.job === 'chief' || (!s.job && s.role === 'admin'), role: s.role, salary: s.salary || 0, leave_days: ent, leave_own: s.leave_days != null },
@@ -276,7 +278,7 @@ export async function hrRoutes(c) {
       if (!name || !data || !/^[A-Za-z0-9+/]+=*$/.test(data.slice(0, 2000))) return fail(422, 'file');
       const size = Math.floor(data.length * 3 / 4);
       if (size > DOC_MAX) return fail(413, 'too_large');
-      const r = await env.DB.prepare('INSERT INTO docs (staff_id, name, mime, size, uploaded_by, created_at) VALUES (?, ?, ?, ?, ?, ?)').bind(target, name, mime, size, me.id, nowIso()).run();
+      const r = await env.DB.prepare('INSERT INTO docs (staff_id, name, mime, size, uploaded_by, created_at, purpose) VALUES (?, ?, ?, ?, ?, ?, ?)').bind(target, name, mime, size, me.id, nowIso(), b.purpose === 'request' ? 'request' : null).run();
       const docId = r.meta.last_row_id;
       for (let i = 0, seq = 0; i < data.length; i += CHUNK, seq++) {
         await env.DB.prepare('INSERT INTO doc_chunks (doc_id, seq, data) VALUES (?, ?, ?)').bind(docId, seq, data.slice(i, i + CHUNK)).run();
@@ -337,8 +339,14 @@ export async function hrRoutes(c) {
         if (!(days > 0 && days <= 365)) return fail(422, 'days');
         date = b.date; dateTo = b.date_to;
       }
-      await env.DB.prepare('INSERT INTO requests (staff_id, kind, body, date, date_to, days, in_time, out_time, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-        .bind(me.id, kind, text, date, dateTo, days, tin, tout, 'pending', nowIso()).run();
+      // an attachment is a file the member uploaded just before, for this request
+      let docId = null;
+      if (/^\d+$/.test(String(b.doc_id || ''))) {
+        const d = await env.DB.prepare("SELECT id FROM docs WHERE id = ? AND staff_id = ? AND purpose = 'request'").bind(+b.doc_id, me.id).first();
+        if (d) docId = d.id;
+      }
+      await env.DB.prepare('INSERT INTO requests (staff_id, kind, body, date, date_to, days, in_time, out_time, status, created_at, doc_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+        .bind(me.id, kind, text, date, dateTo, days, tin, tout, 'pending', nowIso(), docId).run();
       await notify(env, await chiefIds(env), 'request', 'طلب جديد من ' + me.name, text, '#team/requests', nowIso);
       return json({ ok: true });
     }
@@ -372,7 +380,9 @@ export async function hrRoutes(c) {
       if (method === 'DELETE') {
         // the writer can withdraw a request that is still waiting; the head of management can delete any
         if (!chief && !(r.staff_id === me.id && r.status === 'pending')) return fail(403, 'chief_only');
-        await env.DB.prepare('DELETE FROM requests WHERE id = ?').bind(id).run();
+        const gone = [env.DB.prepare('DELETE FROM requests WHERE id = ?').bind(id)];
+        if (r.doc_id) gone.push(env.DB.prepare('DELETE FROM doc_chunks WHERE doc_id = ?').bind(r.doc_id), env.DB.prepare('DELETE FROM docs WHERE id = ?').bind(r.doc_id));
+        await env.DB.batch(gone);
         return json({ ok: true });
       }
     }

@@ -201,7 +201,8 @@
   function noop() {}
   function live(t) { return t === seq; }
   function go(hash) { if (location.hash === hash) route(); else location.hash = hash; }
-  function logout() { api('POST', 'logout', {}).then(function () { me = null; location.hash = ''; gate(false); }).catch(noop); }
+  // signing out also stops this browser's alerts, so the next person on it does not get them
+  function logout() { pushOff().then(function () { return api('POST', 'logout', {}); }).then(function () { me = null; location.hash = ''; gate(false); }).catch(noop); }
   function toast(text) {
     ui.toast.textContent = text; ui.toast.classList.add('is-on');
     clearTimeout(ui.tt); ui.tt = setTimeout(function () { ui.toast.classList.remove('is-on'); }, 3500);
@@ -296,6 +297,7 @@
     var lang = langButton('top__me');
     add(top, ui.title, sf, ui.bell, lang, acc);
     pollBell(); clearInterval(ui.bellTimer); ui.bellTimer = setInterval(pollBell, 45000);
+    pushSync();
     ui.body = h('div', 'body');
     ui.toast = h('div', 'toast'); ui.toast.setAttribute('role', 'status');
     add(main, top, ui.body);
@@ -324,6 +326,29 @@
   window.addEventListener('hashchange', route);
 
   /* ------------------------------------------------------------ notifications */
+  // Alerts while the page is closed (Web Push). The service worker shows them; this side only manages the subscription.
+  var pushOk = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  function swReady() { return navigator.serviceWorker.register('sw.js').then(function () { return navigator.serviceWorker.ready; }); }
+  function keyBytes(k) { var s = atob(k.replace(/-/g, '+').replace(/_/g, '/')), a = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) a[i] = s.charCodeAt(i); return a; }
+  // subscribes this browser and tells the server; resolves true when alerts are on
+  function pushOn() {
+    return swReady().then(function (reg) {
+      return reg.pushManager.getSubscription().then(function (sub) {
+        if (sub) return sub;
+        return api('GET', 'push/key').then(function (k) { if (!k.ok) throw new Error('key'); return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(k.key) }); });
+      });
+    }).then(function (sub) { ui.push = true; return api('POST', 'push/subscribe', { endpoint: sub.endpoint }).then(function (r) { return !!r.ok; }); });
+  }
+  function pushOff() {
+    if (!pushOk) return Promise.resolve();
+    return navigator.serviceWorker.getRegistration('sw.js').then(function (reg) { return reg ? reg.pushManager.getSubscription() : null; }).then(function (sub) {
+      ui.push = false;
+      if (!sub) return;
+      return api('DELETE', 'push/subscribe', { endpoint: sub.endpoint }).then(function () { return sub.unsubscribe(); });
+    }).catch(noop);
+  }
+  // on every load: a browser that already allowed alerts keeps its subscription fresh
+  function pushSync() { if (pushOk && Notification.permission === 'granted') pushOn().catch(noop); }
   // asks how many are unread; a new one since the last ask shows on the page and, where allowed, as a device alert
   function pollBell() {
     if (!me) return;
@@ -333,7 +358,7 @@
       ui.bell.dataset.on = res.unread ? '1' : '';
       if (ui.lastNote !== undefined && res.last > ui.lastNote && res.newest) {
         toast(res.newest.title);
-        try { if (window.Notification && Notification.permission === 'granted') new Notification(res.newest.title, { body: res.newest.body || '', icon: '../assets/img/logo-160.png', tag: 'obs-' + res.last }); } catch (e) {}
+        try { if (!ui.push && window.Notification && Notification.permission === 'granted') new Notification(res.newest.title, { body: res.newest.body || '', icon: '../assets/img/logo-160.png', tag: 'obs-' + res.last }); } catch (e) {}
       }
       ui.lastNote = res.last;
     }).catch(noop);
@@ -343,11 +368,25 @@
     fetchPage(t, ['notifications']).then(function (all) {
       var list = all[0].notifications;
       var bar = h('div', 'quick');
-      if (window.Notification && Notification.permission !== 'granted') {
+      var state = h('p', 'panel__hint');
+      if (!pushOk) state.textContent = 'هذا المتصفح ما يدعم تنبيهات الجهاز. على الآيفون: افتح البوابة من سفاري، اضغط مشاركة ثم "إضافة إلى الشاشة الرئيسية"، وافتحها من الأيقونة وفعّل التنبيهات.';
+      else if (Notification.permission === 'granted') {
+        state.textContent = 'تنبيهات الجهاز مفعّلة على هذا الجهاز، وتوصلك حتى والبوابة مقفلة.';
+        var off = h('button', 'btn btn--sm', 'إيقاف تنبيهات هذا الجهاز'); off.type = 'button';
+        off.addEventListener('click', function () { pushOff().then(function () { toast('تم إيقاف تنبيهات هذا الجهاز.'); state.textContent = 'تنبيهات الجهاز موقفة على هذا الجهاز.'; off.remove(); }); });
+        bar.appendChild(off);
+      } else {
+        state.textContent = Notification.permission === 'denied' ? 'التنبيهات مرفوضة من إعدادات المتصفح. اسمح بها لهذا الموقع من الإعدادات ثم حدّث الصفحة.' : 'فعّل تنبيهات الجهاز عشان يوصلك كل جديد حتى والبوابة مقفلة.';
         var en = h('button', 'btn btn--sm btn--solid', 'تفعيل تنبيهات الجهاز'); en.type = 'button';
-        en.addEventListener('click', function () { Notification.requestPermission().then(function (r) { toast(r === 'granted' ? 'تم تفعيل تنبيهات الجهاز.' : 'التنبيهات مرفوضة من إعدادات المتصفح.'); route(); }); });
-        bar.appendChild(en);
+        en.addEventListener('click', function () {
+          Notification.requestPermission().then(function (r) {
+            if (r !== 'granted') { toast('التنبيهات مرفوضة من إعدادات المتصفح.'); return route(); }
+            return pushOn().then(function (ok) { toast(ok ? 'تم تفعيل تنبيهات الجهاز.' : 'ما قدرنا نفعّل التنبيهات على هذا الجهاز.'); route(); });
+          }).catch(function () { toast('ما قدرنا نفعّل التنبيهات على هذا الجهاز.'); });
+        });
+        if (Notification.permission !== 'denied') bar.appendChild(en);
       }
+      ui.body.appendChild(state);
       if (list.length) bar.appendChild(delBtn('مسح الكل', 'btn btn--sm', function () { del('notifications', 'تم مسح التنبيهات.', route); }));
       ui.body.appendChild(bar);
       var p = panel('التنبيهات (' + list.length + ')');
@@ -1777,6 +1816,7 @@
     if (r.kind === 'correction') card.appendChild(h('p', 'row__meta', 'اليوم: ' + fmtDay(r.date) + (r.in_time ? ' · الحضور ' + r.in_time : '') + (r.out_time ? ' · الانصراف ' + r.out_time : '')));
     if (r.kind === 'leave') card.appendChild(h('p', 'row__meta', 'من ' + fmtDay(r.date) + ' إلى ' + fmtDay(r.date_to) + ' · ' + r.days + ' يوم'));
     card.appendChild(h('p', 'memo__body', r.body));
+    if (r.doc_id) { var dl = hlink('btn btn--sm', 'فتح المستند المرفق', '/api/staff/docs/' + r.doc_id + '/file'); dl.target = '_blank'; dl.rel = 'noopener'; card.appendChild(add(h('div', 'quick'), dl)); }
     if (r.reply) card.appendChild(h('p', 'row__meta', 'رد الإدارة: ' + r.reply));
     if (decide && r.status === 'pending') {
       var reply = input('text', { maxLength: 400, placeholder: 'رد اختياري يوصل للموظف' }); reply.setAttribute('aria-label', 'الرد على الطلب');
@@ -1797,18 +1837,39 @@
       else { var box = h('div', 'memos'); list.forEach(function (r) { box.appendChild(requestRow(r, again, false)); }); p.appendChild(box); }
       a1.appendChild(p);
       var txt = input('textarea', { maxLength: 1000, placeholder: 'اكتب طلبك للإدارة…' });
-      a2.appendChild(add(panel('طلب جديد للإدارة'), h('p', 'panel__hint', 'الطلب يشوفه رئيس الإدارة فقط، ويبقى قيد الدراسة لين يقبله أو يرفضه.'), simpleForm([field('الطلب', txt)], 'إرسال الطلب',
-        function () { return api('POST', 'requests', { kind: 'general', body: txt.value.trim() }); }, function () { toast('تم إرسال الطلب.'); again(); })));
+      var att = attachField();
+      a2.appendChild(add(panel('طلب جديد للإدارة'), h('p', 'panel__hint', 'الطلب يشوفه رئيس الإدارة فقط، ويبقى قيد الدراسة لين يقبله أو يرفضه.'), simpleForm([field('الطلب', txt), att.node], 'إرسال الطلب',
+        function () { return att.upload('مرفق طلب').then(function (up) { return up.ok ? api('POST', 'requests', { kind: 'general', body: txt.value.trim(), doc_id: up.id }) : up; }); }, function () { toast('تم إرسال الطلب.'); again(); })));
       ui.body.appendChild(add(cols, a1, a2));
     }).catch(noop);
+  }
+  // an optional file with a request: uploaded first, then named in the request
+  function attachField() {
+    var f = h('input', 'input'); f.type = 'file'; f.accept = 'image/*,application/pdf,.doc,.docx';
+    return { node: field('مستند مرفق', f, 'اختياري: تقرير طبي، صورة، أو أي إثبات. حتى 4 ميجابايت.'),
+      // resolves the uploaded file's id, null when nothing was chosen, or an error answer
+      upload: function (name) {
+        var fl = f.files && f.files[0];
+        if (!fl) return Promise.resolve({ ok: true, id: null });
+        return readFile(fl).then(function (x) {
+          if (x.size > 4 * 1024 * 1024) return { ok: false, error: 'too_large' };
+          return api('POST', 'docs', { name: name + ' - ' + fl.name, mime: x.mime, data: x.data, purpose: 'request' });
+        });
+      } };
   }
   // on the attendance page: ask for a day's record to be corrected
   function correctionPanel(today) {
     var p = panel('طلب تصحيح التحضير');
     p.appendChild(h('p', 'panel__hint', 'غياب أو تأخير له سبب؟ اكتب اليوم والسبب، ورئيس الإدارة يوافق أو يرفض.'));
     var day = input('date', { value: today, max: today }), tin = input('time', {}), tout = input('time', {}), why = input('textarea', { maxLength: 1000, placeholder: 'السبب…' });
-    return add(p, simpleForm([field('اليوم', day), two(field('وقت الحضور الصحيح', tin, 'اختياري'), field('وقت الانصراف الصحيح', tout, 'اختياري')), field('السبب', why)], 'إرسال طلب التصحيح',
-      function () { return api('POST', 'requests', { kind: 'correction', date: day.value, in_time: tin.value, out_time: tout.value, body: why.value.trim() }); }, function () { toast('تم إرسال طلب التصحيح.'); go('#account/requests'); }));
+    var att = attachField();
+    return add(p, simpleForm([field('اليوم', day), two(field('وقت الحضور الصحيح', tin, 'اختياري'), field('وقت الانصراف الصحيح', tout, 'اختياري')), field('السبب', why), att.node], 'إرسال طلب التصحيح',
+      function () {
+        return att.upload('مرفق طلب تصحيح ' + day.value).then(function (up) {
+          if (!up.ok) return up;
+          return api('POST', 'requests', { kind: 'correction', date: day.value, in_time: tin.value, out_time: tout.value, body: why.value.trim(), doc_id: up.id });
+        });
+      }, function () { toast('تم إرسال طلب التصحيح.'); go('#account/requests'); }));
   }
 
   var FILE_TABS = [['money', 'المالية'], ['leave', 'الإجازات'], ['commissions', 'العمولات'], ['docs', 'المستندات']];
