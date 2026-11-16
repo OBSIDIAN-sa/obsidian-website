@@ -669,6 +669,19 @@
 "جهاز": "Device",
 " · أول محاولة ": " · first attempt ",
 " · آخر دخول ": " · last sign-in ",
-"تعذر الاتصال. حدّث الصفحة.": "Could not connect. Refresh the page."
+"تعذر الاتصال. حدّث الصفحة.": "Could not connect. Refresh the page.",
+"هذا المتصفح ما يدعم تنبيهات الجهاز. على الآيفون: افتح البوابة من سفاري، اضغط مشاركة ثم \"إضافة إلى الشاشة الرئيسية\"، وافتحها من الأيقونة وفعّل التنبيهات.": "This browser does not support device alerts. On iPhone: open the portal in Safari, press Share then \"Add to Home Screen\", open it from the icon and turn alerts on.",
+"تنبيهات الجهاز مفعّلة على هذا الجهاز، وتوصلك حتى والبوابة مقفلة.": "Device alerts are on for this device and reach you even when the portal is closed.",
+"إيقاف تنبيهات هذا الجهاز": "Turn off this device's alerts",
+"تم إيقاف تنبيهات هذا الجهاز.": "This device's alerts are off.",
+"تنبيهات الجهاز موقفة على هذا الجهاز.": "Device alerts are off for this device.",
+"التنبيهات مرفوضة من إعدادات المتصفح. اسمح بها لهذا الموقع من الإعدادات ثم حدّث الصفحة.": "Alerts are blocked in the browser settings. Allow them for this site in the settings, then refresh the page.",
+"فعّل تنبيهات الجهاز عشان يوصلك كل جديد حتى والبوابة مقفلة.": "Turn on device alerts to get everything new even when the portal is closed.",
+"ما قدرنا نفعّل التنبيهات على هذا الجهاز.": "We could not turn alerts on for this device.",
+"فتح المستند المرفق": "Open the attached document",
+"مرفق طلب": "Request attachment",
+"مستند مرفق": "Attached document",
+"اختياري: تقرير طبي، صورة، أو أي إثبات. حتى 4 ميجابايت.": "Optional: a medical report, a photo or any proof. Up to 4 MB.",
+"مرفق طلب تصحيح ": "Correction request attachment "
 }
 }

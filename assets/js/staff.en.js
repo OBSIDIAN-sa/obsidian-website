@@ -202,7 +202,8 @@
   function noop() {}
   function live(t) { return t === seq; }
   function go(hash) { if (location.hash === hash) route(); else location.hash = hash; }
-  function logout() { api('POST', 'logout', {}).then(function () { me = null; location.hash = ''; gate(false); }).catch(noop); }
+  // signing out also stops this browser's alerts, so the next person on it does not get them
+  function logout() { pushOff().then(function () { return api('POST', 'logout', {}); }).then(function () { me = null; location.hash = ''; gate(false); }).catch(noop); }
   function toast(text) {
     ui.toast.textContent = text; ui.toast.classList.add('is-on');
     clearTimeout(ui.tt); ui.tt = setTimeout(function () { ui.toast.classList.remove('is-on'); }, 3500);
@@ -297,6 +298,7 @@
     var lang = langButton('top__me');
     add(top, ui.title, sf, ui.bell, lang, acc);
     pollBell(); clearInterval(ui.bellTimer); ui.bellTimer = setInterval(pollBell, 45000);
+    pushSync();
     ui.body = h('div', 'body');
     ui.toast = h('div', 'toast'); ui.toast.setAttribute('role', 'status');
     add(main, top, ui.body);
@@ -325,6 +327,29 @@
   window.addEventListener('hashchange', route);
 
   /* ------------------------------------------------------------ notifications */
+  // Alerts while the page is closed (Web Push). The service worker shows them; this side only manages the subscription.
+  var pushOk = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  function swReady() { return navigator.serviceWorker.register('sw.js').then(function () { return navigator.serviceWorker.ready; }); }
+  function keyBytes(k) { var s = atob(k.replace(/-/g, '+').replace(/_/g, '/')), a = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) a[i] = s.charCodeAt(i); return a; }
+  // subscribes this browser and tells the server; resolves true when alerts are on
+  function pushOn() {
+    return swReady().then(function (reg) {
+      return reg.pushManager.getSubscription().then(function (sub) {
+        if (sub) return sub;
+        return api('GET', 'push/key').then(function (k) { if (!k.ok) throw new Error('key'); return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(k.key) }); });
+      });
+    }).then(function (sub) { ui.push = true; return api('POST', 'push/subscribe', { endpoint: sub.endpoint }).then(function (r) { return !!r.ok; }); });
+  }
+  function pushOff() {
+    if (!pushOk) return Promise.resolve();
+    return navigator.serviceWorker.getRegistration('sw.js').then(function (reg) { return reg ? reg.pushManager.getSubscription() : null; }).then(function (sub) {
+      ui.push = false;
+      if (!sub) return;
+      return api('DELETE', 'push/subscribe', { endpoint: sub.endpoint }).then(function () { return sub.unsubscribe(); });
+    }).catch(noop);
+  }
+  // on every load: a browser that already allowed alerts keeps its subscription fresh
+  function pushSync() { if (pushOk && Notification.permission === 'granted') pushOn().catch(noop); }
   // asks how many are unread; a new one since the last ask shows on the page and, where allowed, as a device alert
   function pollBell() {
     if (!me) return;
@@ -334,7 +359,7 @@
       ui.bell.dataset.on = res.unread ? '1' : '';
       if (ui.lastNote !== undefined && res.last > ui.lastNote && res.newest) {
         toast(res.newest.title);
-        try { if (window.Notification && Notification.permission === 'granted') new Notification(res.newest.title, { body: res.newest.body || '', icon: '../assets/img/logo-160.png', tag: 'obs-' + res.last }); } catch (e) {}
+        try { if (!ui.push && window.Notification && Notification.permission === 'granted') new Notification(res.newest.title, { body: res.newest.body || '', icon: '../assets/img/logo-160.png', tag: 'obs-' + res.last }); } catch (e) {}
       }
       ui.lastNote = res.last;
     }).catch(noop);
@@ -344,11 +369,25 @@
     fetchPage(t, ['notifications']).then(function (all) {
       var list = all[0].notifications;
       var bar = h('div', 'quick');
-      if (window.Notification && Notification.permission !== 'granted') {
+      var state = h('p', 'panel__hint');
+      if (!pushOk) state.textContent = 'This browser does not support device alerts. On iPhone: open the portal in Safari, press Share then "Add to Home Screen", open it from the icon and turn alerts on.';
+      else if (Notification.permission === 'granted') {
+        state.textContent = 'Device alerts are on for this device and reach you even when the portal is closed.';
+        var off = h('button', 'btn btn--sm', 'Turn off this device\'s alerts'); off.type = 'button';
+        off.addEventListener('click', function () { pushOff().then(function () { toast('This device\'s alerts are off.'); state.textContent = 'Device alerts are off for this device.'; off.remove(); }); });
+        bar.appendChild(off);
+      } else {
+        state.textContent = Notification.permission === 'denied' ? 'Alerts are blocked in the browser settings. Allow them for this site in the settings, then refresh the page.' : 'Turn on device alerts to get everything new even when the portal is closed.';
         var en = h('button', 'btn btn--sm btn--solid', 'Turn on device alerts'); en.type = 'button';
-        en.addEventListener('click', function () { Notification.requestPermission().then(function (r) { toast(r === 'granted' ? 'Device alerts are on.' : 'Alerts are blocked in the browser settings.'); route(); }); });
-        bar.appendChild(en);
+        en.addEventListener('click', function () {
+          Notification.requestPermission().then(function (r) {
+            if (r !== 'granted') { toast('Alerts are blocked in the browser settings.'); return route(); }
+            return pushOn().then(function (ok) { toast(ok ? 'Device alerts are on.' : 'We could not turn alerts on for this device.'); route(); });
+          }).catch(function () { toast('We could not turn alerts on for this device.'); });
+        });
+        if (Notification.permission !== 'denied') bar.appendChild(en);
       }
+      ui.body.appendChild(state);
       if (list.length) bar.appendChild(delBtn('Clear all', 'btn btn--sm', function () { del('notifications', 'Notifications cleared.', route); }));
       ui.body.appendChild(bar);
       var p = panel('Notifications (' + list.length + ')');
@@ -1778,6 +1817,7 @@
     if (r.kind === 'correction') card.appendChild(h('p', 'row__meta', 'Day: ' + fmtDay(r.date) + (r.in_time ? ' · Check-in ' + r.in_time : '') + (r.out_time ? ' · Check-out ' + r.out_time : '')));
     if (r.kind === 'leave') card.appendChild(h('p', 'row__meta', 'From ' + fmtDay(r.date) + ' to ' + fmtDay(r.date_to) + ' · ' + r.days + ' day(s)'));
     card.appendChild(h('p', 'memo__body', r.body));
+    if (r.doc_id) { var dl = hlink('btn btn--sm', 'Open the attached document', '/api/staff/docs/' + r.doc_id + '/file'); dl.target = '_blank'; dl.rel = 'noopener'; card.appendChild(add(h('div', 'quick'), dl)); }
     if (r.reply) card.appendChild(h('p', 'row__meta', 'Management\'s reply: ' + r.reply));
     if (decide && r.status === 'pending') {
       var reply = input('text', { maxLength: 400, placeholder: 'Optional reply that reaches the member' }); reply.setAttribute('aria-label', 'Reply to the request');
@@ -1798,18 +1838,39 @@
       else { var box = h('div', 'memos'); list.forEach(function (r) { box.appendChild(requestRow(r, again, false)); }); p.appendChild(box); }
       a1.appendChild(p);
       var txt = input('textarea', { maxLength: 1000, placeholder: 'Write your request to management…' });
-      a2.appendChild(add(panel('New request to management'), h('p', 'panel__hint', 'Only the head of management sees the request; it stays under review until they approve or reject it.'), simpleForm([field('Request', txt)], 'Send request',
-        function () { return api('POST', 'requests', { kind: 'general', body: txt.value.trim() }); }, function () { toast('Request sent.'); again(); })));
+      var att = attachField();
+      a2.appendChild(add(panel('New request to management'), h('p', 'panel__hint', 'Only the head of management sees the request; it stays under review until they approve or reject it.'), simpleForm([field('Request', txt), att.node], 'Send request',
+        function () { return att.upload('Request attachment').then(function (up) { return up.ok ? api('POST', 'requests', { kind: 'general', body: txt.value.trim(), doc_id: up.id }) : up; }); }, function () { toast('Request sent.'); again(); })));
       ui.body.appendChild(add(cols, a1, a2));
     }).catch(noop);
+  }
+  // an optional file with a request: uploaded first, then named in the request
+  function attachField() {
+    var f = h('input', 'input'); f.type = 'file'; f.accept = 'image/*,application/pdf,.doc,.docx';
+    return { node: field('Attached document', f, 'Optional: a medical report, a photo or any proof. Up to 4 MB.'),
+      // resolves the uploaded file's id, null when nothing was chosen, or an error answer
+      upload: function (name) {
+        var fl = f.files && f.files[0];
+        if (!fl) return Promise.resolve({ ok: true, id: null });
+        return readFile(fl).then(function (x) {
+          if (x.size > 4 * 1024 * 1024) return { ok: false, error: 'too_large' };
+          return api('POST', 'docs', { name: name + ' - ' + fl.name, mime: x.mime, data: x.data, purpose: 'request' });
+        });
+      } };
   }
   // on the attendance page: ask for a day's record to be corrected
   function correctionPanel(today) {
     var p = panel('Attendance correction request');
     p.appendChild(h('p', 'panel__hint', 'An absence or lateness with a reason? Enter the day and the reason; the head of management approves or rejects.'));
     var day = input('date', { value: today, max: today }), tin = input('time', {}), tout = input('time', {}), why = input('textarea', { maxLength: 1000, placeholder: 'Reason…' });
-    return add(p, simpleForm([field('Today', day), two(field('Correct check-in time', tin, 'Optional'), field('Correct check-out time', tout, 'Optional')), field('Reason', why)], 'Send correction request',
-      function () { return api('POST', 'requests', { kind: 'correction', date: day.value, in_time: tin.value, out_time: tout.value, body: why.value.trim() }); }, function () { toast('Correction request sent.'); go('#account/requests'); }));
+    var att = attachField();
+    return add(p, simpleForm([field('Today', day), two(field('Correct check-in time', tin, 'Optional'), field('Correct check-out time', tout, 'Optional')), field('Reason', why), att.node], 'Send correction request',
+      function () {
+        return att.upload('Correction request attachment ' + day.value).then(function (up) {
+          if (!up.ok) return up;
+          return api('POST', 'requests', { kind: 'correction', date: day.value, in_time: tin.value, out_time: tout.value, body: why.value.trim(), doc_id: up.id });
+        });
+      }, function () { toast('Correction request sent.'); go('#account/requests'); }));
   }
 
   var FILE_TABS = [['money', 'Money'], ['leave', 'Leave'], ['commissions', 'Commissions'], ['docs', 'Documents']];
