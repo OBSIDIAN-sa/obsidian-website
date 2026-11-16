@@ -238,6 +238,8 @@ a.row--cust:hover { background: var(--ink); }
   .nav__item[aria-current] { border-block-start-color: var(--bronze); }
   .top { flex-wrap: wrap; gap: 0.5rem; padding: 0.75rem 1rem; }
   .top__title { flex: 1; }
+  .top__bell span { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); }
+  .top__me { padding-inline: 0.6rem; }
   .search { order: 3; flex: 1 0 100%; max-inline-size: none; margin: 0; }
   .body { padding: 1rem; }
   .toast { inset-block-end: calc(76px + env(safe-area-inset-bottom)); }
@@ -325,6 +327,23 @@ input[type='file'].input { padding-block: 0.6rem; }
 .editbox { padding: 1rem; background: var(--ink); border: 1px solid var(--hairline); border-inline-start: 3px solid var(--blue); }
 .rows > .editbox { margin-block: 0.5rem; }
 .editbox .input { background: var(--onyx); }
+.top__bell { position: relative; }
+.bell__n { min-inline-size: 1.4rem; padding: 0 0.3rem; background: var(--rose); color: #fff; font-size: 0.8125rem; font-weight: 700; line-height: 1.4rem; text-align: center; }
+.bell__n:empty { display: none; }
+.top__bell[data-on='1'] { border-color: var(--rose); }
+button.top__me { font: inherit; cursor: pointer; font-weight: 700; color: var(--bronze); }
+.checks { display: grid; gap: 0.1rem; padding: 0.5rem 0.75rem; background: var(--onyx); border: 1px solid var(--hairline); }
+.panel--star { border-block-start: 3px solid var(--amber); background: var(--amber-bg); }
+.star__who { display: flex; align-items: center; gap: 0.9rem; }
+.star__who b { display: block; font-size: 1.25rem; }
+.star__who span { color: var(--warm-grey); font-size: 0.9375rem; }
+.star__mark { display: grid; place-items: center; inline-size: 3rem; block-size: 3rem; background: var(--amber); color: #fff !important; font-size: 1.5rem !important; }
+.panel--star .input { background: var(--onyx); }
+[dir='ltr'] .toast { transform: translate(-50%, 1rem); }
+[dir='ltr'] .toast.is-on { transform: translate(-50%, 0); }
+[dir='ltr'] .back::before { content: '←'; }
+.gate { position: relative; }
+.gate__lang { position: absolute; inset-block-start: 1rem; inset-inline-end: 1rem; }
 .print { display: none; }
 @media print {
   @page { size: A4; margin: 14mm; }

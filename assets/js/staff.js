@@ -113,9 +113,15 @@
   }
 
   /* ------------------------------------------------------------ sign in / setup */
+  function langButton(cls) {
+    var b = h('button', cls, 'EN'); b.type = 'button'; b.setAttribute('aria-label', 'English');
+    b.addEventListener('click', function () { try { localStorage.setItem('obs_lang', 'en'); } catch (e) {} location.reload(); });
+    return b;
+  }
   function gate(setup, message) {
     app.textContent = '';
     var wrap = h('div', 'gate');
+    wrap.appendChild(langButton('top__me gate__lang'));
     var card = h('form', 'gate__card');
     card.noValidate = true;
     var logo = h('img', 'gate__logo'); logo.src = '../assets/img/logo-160.png'; logo.alt = ''; logo.width = 64; logo.height = 64;
@@ -158,12 +164,14 @@
   var TASK_STATUS = { todo: 'لم تبدأ', doing: 'جارية', done: 'منجزة' };
   var NOTE_KIND = { general: 'ملاحظة', task: 'مهمة جديدة', vip: 'عميل مميز' };
   var JOBS = { chief: 'رئيس الإدارة', management: 'إدارة', showroom_manager: 'مدير معرض', accountant: 'محاسب مالي', designer: 'مصمم', employee: 'موظف' };
-  function jobOf(u) { return u.job && JOBS[u.job] ? u.job : (u.role === 'admin' ? 'chief' : 'employee'); }
-  function jobName(u) { return JOBS[jobOf(u)]; }
-  var ROLES = { staff: 'موظف: يشوف ما يخصه', viewer: 'إداري: يشوف بدون تعديل وبدون أرقام العملاء', finance: 'محاسب: أرقام المعرض وتقرير حضور الكل', admin: 'مدير: يشوف كل شي' };
-  var ROLE_SHORT = { staff: 'موظف', viewer: 'إداري', finance: 'محاسب', admin: 'مدير' };
-  // the viewer permission reads only: no adding or changing customers, requests or appointments
-  function canEdit() { return !!me && me.role !== 'viewer'; }
+  // the title is whatever the head of management wrote for the member; older accounts fall back to the fixed list
+  function jobName(u) { return u.title || (u.chief ? JOBS.chief : JOBS[u.job] || JOBS.employee); }
+  // what my rank allows; the head of management is allowed everything
+  function can(k) { return !!me && (me.chief || !!(me.perms && me.perms[k])); }
+  var roles = [];
+  var PERM = { numbers: 'يشوف أرقام المعرض الكاملة', attendance_all: 'يشوف تقرير حضور كل الموظفين ويطبعه', money: 'يشوف رواتب ومستحقات الموظفين ويسجل الحركات المالية', tasks_all: 'يشوف مهام الفريق كلها', tasks_assign: 'يوزع المهام على الموظفين', leads_assign: 'يسند الطلبات للموظفين', assistant: 'يستخدم المساعد الذكي', note_kinds: 'ينشر ملاحظة للفريق بتصنيف مهمة أو عميل مميز', edit: 'يضيف ويعدل الطلبات والعملاء والمواعيد والملاحظات', contacts: 'يشوف أرقام العملاء وعناوينهم وملاحظاتهم', team_list: 'يشوف قائمة الموظفين' };
+  // a rank without the edit flag reads only: no adding or changing customers, requests or appointments
+  function canEdit() { return can('edit'); }
   // a customer's number with call and WhatsApp links; plain text when the number arrives masked
   function contact(phone, text) {
     var ph = h('span', 'phones');
@@ -171,16 +179,7 @@
     var tel = h('a', 'ltr', phone); tel.href = 'tel:' + phone;
     return add(ph, tel, link('واتساب', wa(phone, text)));
   }
-  // the permission each title usually goes with; picked for you when the title changes, and you can change it
-  function roleFor(job) { return job === 'chief' || job === 'management' ? 'admin' : job === 'accountant' ? 'finance' : 'staff'; }
-  // title and permission side by side: the permission follows the title until it is changed by hand, and is fixed for the head of management
-  function linkRole(job, role) {
-    var sync = function () { role.disabled = job.value === 'chief'; if (role.disabled) role.value = 'admin'; };
-    job.addEventListener('change', function () { role.value = roleFor(job.value); sync(); });
-    sync();
-  }
-  function isChief(u) { return jobOf(u) === 'chief'; }
-  function isAdmin() { return me && me.role === 'admin'; }
+  function isChief(u) { return !!(u && u.chief); }
   // deleting, managing members, the activity log, the attendance place and marking others belong to the head of management alone
   function iAmChief() { return !!me && isChief(me); }
   var ICON = {
@@ -190,6 +189,7 @@
     att: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2',
     team: 'M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM3 20c0-3 2.5-5 6-5s6 2 6 5M17 11a2.5 2.5 0 1 0 0-5M17 15c2.5.3 4 2 4 5',
     account: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM5 21c0-4 3-6 7-6s7 2 7 6',
+    bell: 'M6 17V11a6 6 0 1 1 12 0v6l2 2H4zM10 21h4',
     customers: 'M4 5h16v14H4zM9 11a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM6 16c0-2 1.2-3 3-3s3 1 3 3M14 9h4M14 13h4',
     tasks: 'M4 6l2 2 3-3M4 13l2 2 3-3M4 20l2 2 3-3M12 7h8M12 14h8M12 21h8',
   };
@@ -261,7 +261,7 @@
     add(brand, logo, bt);
     var nav = h('nav', 'nav'); nav.setAttribute('aria-label', 'الأقسام');
     ui.nav = {};
-    NAV = NAV_ALL.filter(function (it) { return it[0] !== 'team' || isAdmin(); });
+    NAV = NAV_ALL.filter(function (it) { return it[0] !== 'team' || can('team_list'); });
     document.body.dataset.role = me.role;
     NAV.forEach(function (it) {
       var a = hlink('nav__item', null, '#' + it[0]);
@@ -291,7 +291,11 @@
     });
     add(sf, si, sb);
     var acc = hlink('top__me', null, '#account'); add(acc, icon('account'), h('span', null, me.name.split(' ')[0]));
-    add(top, ui.title, sf, acc);
+    ui.bell = hlink('top__me top__bell', null, '#notifications'); ui.bell.setAttribute('aria-label', 'التنبيهات');
+    ui.bellCount = h('b', 'bell__n'); add(ui.bell, icon('bell'), h('span', null, 'التنبيهات'), ui.bellCount);
+    var lang = langButton('top__me');
+    add(top, ui.title, sf, ui.bell, lang, acc);
+    pollBell(); clearInterval(ui.bellTimer); ui.bellTimer = setInterval(pollBell, 45000);
     ui.body = h('div', 'body');
     ui.toast = h('div', 'toast'); ui.toast.setAttribute('role', 'status');
     add(main, top, ui.body);
@@ -307,7 +311,7 @@
     var parts = hash.replace(/^#/, '').split('/');
     var page = PAGES[parts[0]] ? parts[0] : 'home';
     var t = ++seq;
-    if (page === 'team' && !isAdmin()) page = 'home';
+    if (page === 'team' && !can('team_list')) page = 'home';
     var section = page === 'lead' ? 'leads' : page === 'customer' ? 'customers' : page === 'member' ? 'team' : page;
     NAV.forEach(function (it) {
       if (it[0] === section) ui.nav[it[0]].setAttribute('aria-current', 'page'); else ui.nav[it[0]].removeAttribute('aria-current');
@@ -319,11 +323,56 @@
   }
   window.addEventListener('hashchange', route);
 
+  /* ------------------------------------------------------------ notifications */
+  // asks how many are unread; a new one since the last ask shows on the page and, where allowed, as a device alert
+  function pollBell() {
+    if (!me) return;
+    api('GET', 'notifications/count').then(function (res) {
+      if (!res.ok || !ui.bellCount) return;
+      ui.bellCount.textContent = res.unread ? String(res.unread) : '';
+      ui.bell.dataset.on = res.unread ? '1' : '';
+      if (ui.lastNote !== undefined && res.last > ui.lastNote && res.newest) {
+        toast(res.newest.title);
+        try { if (window.Notification && Notification.permission === 'granted') new Notification(res.newest.title, { body: res.newest.body || '', icon: '../assets/img/logo-160.png', tag: 'obs-' + res.last }); } catch (e) {}
+      }
+      ui.lastNote = res.last;
+    }).catch(noop);
+  }
+  PAGES.notifications = function (_, t) {
+    setTitle('التنبيهات');
+    fetchPage(t, ['notifications']).then(function (all) {
+      var list = all[0].notifications;
+      var bar = h('div', 'quick');
+      if (window.Notification && Notification.permission !== 'granted') {
+        var en = h('button', 'btn btn--sm btn--solid', 'تفعيل تنبيهات الجهاز'); en.type = 'button';
+        en.addEventListener('click', function () { Notification.requestPermission().then(function (r) { toast(r === 'granted' ? 'تم تفعيل تنبيهات الجهاز.' : 'التنبيهات مرفوضة من إعدادات المتصفح.'); route(); }); });
+        bar.appendChild(en);
+      }
+      if (list.length) bar.appendChild(delBtn('مسح الكل', 'btn btn--sm', function () { del('notifications', 'تم مسح التنبيهات.', route); }));
+      ui.body.appendChild(bar);
+      var p = panel('التنبيهات (' + list.length + ')');
+      if (!list.length) p.appendChild(empty('لا توجد تنبيهات.'));
+      else {
+        var box = h('div', 'memos');
+        list.forEach(function (n) {
+          var m = h('article', 'memo'); m.dataset.kind = n.read_at ? 'no' : 'task';
+          var head = h('div', 'memo__head');
+          add(head, h('span', 'tag', n.title), h('span', 'row__meta', fmtDate(n.created_at)), n.link ? hlink('panel__more', 'فتح', n.link) : null);
+          add(m, head, n.body ? h('p', 'memo__body', n.body) : null);
+          box.appendChild(m);
+        });
+        p.appendChild(box);
+      }
+      ui.body.appendChild(p);
+      if (list.some(function (n) { return !n.read_at; })) api('POST', 'notifications/read', {}).then(pollBell).catch(noop);
+    }).catch(noop);
+  };
+
   /* ------------------------------------------------------------ home */
   PAGES.home = function (_, t) {
     setTitle('الرئيسية');
-    fetchPage(t, ['summary', 'attendance', 'appointments?range=today', 'leads?status=new', 'announcements', 'tasks']).then(function (all) {
-      var s = all[0].summary, att = all[1], ap = all[2], nl = all[3], an = all[4], tk = all[5];
+    fetchPage(t, ['summary', 'attendance', 'appointments?range=today', 'leads?status=new', 'announcements', 'tasks', 'star']).then(function (all) {
+      var s = all[0].summary, att = all[1], ap = all[2], nl = all[3], an = all[4], tk = all[5], st = all[6];
       ui.body.appendChild(h('p', 'hello', 'هلا ' + me.name.split(' ')[0] + (att.ok ? ' — ' + fmtDay(att.today) : '')));
 
       var grid = h('div', 'stats' + (s.member ? ' stats--4' : ''));
@@ -351,6 +400,22 @@
         ui.body.insertBefore(w, grid.nextSibling);
       }).catch(noop);
       ui.body.appendChild(notesPanel(an.ok ? an.announcements : []));
+      var star = st.ok && st.star;
+      if (star || iAmChief()) {
+        var ps = h('section', 'panel panel--star');
+        ps.appendChild(add(h('div', 'panel__head'), h('h2', null, 'موظف الأسبوع')));
+        if (star) add(ps, add(h('div', 'star__who'), h('span', 'star__mark', '★'), add(h('div'), h('b', null, star.name), h('span', null, jobName(star)))), star.note ? h('p', 'memo__body', star.note) : null);
+        else ps.appendChild(empty('ما تم اختيار موظف الأسبوع.'));
+        if (iAmChief()) {
+          var so = {}; users.filter(function (u) { return u.active; }).forEach(function (u) { so[u.id] = u.name; });
+          var sw = select(so, star ? String(star.staff_id) : String(me.id)); sw.setAttribute('aria-label', 'الموظف');
+          var sn = input('text', { maxLength: 200, placeholder: 'السبب أو كلمة شكر (اختياري)', value: star ? star.note : '' }); sn.setAttribute('aria-label', 'السبب');
+          var sbn = h('button', 'btn btn--sm btn--solid', 'تثبيت'); sbn.type = 'button';
+          sbn.addEventListener('click', function () { sbn.disabled = true; api('PUT', 'star', { staff_id: +sw.value, note: sn.value.trim() }).then(function (r) { sbn.disabled = false; if (!r.ok) return oops(r); toast('تم تثبيت موظف الأسبوع.'); go('#home'); }).catch(noop); });
+          ps.appendChild(add(h('div', 'inline inline--wrap'), sw, sn, sbn, star ? delBtn('إزالة', 'btn btn--sm', function () { del('star', 'تمت إزالة موظف الأسبوع.', function () { go('#home'); }); }) : null));
+        }
+        ui.body.appendChild(ps);
+      }
 
       var cols = h('div', 'cols cols--home');
       var a1 = h('div', 'col'), a2 = h('div', 'col');
@@ -372,9 +437,9 @@
       var quick = panel('إجراءات سريعة');
       var qr = h('div', 'quick');
       add(qr, canEdit() ? hlink('btn btn--sm', 'طلب جديد', '#leads/add') : null, canEdit() ? hlink('btn btn--sm', 'عميل جديد', '#customers/add') : null, hlink('btn btn--sm', 'مهمة جديدة', '#tasks/mine'), hlink('btn btn--sm', 'طلب للإدارة', '#account/requests'), hlink('btn btn--sm', 'ملفي', '#account/money'),
-        iAmChief() || me.role === 'finance' ? hlink('btn btn--sm', 'الرواتب والمستحقات', '#payroll') : null);
+        can('money') ? hlink('btn btn--sm', 'الرواتب والمستحقات', '#payroll') : null);
       a2.appendChild(add(quick, qr));
-      if (isAdmin()) a2.appendChild(askPanel());
+      if (can('assistant')) a2.appendChild(askPanel());
       ui.body.appendChild(add(cols, a1, a2));
     }).catch(noop);
   };
@@ -412,7 +477,7 @@
       b.disabled = true;
       api('POST', 'announcements', { kind: kind.value, body: v }).then(function (r) { b.disabled = false; if (!r.ok) return oops(r); toast('تم نشر الملاحظة.'); go('#home'); }).catch(function () { b.disabled = false; });
     });
-    if (canEdit()) p.appendChild(add(f, isAdmin() ? kind : null, txt, b));
+    if (canEdit()) p.appendChild(add(f, can('note_kinds') ? kind : null, txt, b));
     return p;
   }
 
@@ -551,7 +616,7 @@
         api('PATCH', 'leads/' + l.id, { assigned_to: as.value === '' ? null : +as.value }).then(function (r) { if (!r.ok) return oops(r); toast('تم تحديث المسؤول.'); }).catch(noop);
       });
       if (!canEdit()) { var w0 = h('div', 'field'); add(w0, h('label', null, 'المسؤول'), h('p', 'who', l.assigned_name || 'غير مسند')); add(ctl, field('الحالة', st), w0); }
-      else if (isAdmin()) add(ctl, field('الحالة', st), field('المسؤول', as));
+      else if (can('leads_assign')) add(ctl, field('الحالة', st), field('المسؤول', as));
       else {
         var mineNow = l.assigned_to === me.id;
         var take = h('button', 'btn btn--sm', 'استلام الطلب'); take.type = 'button';
@@ -796,7 +861,7 @@
   function taskRow(x, today, after, showOwner) {
     var r = h('div', 'row row--task'); r.dataset.s = x.status;
     var st = select(TASK_STATUS, x.status); st.setAttribute('aria-label', 'حالة المهمة: ' + x.title); st.dataset.s = x.status;
-    st.disabled = !isAdmin() && x.assigned_to !== me.id;
+    st.disabled = !can('tasks_assign') && x.assigned_to !== me.id;
     st.addEventListener('change', function () {
       api('PATCH', 'tasks/' + x.id, { status: st.value }).then(function (res) { if (!res.ok) { st.value = x.status; return oops(res); } toast(st.value === 'done' ? 'تم إنجاز المهمة.' : 'تم تحديث المهمة.'); after(); }).catch(noop);
     });
@@ -820,8 +885,8 @@
   }
 
   PAGES.tasks = function (args, t) {
-    var admin = isAdmin();
-    var seeAll = admin || me.role === 'viewer';
+    var admin = can('tasks_assign');
+    var seeAll = can('tasks_all');
     var tab = args[0] === 'done' || (seeAll && args[0] === 'all') ? args[0] : 'mine';
     setTitle('المهام');
     var items = [['mine', 'مهامي']]; if (seeAll) items.push(['all', 'مهام الفريق']); items.push(['done', 'المنجزة']);
@@ -995,7 +1060,7 @@
   }
 
   PAGES.att = function (args, t) {
-    var admin = me.role === 'admin' || me.role === 'finance';
+    var admin = can('attendance_all');
     var chief = iAmChief();
     var tab = (admin && args[0] === 'report') || (chief && (args[0] === 'roll' || args[0] === 'place')) ? args[0] : 'me';
     setTitle('الحضور والانصراف');
@@ -1176,7 +1241,7 @@
       var ht = h('div'); add(ht, h('h1', null, 'كشف الحضور والانصراف الشهري'), h('p', null, 'أوبسيديان ديزاين — سيهات'));
       add(head, logo, ht);
       var info = h('dl', 'sheet__info');
-      [['اسم الموظف', s.name], ['التصنيف', jobName(s)], ['الشهر', monthName], ['الفترة', ym + '-01 إلى ' + to]].forEach(function (x) { var d = h('div'); add(d, h('dt', null, x[0]), h('dd', null, x[1])); info.appendChild(d); });
+      [['اسم الموظف', s.name], ['المسمى الوظيفي', jobName(s)], ['الشهر', monthName], ['الفترة', ym + '-01 إلى ' + to]].forEach(function (x) { var d = h('div'); add(d, h('dt', null, x[0]), h('dd', null, x[1])); info.appendChild(d); });
       var table = h('table', 'sheet__table');
       var thead = h('thead'), trh = h('tr');
       ['التاريخ', 'اليوم', 'الحضور', 'الانصراف', 'الساعات', 'ملاحظات'].forEach(function (x) { trh.appendChild(h('th', null, x)); });
@@ -1212,14 +1277,53 @@
 
   /* ------------------------------------------------------------ team & account */
   function loadUsers() { return api('GET', 'users').then(function (res) { if (res.ok) users = res.users; return users; }); }
+  function loadRoles() { return api('GET', 'roles').then(function (res) { if (res.ok) roles = res.roles; return roles; }); }
+  function roleOptions() { var o = {}; roles.forEach(function (r) { o[r.key] = r.name; }); if (!o.staff) o.staff = JOBS.employee; return o; }
+
+  // head of management: every rank, what it may do, and new ranks
+  function rolesPage(t) {
+    var l0 = h('p', 'loading', 'جارٍ التحميل…'); ui.body.appendChild(l0);
+    loadRoles().then(function () {
+      if (!live(t)) return;
+      l0.remove();
+      var again = function () { go('#team/roles'); };
+      var boxes = function (perms) {
+        var w = h('div', 'checks'), map = {};
+        Object.keys(PERM).forEach(function (k) { var c = h('input'); c.type = 'checkbox'; c.checked = !!(perms && perms[k]); map[k] = c; w.appendChild(add(h('label', 'check'), c, h('span', null, PERM[k]))); });
+        return { node: w, read: function () { var o = {}; Object.keys(map).forEach(function (k) { o[k] = map[k].checked; }); return o; } };
+      };
+      var cols = h('div', 'cols'), a1 = h('div', 'col'), a2 = h('div', 'col');
+      var p = panel('الرتب (' + roles.length + ')');
+      p.appendChild(h('p', 'panel__hint', 'افتح الرتبة وعلّم على اللي تسمح به. التغيير يسري على كل من يحمل الرتبة أول ما يحدّث صفحته.'));
+      roles.forEach(function (r) {
+        var d = h('details', 'fold member');
+        var on = Object.keys(PERM).filter(function (k) { return r.perms[k]; }).length;
+        add(d, add(h('summary'), h('span', 'row__name', r.name), h('span', 'row__meta', 'عدد الموظفين: ' + r.members + ' · الصلاحيات المفعلة: ' + on + ' من ' + Object.keys(PERM).length), h('span', 'badge', r.builtin ? 'أساسية' : 'مخصصة')));
+        var nm = input('text', { value: r.name, maxLength: 40 }), bx = boxes(r.perms);
+        var f = simpleForm([field('اسم الرتبة', nm), bx.node], 'حفظ الرتبة', function () { return api('PATCH', 'roles/' + r.key, { name: nm.value.trim(), perms: bx.read() }); }, function () { toast('تم حفظ الرتبة.'); again(); });
+        if (r.key !== 'staff') f.appendChild(delBtn('حذف الرتبة', 'btn btn--sm btn--danger', function () { del('roles/' + r.key, 'تم حذف الرتبة، وأصحابها رجعوا لرتبة موظف.', again); }));
+        d.appendChild(f);
+        p.appendChild(d);
+      });
+      a1.appendChild(p);
+      var nn = input('text', { maxLength: 40, placeholder: 'مثال: مشرف مبيعات' }), nb = boxes({ edit: true, contacts: true });
+      a2.appendChild(add(panel('رتبة جديدة'), simpleForm([field('اسم الرتبة', nn), nb.node], 'إضافة الرتبة', function () { return api('POST', 'roles', { name: nn.value.trim(), perms: nb.read() }); }, function () { toast('تمت إضافة الرتبة.'); again(); })));
+      var only = panel('لرئيس الإدارة فقط');
+      var ul = h('ul', 'bullets');
+      ['الحذف بكل أنواعه', 'إضافة الموظفين وتعديلهم وإدارة الرتب', 'اعتماد الأجهزة', 'قبول ورفض طلبات الموظفين', 'تحضير الموظفين وتحديد موقع الحضور', 'سجل النشاط ومستندات الموظفين'].forEach(function (x) { ul.appendChild(h('li', null, x)); });
+      a2.appendChild(add(only, h('p', 'panel__hint', 'هذي ما تنعطى لأي رتبة:'), ul));
+      ui.body.appendChild(add(cols, a1, a2));
+    }).catch(noop);
+  }
 
   PAGES.team = function (args, t) {
-    var admin = me.role === 'admin';
-    var tab = { activity: 1, requests: 1, devices: 1 }[args[0]] ? args[0] : 'members';
+    var admin = can('team_list');
+    var tab = { activity: 1, requests: 1, devices: 1, roles: 1 }[args[0]] ? args[0] : 'members';
     setTitle('الفريق');
     var chief = iAmChief();
     if (!chief) tab = 'members';
-    if (chief) ui.body.appendChild(add(h('div', 'toolbar'), tabs([['members', 'الأعضاء'], ['requests', 'طلبات الموظفين'], ['devices', 'الأجهزة'], ['activity', 'سجل النشاط']], tab, 'team')));
+    if (chief) ui.body.appendChild(add(h('div', 'toolbar'), tabs([['members', 'الأعضاء'], ['roles', 'الرتب والصلاحيات'], ['requests', 'طلبات الموظفين'], ['devices', 'الأجهزة'], ['activity', 'سجل النشاط']], tab, 'team')));
+    if (tab === 'roles') return rolesPage(t);
     if (chief && tab === 'members') ui.body.appendChild(add(h('div', 'quick'), hlink('btn btn--sm', 'الرواتب والمستحقات', '#payroll')));
     if (tab === 'activity') return activityPage(args[1], t);
     if (tab === 'requests') return requestsInbox(t);
@@ -1237,22 +1341,20 @@
         var d = h('details', 'fold member');
         var sum = h('summary');
         var badge = h('span', 'badge', u.active ? 'فعّال' : 'موقوف'); badge.dataset.s = u.active ? 'confirmed' : 'closed';
-        add(sum, h('span', 'row__name', u.name), h('span', 'row__meta', jobName(u) + ' · الصلاحية: ' + (ROLE_SHORT[u.role] || ROLE_SHORT.staff) + ' · ' + u.username), badge);
+        add(sum, h('span', 'row__name', u.name), h('span', 'row__meta', jobName(u) + ' · الرتبة: ' + (u.chief ? JOBS.chief : u.role_name || JOBS.employee) + ' · ' + u.username), badge);
         d.appendChild(sum);
         if (locked) d.appendChild(empty('التعديل على الحسابات عند رئيس الإدارة فقط.'));
         else {
           var f = h('form', 'form'); f.noValidate = true;
           var name = input('text', { value: u.name, required: true });
           var uname = input('text', { value: u.username, dir: 'ltr', autocapitalize: 'none', spellcheck: false, autocomplete: 'off', required: true });
-          var jobs = {}; Object.keys(JOBS).forEach(function (k) { if (k !== 'chief' || isChief(me)) jobs[k] = JOBS[k]; });
-          var job = select(jobs, jobOf(u));
-          var role = select(ROLES, ROLES[u.role] ? u.role : 'staff');
-          linkRole(job, role);
+          var job = input('text', { value: jobName(u), maxLength: 60 });
+          var role = select(roleOptions(), u.chief ? 'admin' : u.role); role.disabled = !!u.chief;
           var pass = input('password', { dir: 'ltr', autocomplete: 'new-password', placeholder: 'اتركها فاضية إذا ما تبغى تغيّرها' });
           var err = h('p', 'err'); err.setAttribute('role', 'alert');
           var save = h('button', 'btn btn--sm btn--solid', 'حفظ التعديلات'); save.type = 'submit';
           var r1 = h('div', 'form__two'); add(r1, field('الاسم', name), field('اسم المستخدم', uname));
-          var r2 = h('div', 'form__two'); add(r2, field('المسمى الوظيفي', job), field('الصلاحية', role, 'الصلاحية هي اللي تحدد وش يشوف. المسمى اسم فقط.'));
+          var r2 = h('div', 'form__two'); add(r2, field('المسمى الوظيفي', job, 'اكتبه مثل ما تبغى.'), field('الرتبة', role, u.chief ? 'رئيس الإدارة له كل الصلاحيات.' : 'الرتبة تحدد وش يشوف ويسوي. تعدلها من تبويب الرتب.'));
           add(f, r1, r2, field('كلمة مرور جديدة', pass), err);
           var acts = h('div', 'quick'); acts.appendChild(save);
           acts.appendChild(hlink('btn btn--sm', 'ملفه', '#member/' + u.id + '/money'));
@@ -1272,8 +1374,8 @@
             var payload = {};
             if (name.value.trim() !== u.name) payload.name = name.value.trim();
             if (uname.value.trim().toLowerCase() !== u.username) payload.username = uname.value.trim();
-            if (job.value !== jobOf(u) || !u.job) payload.job = job.value;
-            if (role.value !== u.role && job.value !== 'chief') payload.role = role.value;
+            if (job.value.trim() !== jobName(u) || !u.title) payload.title = job.value.trim();
+            if (!u.chief && role.value !== u.role) payload.role = role.value;
             if (pass.value) payload.password = pass.value;
             save.disabled = true;
             api('PATCH', 'users/' + u.id, payload).then(function (res) {
@@ -1343,18 +1445,16 @@
     var name = input('text', { required: true });
     var user = input('text', { dir: 'ltr', autocapitalize: 'none', spellcheck: false, autocomplete: 'off', required: true });
     var pass = input('password', { dir: 'ltr', autocomplete: 'new-password', required: true });
-    var role = select(ROLES, 'staff');
-    var jobsNew = {}; Object.keys(JOBS).forEach(function (k) { if (k !== 'chief' || isChief(me)) jobsNew[k] = JOBS[k]; });
-    var job = select(jobsNew, 'employee');
-    linkRole(job, role);
+    var role = select(roleOptions(), 'staff');
+    var job = input('text', { maxLength: 60, placeholder: 'مثال: مصمم داخلي' });
     var err = h('p', 'err'); err.setAttribute('role', 'alert');
     var btn = h('button', 'btn btn--solid', 'إضافة'); btn.type = 'submit';
-    add(f, field('الاسم', name), field('اسم المستخدم', user, 'أحرف إنجليزية صغيرة وأرقام.'), field('كلمة المرور', pass, '8 أحرف على الأقل. يقدر يغيّرها بعد الدخول.'), field('المسمى الوظيفي', job), field('الصلاحية', role, 'الصلاحية هي اللي تحدد وش يشوف. المسمى اسم فقط.'), err, btn);
+    add(f, field('الاسم', name), field('اسم المستخدم', user, 'أحرف إنجليزية صغيرة وأرقام.'), field('كلمة المرور', pass, '8 أحرف على الأقل. يقدر يغيّرها بعد الدخول.'), field('المسمى الوظيفي', job), field('الرتبة', role, 'الرتبة تحدد وش يشوف ويسوي.'), err, btn);
     f.addEventListener('submit', function (e) {
       e.preventDefault();
       if (btn.disabled) return;
       err.textContent = ''; btn.disabled = true;
-      api('POST', 'users', { name: name.value.trim(), username: user.value.trim(), password: pass.value, role: role.value, job: job.value }).then(function (res) {
+      api('POST', 'users', { name: name.value.trim(), username: user.value.trim(), password: pass.value, role: role.value, title: job.value.trim() }).then(function (res) {
         btn.disabled = false;
         if (!res.ok) { err.textContent = errText(res.error); return; }
         toast('تمت إضافة ' + name.value.trim() + '.');
@@ -1388,7 +1488,7 @@
 
     var pi = panel('بيانات الحساب');
     var facts = h('dl', 'facts');
-    [['الاسم', me.name], ['اسم المستخدم', me.username || '—'], ['المسمى الوظيفي', jobName(me)], ['الصلاحية', ROLE_SHORT[me.role] || 'موظف']].forEach(function (x) {
+    [['الاسم', me.name], ['اسم المستخدم', me.username || '—'], ['المسمى الوظيفي', jobName(me)], ['الرتبة', me.role_name || JOBS.employee]].forEach(function (x) {
       var d = h('div'); add(d, h('dt', null, x[0]), h('dd', null, x[1])); facts.appendChild(d);
     });
     var out = h('button', 'btn', 'تسجيل الخروج'); out.type = 'button'; out.addEventListener('click', logout);
@@ -1507,11 +1607,11 @@
 
   // base = '#account' for my own file, '#member/ID' when the head of management or the accountant opens someone's
   function memberFile(sid, tab, base, t) {
-    var own = sid === me.id, chief = iAmChief(), fin = me.role === 'finance';
+    var own = sid === me.id, chief = iAmChief(), fin = can('money');
     var again = function () { go(base + '/' + tab); };
     fetchPage(t, ['hr/' + sid]).then(function (all) {
       var d = all[0], s = d.staff, T = d.totals;
-      if (!own) ui.body.appendChild(h('p', 'hello', s.name + ' — ' + (JOBS[s.job] || 'موظف')));
+      if (!own) ui.body.appendChild(h('p', 'hello', s.name + ' — ' + jobName(s)));
       var cols = h('div', 'cols'), a1 = h('div', 'col'), a2 = h('div', 'col');
 
       if (tab === 'money') {
@@ -1724,7 +1824,7 @@
   // someone else's file: the head of management sees all of it, the accountant everything but the documents
   PAGES.member = function (args, t) {
     var sid = +args[0] || 0;
-    if (!(iAmChief() || me.role === 'finance') || !sid) return go('#home');
+    if (!can('money') || !sid) return go('#home');
     var tab = { money: 1, leave: 1, commissions: 1, docs: 1 }[args[1]] ? args[1] : 'money';
     setTitle('ملف الموظف');
     ui.body.appendChild(hlink('back', 'رجوع', iAmChief() ? '#team' : '#payroll'));
@@ -1733,7 +1833,7 @@
   };
   // the whole team's pay, balances, leave and commissions in one table
   PAGES.payroll = function (args, t) {
-    if (!(iAmChief() || me.role === 'finance')) return go('#home');
+    if (!can('money')) return go('#home');
     var tab = args[0] === 'commissions' ? 'commissions' : 'all';
     setTitle('الرواتب والمستحقات');
     ui.body.appendChild(add(h('div', 'toolbar'), tabs([['all', 'الرواتب والأرصدة'], ['commissions', 'كل العمولات']], tab, 'payroll')));
@@ -1754,12 +1854,12 @@
       rows.appendChild(head);
       list.forEach(function (x) {
         var r = hlink('row row--pay', null, '#member/' + x.id + '/money');
-        add(r, add(h('span', 'row__who'), h('span', 'row__name', x.name), h('span', 'row__type', JOBS[x.job] || 'موظف')), h('span', 'row__id', sar(x.salary)), h('span', 'pay', 'له ' + sar(x.dues)), h('span', 'pay pay--debt', 'عليه ' + sar(x.debts)), h('span', 'pay', sar(x.commissions)), h('span', 'pay', x.leave_left + ' من ' + x.leave_days + ' يوم'));
+        add(r, add(h('span', 'row__who'), h('span', 'row__name', x.name), h('span', 'row__type', jobName(x))), h('span', 'row__id', sar(x.salary)), h('span', 'pay', 'له ' + sar(x.dues)), h('span', 'pay pay--debt', 'عليه ' + sar(x.debts)), h('span', 'pay', sar(x.commissions)), h('span', 'pay', x.leave_left + ' من ' + x.leave_days + ' يوم'));
         rows.appendChild(r);
       });
       p.appendChild(rows);
       p.appendChild(exportBar('رواتب وأرصدة الموظفين', ['الموظف', 'المسمى', 'الراتب الشهري', 'مستحقات له', 'مديونيات عليه', 'رواتب مصروفة', 'العمولات', 'رصيد الإجازة السنوي', 'المستخدم', 'المتبقي'],
-        function () { return list.map(function (x) { return [x.name, JOBS[x.job] || 'موظف', x.salary, x.dues, x.debts, x.salaries_paid, x.commissions, x.leave_days, x.leave_used, x.leave_left]; }); }));
+        function () { return list.map(function (x) { return [x.name, jobName(x), x.salary, x.dues, x.debts, x.salaries_paid, x.commissions, x.leave_days, x.leave_used, x.leave_left]; }); }));
       ui.body.appendChild(p);
       if (iAmChief()) {
         var dl = input('number', { dir: 'ltr', min: 0, max: 365, step: '0.5', value: String(all[0].leave_default) });
@@ -1812,7 +1912,7 @@
       if (!res.ok) { app.textContent = ''; app.appendChild(h('p', 'gate', errText(res.error))); app.setAttribute('aria-busy', 'false'); return; }
       if (!res.user) return gate(!!res.needs_setup);
       me = res.user;
-      loadUsers().then(shell, shell);
+      Promise.all([loadUsers(), loadRoles()]).then(shell, shell);
     }).catch(function () { app.textContent = ''; app.appendChild(h('p', 'gate', 'تعذر الاتصال. حدّث الصفحة.')); });
   }
   boot();

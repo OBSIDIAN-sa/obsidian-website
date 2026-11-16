@@ -3,6 +3,7 @@
 // Secrets: SETUP_KEY — needed once, to create the first admin account at /staff/.
 import { HOURS, customerPrompt, staffPrompt } from '../_lib/kb.js';
 import { HR_SCHEMA, HR_COLUMNS, hrRoutes, hrDeleteStaff, deviceLabel } from '../_lib/hr.js';
+import { ROLES_SCHEMA, ROLES_COLUMNS, ALL_PERMS, seedRoles, permsOf, notify, everyoneBut, chiefIds, rolesRoutes } from '../_lib/roles.js';
 
 const LEAD_STATUS = ['new', 'contacted', 'appointment', 'quoted', 'won', 'closed'];
 const APPT_STATUS = ['pending', 'confirmed', 'done', 'cancelled', 'noshow'];
@@ -198,7 +199,7 @@ async function currentStaff(env, request) {
   const token = cookie(request, 'obs_staff');
   if (!token || !/^[0-9a-f]{64}$/.test(token)) return null;
   const row = await env.DB.prepare(
-    "SELECT s.id, s.username, s.name, CASE WHEN s.job = 'chief' THEN 'admin' ELSE s.role END AS role, s.job FROM sessions x JOIN staff s ON s.id = x.staff_id LEFT JOIN devices d ON d.id = x.device_id WHERE x.token_hash = ? AND x.expires_at > ? AND s.active = 1 AND (s.job = 'chief' OR (s.job IS NULL AND s.role = 'admin') OR d.status = 'approved')"
+    "SELECT s.id, s.username, s.name, CASE WHEN s.job = 'chief' THEN 'admin' ELSE s.role END AS role, s.job, s.title FROM sessions x JOIN staff s ON s.id = x.staff_id LEFT JOIN devices d ON d.id = x.device_id WHERE x.token_hash = ? AND x.expires_at > ? AND s.active = 1 AND (s.job = 'chief' OR (s.job IS NULL AND s.role = 'admin') OR d.status = 'approved')"
   ).bind(await sha256(token), epoch()).first();
   return row || null;
 }
@@ -351,11 +352,12 @@ async function ensureSchema(env) {
   // job = the member's title (a label). Only 'chief' carries permissions by itself; everyone else follows role. Fails harmlessly once the column exists.
   try { await env.DB.prepare('ALTER TABLE staff ADD COLUMN job TEXT').run(); } catch (e) {}
   await env.DB.batch(HR_SCHEMA.map((q) => env.DB.prepare(q)));
-  for (const q of HR_COLUMNS) { try { await env.DB.prepare(q).run(); } catch (e) {} }
+  for (const q of HR_COLUMNS.concat(ROLES_COLUMNS)) { try { await env.DB.prepare(q).run(); } catch (e) {} }
+  await env.DB.batch(ROLES_SCHEMA.map((q) => env.DB.prepare(q)));
+  await seedRoles(env);
   schemaReady = true;
 }
 const JOBS = ['chief', 'management', 'showroom_manager', 'accountant', 'designer', 'employee'];
-const ROLES = ['staff', 'viewer', 'finance', 'admin'];
 // The head of management: classified so, or a manager account from before classifications existed
 const isChief = (u) => !!u && (u.job === 'chief' || (!u.job && u.role === 'admin'));
 const TASK_STATUS = ['todo', 'doing', 'done'];
@@ -398,6 +400,9 @@ function describeAction(method, parts, b) {
   if (a === 'appointments') return (method === 'DELETE' ? 'حذف الموعد' : b && (b.date || b.time) ? 'غيّر وقت الموعد' : 'غيّر حالة الموعد') + n;
   if (a === 'users') return method === 'POST' ? 'أضاف موظف' + t(b && b.name) : method === 'DELETE' ? 'حذف الموظف' + n : 'عدّل حساب الموظف' + n;
   if (a === 'activity') return 'مسح سجل النشاط';
+  if (a === 'roles') return method === 'POST' ? 'أضاف رتبة' + t(b && b.name) : method === 'DELETE' ? 'حذف رتبة' : 'عدّل رتبة وصلاحياتها';
+  if (a === 'star') return method === 'DELETE' ? 'شال موظف الأسبوع' : 'ثبّت موظف الأسبوع';
+  if (a === 'notifications') return null;
   if (a === 'devices') return method === 'DELETE' ? 'حذف جهاز' + n : (b && b.status === 'approved' ? 'اعتمد جهاز' : 'رفض جهاز') + n;
   if (a === 'requests') return method === 'POST' ? 'رفع طلب للإدارة' : method === 'DELETE' ? 'حذف طلب للإدارة' + n : (b && b.status === 'approved' ? 'قبل طلب' : 'رفض طلب') + n;
   if (a === 'commissions') return method === 'POST' ? 'سجّل عمولة' + t(b && b.source) : method === 'PATCH' ? 'عدّل عمولة' + n : 'حذف عمولة' + n;
@@ -433,13 +438,14 @@ async function staffRoutes(env, request, method, parts) {
   await ensureSchema(env);
   if (parts[0] === 'login' || parts[0] === 'setup') return staffRoutesInner(env, request, method, parts);
   const who = await currentStaff(env, request);
-  // viewer: an overview permission. Reads the showroom's lists without contact details, and changes nothing
-  // except their own attendance, password and tasks.
-  if (who && who.role === 'viewer') {
+  // A rank without "edit" changes nothing except the member's own attendance, password, tasks, requests, commissions,
+  // documents and notifications. A rank without "contacts" reads the lists with phone numbers masked and no notes.
+  const WP = who && !isChief(who) ? await permsOf(env, who.role) : null;
+  if (WP && (!WP.edit || !WP.contacts)) {
     if (method !== 'GET') {
-      const own = ['logout', 'password', 'tasks', 'requests', 'commissions', 'docs'].includes(parts[0]) || (parts[0] === 'attendance' && (parts[1] === 'in' || parts[1] === 'out'));
-      if (!own) return fail(403, 'read_only');
-    } else if (parts[0] === 'leads' || parts[0] === 'customers' || parts[0] === 'appointments') {
+      const own = ['logout', 'password', 'tasks', 'requests', 'commissions', 'docs', 'notifications'].includes(parts[0]) || (parts[0] === 'attendance' && (parts[1] === 'in' || parts[1] === 'out'));
+      if (!own && !WP.edit) return fail(403, 'read_only');
+    } else if (!WP.contacts && (parts[0] === 'leads' || parts[0] === 'customers' || parts[0] === 'appointments')) {
       const res = await staffRoutesInner(env, request, method, parts);
       let data = null;
       try { data = await res.json(); } catch (e) {}
@@ -451,7 +457,8 @@ async function staffRoutes(env, request, method, parts) {
   let b = null;
   try { b = await request.clone().json(); } catch (e) {}
   const res = await staffRoutesInner(env, request, method, parts);
-  if (who && res.status < 300) await logActivity(env, who, describeAction(method, parts, b));
+  const what = who && res.status < 300 ? describeAction(method, parts, b) : null;
+  if (what) await logActivity(env, who, what);
   return res;
 }
 
@@ -461,7 +468,11 @@ async function staffRoutesInner(env, request, method, parts) {
   /* ---- no session needed ---- */
   if (method === 'GET' && route === 'me') {
     const user = await currentStaff(env, request);
-    if (user) return json({ ok: true, user });
+    if (user) {
+      const boss = isChief(user);
+      const rk = await env.DB.prepare('SELECT name FROM roles WHERE key = ?').bind(user.role).first();
+      return json({ ok: true, user: { ...user, chief: boss, role_name: boss ? 'رئيس الإدارة' : rk ? rk.name : 'موظف', perms: boss ? ALL_PERMS : await permsOf(env, user.role) } });
+    }
     const any = await env.DB.prepare('SELECT COUNT(*) AS n FROM staff').first();
     return json({ ok: true, user: null, needs_setup: any.n === 0 });
   }
@@ -505,7 +516,10 @@ async function staffRoutesInner(env, request, method, parts) {
       const r = await env.DB.prepare('INSERT INTO devices (staff_id, token_hash, label, status, created_at, last_seen) VALUES (?, ?, ?, ?, ?, ?)')
         .bind(row.id, devHash, deviceLabel(request.headers.get('User-Agent')), boss ? 'approved' : 'pending', nowIso(), nowIso()).run();
       dev = { id: r.meta.last_row_id, status: boss ? 'approved' : 'pending' };
-      if (!boss) await logActivity(env, row, 'طلب اعتماد جهاز جديد');
+      if (!boss) {
+        await logActivity(env, row, 'طلب اعتماد جهاز جديد');
+        await notify(env, await chiefIds(env), 'device', 'جهاز جديد ينتظر الاعتماد', row.name + ' · ' + deviceLabel(request.headers.get('User-Agent')), '#team/devices', nowIso);
+      }
     }
     if (dev.status !== 'approved' && !boss) return jsonCookies({ ok: false, error: dev.status === 'rejected' ? 'device_rejected' : 'device_pending' }, 403, [devCookie]);
     await env.DB.prepare('UPDATE devices SET last_seen = ? WHERE id = ?').bind(nowIso(), dev.id).run();
@@ -524,17 +538,18 @@ async function staffRoutesInner(env, request, method, parts) {
   const me = await currentStaff(env, request);
   if (!me) return fail(401, 'login_required');
 
-  const admin = me.role === 'admin';
-  // Deleting, managing members, the activity log, the attendance place and marking others present or absent belong to the head of management alone
+  // Deleting, managing members and ranks, the activity log, the attendance place and marking others present or absent
+  // belong to the head of management alone. Everything else follows the flags of the member's rank (see _lib/roles.js).
   const chief = isChief(me);
-  // The permission (staff | finance | admin) alone decides what a member sees; the job title is a label.
-  // finance sits between a member and a manager: the showroom's full numbers and everyone's attendance report, nothing else extra
-  const finance = admin || me.role === 'finance';
-  const viewer = me.role === 'viewer';
+  const P = chief ? ALL_PERMS : await permsOf(env, me.role);
+  const admin = P.tasks_assign;     // kept name: may act on other members' tasks
+  const finance = P.money;
+  const rr = await rolesRoutes({ env, request, method, parts, me, chief, json, fail, clean, body, nowIso });
+  if (rr) return rr;
 
   // The full picture is for the manager; a member gets only what concerns them
   if (method === 'GET' && route === 'summary') {
-    if (finance || viewer) return json({ ok: true, summary: await summary(env) });
+    if (P.numbers) return json({ ok: true, summary: await summary(env) });
     const today = todayRiyadh();
     const mine = await env.DB.prepare("SELECT COUNT(*) AS n FROM leads WHERE assigned_to = ? AND status NOT IN ('won','closed')").bind(me.id).first();
     const fresh = await env.DB.prepare("SELECT COUNT(*) AS n FROM leads WHERE status = 'new'").first();
@@ -554,7 +569,10 @@ async function staffRoutesInner(env, request, method, parts) {
       const text = clean(b && b.body, 600);
       if (!text) return fail(422, 'body');
       await env.DB.prepare('INSERT INTO announcements (kind, body, created_by, created_at) VALUES (?, ?, ?, ?)')
-        .bind(admin && NOTE_KINDS.includes(b.kind) ? b.kind : 'general', text, me.id, nowIso()).run();
+        .bind(P.note_kinds && NOTE_KINDS.includes(b.kind) ? b.kind : 'general', text, me.id, nowIso()).run();
+      // a note for the team reaches everyone's notification list
+      const kindName = P.note_kinds && b.kind === 'task' ? 'مهمة جديدة' : P.note_kinds && b.kind === 'vip' ? 'عميل مميز' : 'ملاحظة جديدة';
+      await notify(env, await everyoneBut(env, me.id), 'note', kindName + ' من ' + me.name, text, '#home', nowIso);
       return json({ ok: true });
     }
     if (method === 'PATCH' && /^\d+$/.test(parts[1] || '')) {
@@ -578,7 +596,7 @@ async function staffRoutesInner(env, request, method, parts) {
     const sel = 'SELECT t.*, a.name AS assigned_name, c.name AS creator_name FROM tasks t LEFT JOIN staff a ON a.id = t.assigned_to LEFT JOIN staff c ON c.id = t.created_by';
     if (method === 'GET' && parts.length === 1) {
       const url = new URL(request.url);
-      const all = (admin || viewer) && url.searchParams.get('all') === '1';
+      const all = P.tasks_all && url.searchParams.get('all') === '1';
       const done = url.searchParams.get('done') === '1';
       const rows = await env.DB.prepare(
         sel + ' WHERE ' + (done ? "t.status = 'done'" : "t.status != 'done'") + (all ? '' : ' AND t.assigned_to = ?') +
@@ -600,6 +618,7 @@ async function staffRoutesInner(env, request, method, parts) {
       }
       await env.DB.prepare('INSERT INTO tasks (title, note, assigned_to, created_by, due, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
         .bind(title, clean(b.note, 600), target, me.id, validDate(b.due) ? b.due : null, 'todo', nowIso()).run();
+      if (target !== me.id) await notify(env, target, 'task', 'مهمة جديدة لك من ' + me.name, title, '#tasks/mine', nowIso);
       return json({ ok: true });
     }
     if (/^\d+$/.test(parts[1] || '')) {
@@ -726,7 +745,7 @@ async function staffRoutesInner(env, request, method, parts) {
   }
 
   /* ---- attendance: check-in / check-out; an admin can take attendance for anyone ---- */
-  const hr = await hrRoutes({ env, request, method, parts, me, admin, chief, finance, json, fail, clean, body, nowIso, todayRiyadh });
+  const hr = await hrRoutes({ env, request, method, parts, me, admin, chief, finance, json, fail, clean, body, nowIso, todayRiyadh, notify, chiefIds });
   if (hr) return hr;
 
   if (parts[0] === 'activity') {
@@ -846,14 +865,14 @@ async function staffRoutesInner(env, request, method, parts) {
       const ok = (d) => /^\d{4}-\d{2}-\d{2}$/.test(d || '');
       const from = ok(url.searchParams.get('from')) ? url.searchParams.get('from') : today;
       const to = ok(url.searchParams.get('to')) ? url.searchParams.get('to') : today;
-      const all = finance && url.searchParams.get('all') === '1';
+      const all = P.attendance_all && url.searchParams.get('all') === '1';
       const rows = await env.DB.prepare(
         'SELECT a.id, a.staff_id, a.date, a.in_at, a.out_at, a.in_by, a.out_by, a.in_dist, a.out_dist, s.name FROM attendance a JOIN staff s ON s.id = a.staff_id WHERE a.date BETWEEN ? AND ?' +
         (all ? '' : ' AND a.staff_id = ?') + ' ORDER BY a.date DESC, a.in_at DESC LIMIT 800'
       ).bind(...(all ? [from, to] : [from, to, me.id])).all();
       const records = (rows.results || []).map((r) => ({ ...r, minutes: minutes(r), by_admin: r.in_by !== r.staff_id || (r.out_by != null && r.out_by !== r.staff_id) }));
       let staff = [];
-      if (all) staff = (await env.DB.prepare("SELECT id, name, job, CASE WHEN job = 'chief' THEN 'admin' ELSE role END AS role FROM staff WHERE active = 1 ORDER BY id").all()).results || [];
+      if (all) staff = (await env.DB.prepare("SELECT id, name, job, title, CASE WHEN job = 'chief' THEN 'admin' ELSE role END AS role, CASE WHEN job = 'chief' OR (job IS NULL AND role = 'admin') THEN 1 ELSE 0 END AS chief FROM staff WHERE active = 1 ORDER BY id").all()).results || [];
       const abs = await env.DB.prepare('SELECT id, staff_id, date, note FROM absences WHERE date BETWEEN ? AND ?' + (all ? '' : ' AND staff_id = ?') + ' ORDER BY date DESC LIMIT 800').bind(...(all ? [from, to] : [from, to, me.id])).all();
       return json({ ok: true, today, from, to, records, staff, absences: abs.results || [], location_required: !!(await attendancePlace(env)) });
     }
@@ -909,7 +928,7 @@ async function staffRoutesInner(env, request, method, parts) {
         sets.push('status = ?'); args.push(b.status);
       }
       if (b.assigned_to !== undefined) {
-        if (!admin && (b.assigned_to === null || +b.assigned_to !== me.id)) return fail(403, 'admin_only');
+        if (!P.leads_assign && (b.assigned_to === null || +b.assigned_to !== me.id)) return fail(403, 'admin_only');
         if (b.assigned_to === null) sets.push('assigned_to = NULL');
         else {
           const s = await env.DB.prepare('SELECT id FROM staff WHERE id = ? AND active = 1').bind(+b.assigned_to).first();
@@ -1019,8 +1038,8 @@ async function staffRoutesInner(env, request, method, parts) {
   }
 
   if (method === 'GET' && route === 'users') {
-    const rows = await env.DB.prepare(admin ? "SELECT id, username, name, CASE WHEN job = 'chief' THEN 'admin' ELSE role END AS role, role AS base_role, job, active, created_at FROM staff ORDER BY id" : 'SELECT id, name, job, active FROM staff WHERE active = 1 ORDER BY id').all();
-    return json({ ok: true, users: rows.results || [] });
+    const rows = await env.DB.prepare(P.team_list ? "SELECT s.id, s.username, s.name, CASE WHEN s.job = 'chief' THEN 'admin' ELSE s.role END AS role, s.job, s.title, s.active, s.created_at, r.name AS role_name, CASE WHEN s.job = 'chief' OR (s.job IS NULL AND s.role = 'admin') THEN 1 ELSE 0 END AS chief FROM staff s LEFT JOIN roles r ON r.key = s.role ORDER BY s.id" : "SELECT s.id, s.name, s.job, s.title, s.active, CASE WHEN s.job = 'chief' OR (s.job IS NULL AND s.role = 'admin') THEN 1 ELSE 0 END AS chief FROM staff s WHERE s.active = 1 ORDER BY s.id").all();
+    return json({ ok: true, users: (rows.results || []).map((u) => ({ ...u, chief: !!u.chief })) });
   }
 
   if (route === 'users' || parts[0] === 'users') {
@@ -1035,8 +1054,8 @@ async function staffRoutesInner(env, request, method, parts) {
       if (!validPassword(b.password)) return fail(422, 'password');
       const salt = randomHex(16);
       try {
-        await env.DB.prepare('INSERT INTO staff (username, name, role, job, pass_hash, pass_salt, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
-          .bind(username, name, ROLES.includes(b.role) ? b.role : 'staff', JOBS.includes(b.job) && (b.job !== 'chief' || isChief(me)) ? b.job : 'employee', await hashPassword(b.password, salt), salt, nowIso()).run();
+        await env.DB.prepare('INSERT INTO staff (username, name, title, role, job, pass_hash, pass_salt, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+          .bind(username, name, clean(b.title, 60), (await env.DB.prepare('SELECT key FROM roles WHERE key = ?').bind(String(b.role || '')).first()) ? String(b.role) : 'staff', JOBS.includes(b.job) && (b.job !== 'chief' || isChief(me)) ? b.job : 'employee', await hashPassword(b.password, salt), salt, nowIso()).run();
       } catch (e) {
         return fail(409, 'username_taken');
       }
@@ -1082,6 +1101,7 @@ async function staffRoutesInner(env, request, method, parts) {
         if (id === me.id && b.job !== 'chief') return fail(422, 'self');
         await env.DB.prepare('UPDATE staff SET job = ? WHERE id = ?').bind(b.job, id).run();
       }
+      if (b.title !== undefined) await env.DB.prepare('UPDATE staff SET title = ? WHERE id = ?').bind(clean(b.title, 60), id).run();
       if (b.name !== undefined) {
         const name = clean(b.name, 60);
         if (name.length < 2) return fail(422, 'name');
@@ -1093,11 +1113,9 @@ async function staffRoutesInner(env, request, method, parts) {
         try { await env.DB.prepare('UPDATE staff SET username = ? WHERE id = ?').bind(username, id).run(); } catch (e) { return fail(409, 'username_taken'); }
       }
       if (b.role !== undefined) {
-        if (!ROLES.includes(b.role)) return fail(422, 'role');
-        // a manager cannot take the manager permission away from their own account
-        const now = await env.DB.prepare('SELECT job FROM staff WHERE id = ?').bind(id).first();
-        if (id === me.id && b.role !== 'admin') return fail(422, 'self');
-        await env.DB.prepare('UPDATE staff SET role = ? WHERE id = ?').bind(b.role, id).run();
+        if (!(await env.DB.prepare('SELECT key FROM roles WHERE key = ?').bind(String(b.role)).first())) return fail(422, 'role');
+        // the head of management's own account keeps its rank, so it can never be locked out
+        if (id !== me.id) await env.DB.prepare('UPDATE staff SET role = ? WHERE id = ?').bind(String(b.role), id).run();
       }
       if (b.active !== undefined) {
         if (id === me.id) return fail(422, 'self');
@@ -1118,7 +1136,7 @@ async function staffRoutesInner(env, request, method, parts) {
     const b = await body(request);
     const question = clean(b && b.question, 500);
     if (!question) return fail(400, 'bad_request');
-    if (!admin) return fail(403, 'admin_only');
+    if (!P.assistant) return fail(403, 'admin_only');
     if (!(await allow(env, request, 'ask', 60, 86400, String(me.id)))) return json({ ok: false, fallback: true });
     const s = await summary(env);
     const leads = await env.DB.prepare(
