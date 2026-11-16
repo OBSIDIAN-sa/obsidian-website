@@ -45,7 +45,12 @@ const validDate = (d) => /^\d{4}-\d{2}-\d{2}$/.test(d || '');
 const validTime = (t) => /^([01]\d|2[0-3]):[0-5]\d$/.test(t || '');
 // Riyadh wall time to a UTC timestamp
 const riyadhIso = (date, time) => new Date(date + 'T' + time + ':00+03:00').toISOString();
-const DEFAULT_LEAVE = 2;
+// days of annual leave when a member has no number of their own; the head of management can change it for everyone
+async function defaultLeave(env) {
+  const row = await env.DB.prepare("SELECT value FROM settings WHERE key = 'leave_default'").first();
+  const v = row ? Number(row.value) : NaN;
+  return Number.isFinite(v) ? v : 21;
+}
 
 async function balances(env, staffId, year) {
   const m = await env.DB.prepare('SELECT kind, COALESCE(SUM(amount), 0) AS total FROM money WHERE staff_id = ? GROUP BY kind').bind(staffId).all();
@@ -100,12 +105,43 @@ export async function hrRoutes(c) {
       if (!chief && !finance) return fail(403, 'admin_only');
       const staff = (await env.DB.prepare('SELECT id, name, job, salary, leave_days FROM staff WHERE active = 1 ORDER BY id').all()).results || [];
       const rows = [];
+      const base = await defaultLeave(env);
       for (const s of staff) {
         const b = await balances(env, s.id, year);
-        const ent = s.leave_days == null ? DEFAULT_LEAVE : s.leave_days;
+        const ent = s.leave_days == null ? base : s.leave_days;
         rows.push({ id: s.id, name: s.name, job: s.job, salary: s.salary || 0, ...b, leave_days: ent, leave_left: Math.round((ent - b.leave_used) * 100) / 100 });
       }
-      return json({ ok: true, year, staff: rows });
+      return json({ ok: true, year, staff: rows, leave_default: base });
+    }
+    // the yearly leave every member gets unless they have a number of their own
+    if (parts[1] === 'default' && method === 'PUT') {
+      if (!chief) return fail(403, 'chief_only');
+      const b = await body(request);
+      const v = num(b && b.leave_days);
+      if (!(v >= 0 && v <= 365)) return fail(422, 'days');
+      await env.DB.prepare("INSERT INTO settings (key, value) VALUES ('leave_default', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").bind(String(v)).run();
+      return json({ ok: true });
+    }
+    if (parts[1] === 'money' && method === 'PATCH' && idAt(2)) {
+      if (!chief) return fail(403, 'chief_only');
+      const b = await body(request);
+      if (!b) return fail(400, 'bad_request');
+      const amount = num(b.amount);
+      if (!MONEY_KINDS.includes(b.kind)) return fail(422, 'kind');
+      if (!(amount > 0 && amount < 1e7)) return fail(422, 'amount');
+      if (!validDate(b.date)) return fail(422, 'date');
+      await env.DB.prepare('UPDATE money SET kind = ?, amount = ?, note = ?, date = ? WHERE id = ?').bind(b.kind, amount, clean(b.note, 200), b.date, idAt(2)).run();
+      return json({ ok: true });
+    }
+    if (parts[1] === 'leaves' && method === 'PATCH' && idAt(2)) {
+      if (!chief) return fail(403, 'chief_only');
+      const b = await body(request);
+      if (!b) return fail(400, 'bad_request');
+      const days = num(b.days);
+      if (!validDate(b.date_from) || !validDate(b.date_to) || b.date_to < b.date_from) return fail(422, 'date');
+      if (!(days > 0 && days <= 365)) return fail(422, 'days');
+      await env.DB.prepare('UPDATE leaves SET date_from = ?, date_to = ?, days = ?, note = ? WHERE id = ?').bind(b.date_from, b.date_to, days, clean(b.note, 200), idAt(2)).run();
+      return json({ ok: true });
     }
     if (parts[1] === 'money' && method === 'DELETE' && idAt(2)) {
       if (!chief) return fail(403, 'chief_only');
@@ -125,14 +161,14 @@ export async function hrRoutes(c) {
       if (!mine && !chief && !finance) return fail(403, 'admin_only');
       if (method === 'GET' && parts.length === 2) {
         const b = await balances(env, sid, year);
-        const ent = s.leave_days == null ? DEFAULT_LEAVE : s.leave_days;
+        const ent = s.leave_days == null ? await defaultLeave(env) : s.leave_days;
         const money = await env.DB.prepare('SELECT m.id, m.kind, m.amount, m.note, m.date, x.name AS by_name FROM money m LEFT JOIN staff x ON x.id = m.created_by WHERE m.staff_id = ? ORDER BY m.date DESC, m.id DESC LIMIT 300').bind(sid).all();
         const leaves = await env.DB.prepare('SELECT id, date_from, date_to, days, note FROM leaves WHERE staff_id = ? ORDER BY date_from DESC LIMIT 100').bind(sid).all();
         const com = await env.DB.prepare('SELECT id, source, base, percent, amount, date FROM commissions WHERE staff_id = ? ORDER BY date DESC, id DESC LIMIT 300').bind(sid).all();
         const docs = mine || chief ? (await env.DB.prepare('SELECT d.id, d.name, d.mime, d.size, d.created_at, d.uploaded_by, x.name AS by_name FROM docs d LEFT JOIN staff x ON x.id = d.uploaded_by WHERE d.staff_id = ? ORDER BY d.id DESC').bind(sid).all()).results || [] : null;
         return json({
           ok: true, year, today,
-          staff: { id: s.id, name: s.name, job: s.job, role: s.role, salary: s.salary || 0, leave_days: ent },
+          staff: { id: s.id, name: s.name, job: s.job, role: s.role, salary: s.salary || 0, leave_days: ent, leave_own: s.leave_days != null },
           totals: { ...b, leave_left: Math.round((ent - b.leave_used) * 100) / 100 },
           money: money.results || [], leaves: leaves.results || [], commissions: com.results || [], docs,
         });
@@ -146,7 +182,8 @@ export async function hrRoutes(c) {
           if (!(v >= 0 && v < 1e7)) return fail(422, 'amount');
           await env.DB.prepare('UPDATE staff SET salary = ? WHERE id = ?').bind(v, sid).run();
         }
-        if (b.leave_days !== undefined) {
+        if (b.leave_days === null) await env.DB.prepare('UPDATE staff SET leave_days = NULL WHERE id = ?').bind(sid).run();
+        else if (b.leave_days !== undefined) {
           const v = num(b.leave_days);
           if (!(v >= 0 && v <= 365)) return fail(422, 'days');
           await env.DB.prepare('UPDATE staff SET leave_days = ? WHERE id = ?').bind(v, sid).run();
@@ -200,6 +237,19 @@ export async function hrRoutes(c) {
       const target = chief && idAt(1) ? idAt(1) : me.id;
       await env.DB.prepare('INSERT INTO commissions (staff_id, source, base, percent, amount, date, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
         .bind(target, source, base, percent, amount, validDate(b.date) ? b.date : today, nowIso()).run();
+      return json({ ok: true });
+    }
+    if (method === 'PATCH' && idAt(1)) {
+      if (!chief) return fail(403, 'chief_only');
+      const b = await body(request);
+      if (!b) return fail(400, 'bad_request');
+      const source = clean(b.source, 300), amount = num(b.amount);
+      const base = b.base === '' || b.base == null ? null : num(b.base), percent = b.percent === '' || b.percent == null ? null : num(b.percent);
+      if (source.length < 3) return fail(422, 'source');
+      if (!(amount > 0 && amount < 1e8)) return fail(422, 'amount');
+      if (percent != null && !(percent >= 0 && percent <= 100)) return fail(422, 'percent');
+      if (!validDate(b.date)) return fail(422, 'date');
+      await env.DB.prepare('UPDATE commissions SET source = ?, base = ?, percent = ?, amount = ?, date = ? WHERE id = ?').bind(source, base, percent, amount, b.date, idAt(1)).run();
       return json({ ok: true });
     }
     if (method === 'DELETE' && idAt(1)) {

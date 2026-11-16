@@ -320,6 +320,11 @@ a.row--pay:hover, a.row--money:hover { background: var(--ink); }
 .memo .inline .input { flex: 1 1 12rem; }
 input[type='file'].input { padding-block: 0.6rem; }
 .row--cust .row__who { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.5rem; }
+.link--edit { color: var(--blue); }
+.acts { display: inline-flex; align-items: center; white-space: nowrap; }
+.editbox { padding: 1rem; background: var(--ink); border: 1px solid var(--hairline); border-inline-start: 3px solid var(--blue); }
+.rows > .editbox { margin-block: 0.5rem; }
+.editbox .input { background: var(--onyx); }
 .print { display: none; }
 @media print {
   @page { size: A4; margin: 14mm; }
